@@ -55,3 +55,49 @@ Microsoft Edge headless con Playwright: ocho pantallas a 1440, 768, 390 y 360 px
 - Sintaxis verificada con node --check para model.js, views.js, experience.js y app.js.
 
 Los documentos siguen siendo vistas previas HTML. El guardado es local, sin backend ni sincronización entre dispositivos.
+
+## Actualización: anatomía y género
+
+- Mapa vectorial con contornos, fibras y sombreado, con vistas frontal y posterior. `anatomy.js` dibuja las variantes masculina y femenina según el perfil.
+- Género (Masculino/Femenino) disponible al crear o editar alumnos y visible en su información.
+- Los datos guardados de la revisión 5 se conservan. Los perfiles anteriores sin género pueden completarlo desde Editar datos.
+- Verificado en el navegador: selección por clic y Enter, modos Evolución/Cargas, cambio de figura y guardado al recargar, selector obligatorio en el alta y mapa en el informe sin controles interactivos.
+- Inspección visual en móvil y escritorio. Sin errores de consola en el recorrido. Comprobadas la sintaxis y la migración de datos anteriores sin perder registros ni sobrescribir un género ya elegido.
+
+## Calendario y horarios por día
+
+- Ver calendario permite seleccionar un día de la semana de muestra y consultar solo nombres y horarios, ordenados por hora.
+- Los perfiles muestran Días y horarios. Al crear o editar un alumno se completa una hora independiente para cada día seleccionado.
+- Reprogramar visita permite elegir fecha y hora para esa visita.
+- Verificados: guardado al recargar, horario distinto por día reflejado en calendario, orden por hora, día vacío y reprogramación sin duplicados. El calendario no contiene estados ni controles de confirmación.
+
+## Guardado manual de borradores — comportamiento vigente
+
+Esta actualización reemplaza el guardado automático de borradores de la revisión 5.
+
+- Guardar borrador conserva una copia independiente por alumno. Las ediciones siguientes quedan pendientes hasta volver a pulsarlo.
+- Ninguna otra acción (navegación, edición de otro alumno o guardado de datos) persiste esos cambios pendientes.
+- Los borradores anteriores se mantienen. Recargar recupera la última copia guardada; el navegador advierte si hay cambios pendientes.
+- Activar requiere guardar primero. Un error al guardar conserva los cambios abiertos y la versión guardada anterior.
+- Verificado con seis pruebas de regresión: `node --test --test-isolation=none tests/manual-draft.test.cjs`.
+- Verificado en interfaz: botón Guardar borrador, estados pendiente/guardado y conservación al recargar. El borrador creado para probar fue descartado; la rutina actual se conservó.
+
+## Historial, bancos y ejercicios sin valores predeterminados
+
+- Historial dentro del alumno con filtros Todo, Rutinas, Entrenamientos y pesos, Cambios, Datos y visitas. Incluye registros anteriores disponibles y auditoría de cambios nuevos. Paginación y detalle desplegable.
+- Guardar un borrador registra las diferencias de peso/series/repeticiones y estructura por semana. Activar, descartar, corregir entrenamientos, reprogramar y editar el perfil agregan eventos propios.
+- Las correcciones conservan antes/después; Progreso usa el último valor vigente sin duplicar el registro de esa sesión.
+- Banco de rutinas sin Usar en alumno; Nueva plantilla solo solicita nombre y cantidad de días. Siempre crea cuatro semanas vacías.
+- Banco de ejercicios con búsqueda, filtro por grupo y alta. Los ejercicios agregados a rutinas o plantillas tienen peso, series y repeticiones null y se muestran sin definir. Un borrador incompleto puede guardarse, pero no activarse.
+- Sin Ver documento en borradores.
+- 14 pruebas pasan: `node --test --test-isolation=none tests/manual-draft.test.cjs`. Incluyen persistencia manual, rollback, historial y correcciones, plantilla vacía, alta de ejercicios, duplicados y valores sin definir.
+- Revisadas en navegador las pantallas de historial y banco de ejercicios, filtros, detalle de sesiones y formulario de nueva plantilla; sin errores de consola y sin desborde de página a 1440 px. Inspección visual también en móvil.
+
+
+## Mapa muscular completo y documento sin selección
+
+- Las figuras masculina y femenina incluyen 17 grupos: pecho, espalda, hombros, trapecios, bíceps, tríceps, antebrazos, abdominales, oblicuos, lumbares, glúteos, abductores, aductores, cuádriceps, isquios, pantorrillas y tibial anterior.
+- El documento conserva los colores de los registros, pero nunca el contorno del músculo seleccionado ni controles interactivos.
+- Elegir un grupo sin registros mantiene la selección y muestra “Sin datos en este período”; no inventa valores ni cambia a otro músculo.
+- Los alias comunes (por ejemplo, gemelos/pantorrillas) se asocian a la misma zona del mapa.
+- Pasan 18 pruebas con `node --test --test-isolation=none tests/manual-draft.test.cjs`. Revisado también en navegador el documento sin resaltado y la selección de antebrazos sin registros.

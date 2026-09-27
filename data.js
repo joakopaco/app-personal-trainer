@@ -4,6 +4,8 @@ window.DEMO = {
     {
       "name": "Joaquín Santa María",
       "initials": "JS",
+      "scheduleTime": "08:00",
+      "gender": "masculino",
       "days": "Lun · Mié · Vie",
       "count": 3,
       "session": "Día 2 · Rodilla y cadera",
@@ -13,6 +15,8 @@ window.DEMO = {
     {
       "name": "Lucía Fernández",
       "initials": "LF",
+      "scheduleTime": "09:00",
+      "gender": "femenino",
       "days": "Lun · Mié · Vie",
       "count": 3,
       "session": "Día 2 · Tren superior",
@@ -22,6 +26,8 @@ window.DEMO = {
     {
       "name": "Tomás Acosta",
       "initials": "TA",
+      "scheduleTime": "10:30",
+      "gender": "masculino",
       "days": "Mar · Mié · Jue · Vie",
       "count": 4,
       "session": "Día 2 · Tracción",
@@ -31,6 +37,8 @@ window.DEMO = {
     {
       "name": "Valentina Ríos",
       "initials": "VR",
+      "scheduleTime": "17:00",
+      "gender": "femenino",
       "days": "Lun · Mié · Vie",
       "count": 3,
       "session": "Día 2 · Piernas",
@@ -40,6 +48,8 @@ window.DEMO = {
     {
       "name": "Nicolás Peralta",
       "initials": "NP",
+      "scheduleTime": "18:00",
+      "gender": "masculino",
       "days": "Mar · Jue",
       "count": 2,
       "session": "Día 1 · Cuerpo completo",
@@ -49,6 +59,8 @@ window.DEMO = {
     {
       "name": "Camila Méndez",
       "initials": "CM",
+      "scheduleTime": "19:00",
+      "gender": "femenino",
       "days": "Lun · Mié · Vie",
       "count": 3,
       "session": "Día 2 · Empuje",

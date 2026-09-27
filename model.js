@@ -67,7 +67,41 @@ DB.branding={name:'Mateo Torres',subtitle:'PERSONAL TRAINER',accent:'#204f43',lo
 const STORAGE_KEY='pulso-demo-v5';
 let storageAvailable=true;
 try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');if(saved?.version===5&&Array.isArray(saved.db?.people)&&saved.db.people.length&&Array.isArray(saved.db.templates)&&Array.isArray(saved.db.library)){Object.assign(DB,saved.db);serial=Math.max(serial,saved.serial||0)}}catch{storageAvailable=false}
-function persist(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({version:5,db:DB,serial}));storageAvailable=true}catch{storageAvailable=false}}
+// Completa solo los perfiles ficticios conocidos; los alumnos previos eligen su género al editar.
+DB.people.forEach(p=>{
+  if(p.scheduleTime===undefined)p.scheduleTime=DEMO.people.find(seed=>seed.name===p.name)?.scheduleTime||'';
+  if(!p.scheduleTimes)p.scheduleTimes=Object.fromEntries(p.weekdays.map(day=>[day,p.scheduleTime||'']));
+  if(!['masculino','femenino'].includes(p.gender))p.gender=DEMO.people.find(seed=>seed.name===p.name)?.gender||'';
+});
+const genderLabel = p => ({masculino:'Masculino',femenino:'Femenino'}[p.gender]||'Sin especificar');
+// La edición vive en memoria; solo Guardar borrador actualiza estas copias.
+const savedDrafts=new Map(DB.people.filter(p=>p.draft).map(p=>[p.id,copy(p.draft)]));
+const draftSaveErrors=new Set();
+function draftHasChanges(p){return Boolean(p.draft)&&JSON.stringify(p.draft)!==JSON.stringify(savedDrafts.get(p.id))}
+function persist(){
+  const db=copy(DB);
+  db.people.forEach(p=>{if(savedDrafts.has(p.id))p.draft=copy(savedDrafts.get(p.id));else delete p.draft});
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify({version:5,db,serial}));storageAvailable=true;return true}catch{storageAvailable=false;return false}
+}
+function saveDraft(p){
+  if(!p.draft)return false;
+  if(!draftHasChanges(p)){draftSaveErrors.delete(p.id);return true}
+  const previous=savedDrafts.get(p.id),working=copy(p.draft);
+  const history=copy(p.history||[]);
+  p.draft.savedAt=new Date().toISOString();savedDrafts.set(p.id,copy(p.draft));
+  recordHistory(p,'changes','Borrador guardado',routineChanges(previous,p.draft),{draftId:p.draft.id});
+  if(persist()){draftSaveErrors.delete(p.id);return true}
+  p.draft=working;p.history=history;
+  if(previous)savedDrafts.set(p.id,previous);else savedDrafts.delete(p.id);
+  draftSaveErrors.add(p.id);return false;
+}
+function discardDraft(p){
+  const working=p.draft,previous=savedDrafts.get(p.id),history=copy(p.history||[]);
+  if(working)recordHistory(p,'changes','Borrador descartado',[working.name]);
+  delete p.draft;savedDrafts.delete(p.id);
+  if(persist()){draftSaveErrors.delete(p.id);return true}
+  p.draft=working;p.history=history;if(previous)savedDrafts.set(p.id,previous);return false;
+}
 const state={page:'agenda',person:0,day:0,week:2,period:'six',group:'Espalda',metricName:'Remo con barra agarre prono',customStart:'2026-01-01',customEnd:'2026-03-31',document:'routine',archiveId:null,templateId:null,draftMode:false,bodyMode:'progress',bankPreview:null,empty:false};
 const person=()=>DB.people[state.person];
 const activeRoutine=()=>state.templateId?DB.templates.find(r=>r.id===state.templateId):state.archiveId?person().archives.find(r=>r.id===state.archiveId):state.draftMode?person().draft:person().routine;
@@ -76,11 +110,15 @@ const currentDay=()=>activeRoutine()?.weeks[state.week-1]?.[state.day];
 function cloneRoutine(source,name=source.name) {
   const r=copy(source);r.id=uid();r.name=name;r.date=TODAY;r.revision=1;return r;
 }
+function emptyTemplate(name,count){
+  const days=Array.from({length:count},(_,i)=>({id:uid(),title:`Día ${i+1}`,weekday:'Sin asignar',mobility:[],approximation:[],main:[]}));
+  return {id:uid(),name,date:TODAY,weeks:Array.from({length:4},()=>copy(days)),revision:1};
+}
 function assignRoutine(source=null) {
   const p=person();
   const days=p.weekdays.map(d=>({id:uid(),title:'Por armar',weekday:d,mobility:[],approximation:[],main:[]}));
   p.draft=source?cloneRoutine(source):{id:uid(),name:'Rutina personalizada',date:TODAY,weeks:Array.from({length:4},()=>copy(days)),revision:1};
-  p.draft.sourceName=source?.name||'Desde cero';p.draft.savedAt=new Date().toISOString();
+  p.draft.sourceName=source?.name||'Desde cero';delete p.draft.savedAt;draftSaveErrors.delete(p.id);
   p.draft.weeks.forEach(w=>w.forEach((d,i)=>d.weekday=p.weekdays[i]||'Sin asignar'));
   state.week=1;state.day=0;state.archiveId=null;state.templateId=null;state.draftMode=true;
 }
@@ -88,7 +126,8 @@ function mutateDays(edit) {
   if(isRoutineReadOnly())return;
   const r=activeRoutine();
   for(let w=state.week-1;w<4;w++)if(r.weeks[w][state.day])edit(r.weeks[w][state.day]);
-  r.revision++;r.savedAt=new Date().toISOString();persist();
+  r.revision++;
+  if(state.templateId){r.savedAt=new Date().toISOString();persist()}
 }
 function rangeInfo(){
   if(state.period==='custom')return {start:state.customStart,end:state.customEnd,label:'Personalizado'};

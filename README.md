@@ -4,24 +4,25 @@ Ejecutar `python -m http.server 4173 --bind 127.0.0.1` y abrir http://127.0.0.1:
 
 ## Revisión 5
 
-La navegación principal contiene Agenda, Alumnos, Banco de rutinas y Plantilla PDF. La rutina personal, sus documentos y su progreso se encuentran dentro del alumno. No hay historial global.
+La navegación principal contiene Agenda, Alumnos, Banco de rutinas y Banco de ejercicios. La rutina personal, sus documentos, progreso e historial se encuentran dentro del alumno. No hay historial global.
 
 ### Rutinas y guardado
 
 - Actual: la rutina en uso, de solo lectura. «Preparar cambios» crea una copia editable.
-- Borrador: se guarda automáticamente en este navegador. Copiar una rutina anterior o una plantilla crea un borrador, sin cambiar la actual.
-- Activar: requiere revisar el cambio; archiva la actual y pone el borrador en uso.
+- Borrador: se guarda únicamente al pulsar **Guardar borrador**. Los cambios pendientes se mantienen en memoria al navegar, pero al recargar se recupera la última versión guardada. Copiar una rutina anterior o una plantilla crea un borrador sin guardar, sin cambiar la actual.
+- Activar: requiere guardar el borrador y revisar el cambio; archiva la actual y pone el borrador en uso.
 - Anterior: consulta de solo lectura con su propio rótulo. Abrirla nunca la convierte en actual.
 - Banco: las plantillas se editan y renombran; sus copias en alumnos son independientes.
-- Plantilla PDF: logo, nombre, color, espaciado y pie globales, con vista previa y botón Guardar plantilla.
 
 ### Recorridos para probar
 
 - Agenda: confirmar un entrenamiento con desplegables de peso de 0 a 150 kg (pasos de 1 kg), series de 1 a 4 y repeticiones de 1 a 15, sin casillas de verificación. Los resultados no cambian la prescripción futura.
 - Alumnos: Nuevo alumno, datos y días de asistencia, y creación de su rutina desde cero, desde una plantilla o desde otro alumno.
-- Perfil: información, rutina actual con todos sus días, rutinas anteriores de solo lectura y progreso.
+- Perfil: información, días y horarios, rutina actual, rutinas anteriores de solo lectura, progreso e historial.
 - Editor: arrastrar desde el agarre de la biblioteca hacia cualquier zona. También se puede usar el botón +. Movilidad, aproximaciones y parte principal son editables. Solo hay peso, series y repeticiones. Los cambios de ejercicios aplican a la semana elegida y posteriores.
-- Banco: ver bases completas, copiar una a un alumno, crear una plantilla desde una rutina existente o guardar la rutina de un alumno como plantilla.
+- Banco de rutinas: editar bases completas y crear plantillas siempre desde cero, con días vacíos. Para usar una base, se elige al crear el borrador desde el perfil del alumno.
+- Banco de ejercicios: catálogo completo, búsqueda, filtro por grupo y alta de ejercicios. Al agregar a una rutina, peso, series y repeticiones quedan sin definir.
+- Historial del alumno: rutinas actuales y anteriores, sesiones con peso/series/repeticiones y comparación con el registro anterior, cambios guardados en borradores, correcciones y cambios de perfil o visita. Los cambios detallados se registran desde esta actualización; no se reconstruyen cambios antiguos que no estaban guardados.
 - Progreso: mapa corporal frontal y posterior, modos Evolución y Cargas, comparación antes/ahora, curvas por ejercicio y barras por grupo. Períodos de un mes, seis meses, un año o fechas personalizadas.
 - Documentos: una rutina completa con cuatro semanas y todos sus días; título RUTINA, nombre y fecha. Informe de progreso del mismo período seleccionado. Ambos usan la plantilla global personalizable.
 
@@ -43,3 +44,5 @@ Las métricas muestran cargas externas del mismo ejercicio, no una estimación d
 - `experience.js`: estados de rutinas, borradores, mapa corporal y personalización de documentos.
 - `experience.css`: estilos de la revisión 5.
 - `styles.css`: escritorio y móvil, sin dependencias externas.
+
+Los borradores no tienen vista de documento. Se pueden guardar incompletos; antes de activar hay que completar todos los ejercicios. Las correcciones de entrenamientos conservan los valores anteriores en el historial y Progreso consulta el registro corregido.
