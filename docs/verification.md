@@ -101,3 +101,11 @@ Esta actualización reemplaza el guardado automático de borradores de la revisi
 - Elegir un grupo sin registros mantiene la selección y muestra “Sin datos en este período”; no inventa valores ni cambia a otro músculo.
 - Los alias comunes (por ejemplo, gemelos/pantorrillas) se asocian a la misma zona del mapa.
 - Pasan 18 pruebas con `node --test --test-isolation=none tests/manual-draft.test.cjs`. Revisado también en navegador el documento sin resaltado y la selección de antebrazos sin registros.
+
+
+## Revisión 6 · 28 de septiembre de 2026
+
+- Node v24.19.0: 35 pruebas correctas (18 regresiones adaptadas al arranque asíncrono y 17 nuevas). Syntax checks de todos los JS y git diff --check correctos.
+- IndexedDB real en el navegador integrado: 10 comprobaciones correctas desde tests/browser/training-checks.html. Incluyen cinco sesiones, recuperación desde otra conexión, auditoría, aborto, conflicto, autosave, cierre idempotente, dos sesiones el mismo día, restauración y renovación mensual.
+- Recorrido UI: iniciar una sesión, cambiar 40 → 42 kg, esperar confirmación y recargar. La sesión sigue abierta y el campo conserva 42 kg.
+- Continúan las comprobaciones visuales y la revisión independiente; se documentarán sus resultados al concluir.

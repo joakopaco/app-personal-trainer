@@ -1,48 +1,46 @@
-# Pulso · Mockup para personal trainers
+# Pulso · Seguimiento para personal trainers
 
-Ejecutar `python -m http.server 4173 --bind 127.0.0.1` y abrir http://127.0.0.1:4173/?v=5#profile.
+Servir con `python -m http.server 4175 --bind 127.0.0.1` y abrir http://127.0.0.1:4175/#agenda. Mantener el mismo navegador y origen (dirección y puerto) para recuperar los datos locales.
 
-## Revisión 5
+## Entrenamiento en vivo · revisión 6
 
-La navegación principal contiene Agenda, Alumnos, Banco de rutinas y Banco de ejercicios. La rutina personal, sus documentos, progreso e historial se encuentran dentro del alumno. No hay historial global.
+- Agenda con visitas pendientes, en curso, finalizadas, faltas y reprogramaciones. «No asistió» no exige otra fecha. «Agregar entrenamiento ahora» permite elegir alumno, día y semana, con la hora actual precargada.
+- «Entrenando ahora» permite alternar entre sesiones abiertas de distintos alumnos. Una persona solo tiene una sesión abierta; puede realizar varias sesiones consecutivas en el mismo día.
+- Peso, series, repeticiones y descansos se editan directamente. Los cambios válidos se guardan automáticamente después de 300 ms, al salir del campo o con Enter. La interfaz distingue guardando, confirmado, error y conflicto con otra pestaña.
+- Un ajuste actualiza la sesión y el mismo ejercicio de la rutina desde la semana elegida en adelante. Historial conserva valor anterior, nuevo, fecha y hora. Un ejercicio repetido en otro bloque es independiente.
+- «No se realizó» excluye ese ejercicio del resultado final. «Finalizar entrenamiento» confirma los ejercicios restantes y cierra una sola vez. Progreso consulta resultados finalizados; las modificaciones intermedias no multiplican entrenamientos.
+- Una sesión abierta se recupera tras recargar. Las correcciones de sesiones finalizadas conservan auditoría y no cambian la rutina vigente.
 
-### Rutinas y guardado
+## Rutinas y bloques
 
-- Actual: la rutina en uso, de solo lectura. «Preparar cambios» crea una copia editable.
-- Borrador: se guarda únicamente al pulsar **Guardar borrador**. Los cambios pendientes se mantienen en memoria al navegar, pero al recargar se recupera la última versión guardada. Copiar una rutina anterior o una plantilla crea un borrador sin guardar, sin cambiar la actual.
-- Activar: requiere guardar el borrador y revisar el cambio; archiva la actual y pone el borrador en uso.
-- Anterior: consulta de solo lectura con su propio rótulo. Abrirla nunca la convierte en actual.
-- Banco: las plantillas se editan y renombran; sus copias en alumnos son independientes.
+Cada día admite bloques con nombre, tipo, orden y ejercicios. Micro es el descanso entre ejercicios; macro se configura entre series o entre bloques. Se expresan en segundos: vacío significa sin definir y cero significa sin pausa.
 
-### Recorridos para probar
+Las rutinas se asignan a un mes calendario. Si no se activa otra, al abrir la app en un mes nuevo se archiva el período anterior y se continúa con una copia y los últimos valores. Las sesiones abiertas posponen esa renovación hasta el cierre. Los días 29–31 usan la cuarta variante semanal por defecto. No se inventan sesiones en meses sin uso.
 
-- Agenda: confirmar un entrenamiento con desplegables de peso de 0 a 150 kg (pasos de 1 kg), series de 1 a 4 y repeticiones de 1 a 15, sin casillas de verificación. Los resultados no cambian la prescripción futura.
-- Alumnos: Nuevo alumno, datos y días de asistencia, y creación de su rutina desde cero, desde una plantilla o desde otro alumno.
-- Perfil: información, días y horarios, rutina actual, rutinas anteriores de solo lectura, progreso e historial.
-- Editor: arrastrar desde el agarre de la biblioteca hacia cualquier zona. También se puede usar el botón +. Movilidad, aproximaciones y parte principal son editables. Solo hay peso, series y repeticiones. Los cambios de ejercicios aplican a la semana elegida y posteriores.
-- Banco de rutinas: editar bases completas y crear plantillas siempre desde cero, con días vacíos. Para usar una base, se elige al crear el borrador desde el perfil del alumno.
-- Banco de ejercicios: catálogo completo, búsqueda, filtro por grupo y alta de ejercicios. Al agregar a una rutina, peso, series y repeticiones quedan sin definir.
-- Historial del alumno: rutinas actuales y anteriores, sesiones con peso/series/repeticiones y comparación con el registro anterior, cambios guardados en borradores, correcciones y cambios de perfil o visita. Los cambios detallados se registran desde esta actualización; no se reconstruyen cambios antiguos que no estaban guardados.
-- Progreso: mapa corporal frontal y posterior, modos Evolución y Cargas, comparación antes/ahora, curvas por ejercicio y barras por grupo. Períodos de un mes, seis meses, un año o fechas personalizadas.
-- Documentos: una rutina completa con cuatro semanas y todos sus días; título RUTINA, nombre y fecha. Informe de progreso del mismo período seleccionado. Ambos usan la plantilla global personalizable.
+Los cambios estructurales usan un borrador con **Guardar borrador** y **Activar rutina**. Los campos se editan en la tabla. Activar se bloquea si hay un entrenamiento abierto o si existen cambios en vivo posteriores a la base del borrador sin resolver. Las plantillas usan **Guardar plantilla**, de manera explícita; sus copias en alumnos son independientes.
 
-## Límites de la demo
+## Persistencia y respaldo
 
-Los cambios se conservan al recargar mediante localStorage en este navegador y origen. No hay backend, autenticación, sincronización entre dispositivos ni generación real de PDF. Los documentos son previews HTML; la maquetación de impresión final se entregará en otra etapa. Borrar los datos del sitio elimina los cambios locales.
+IndexedDB conserva una instantánea versionada. Sesión, rutina e historial se escriben en una transacción. La app solo anuncia guardado después de confirmar la transacción. Las revisiones detectan conflictos entre pestañas y evitan sobrescribir una versión nueva con una vieja. La clave localStorage `pulso-demo-v5` se migra sin borrarla; datos inválidos muestran un error y no se reemplazan automáticamente por una demo.
 
-La fecha de la demo es el 23 de septiembre de 2026. Las personas, rutinas y registros son ficticios. Cada alumno tiene datos y copias independientes. La agenda muestra solo el día de ejemplo; una visita reprogramada fuera de ese día deja de aparecer. Copiar una base con más días que la asistencia mantiene todos los días; el entrenador puede asignarlos o quitarlos.
+Ante un fallo, los campos pendientes permanecen en esta pestaña para reintentar. **Un cambio pendiente no está protegido si se cierra el navegador.** Los formularios y las plantillas requieren resolver o reingresar sus cambios cuando hay un conflicto entre pestañas.
 
-Las métricas muestran cargas externas del mismo ejercicio, no una estimación de fuerza absoluta ni comparaciones entre máquinas. La tarjeta de cada grupo identifica el ejercicio de mayor carga y el de mayor incremento. No se suman series como medida principal. Los resultados reales de la sesión se separan de las indicaciones.
+Desde Agenda → Copias de respaldo se descarga un JSON de los datos confirmados. La restauración valida y pide confirmar el reemplazo. No permite reemplazar un destino con sesiones abiertas o cambios pendientes. Una copia puede recuperar sesiones abiertas si el destino está libre. Guardar una copia fuera del dispositivo protege frente a su pérdida.
+
+Esta sigue siendo una demo local: no incluye cuentas, servidor, sincronización entre equipos ni respaldos automáticos externos. Borrar los datos del navegador elimina esta base. Para usar datos reales hace falta implementar y verificar almacenamiento remoto con respaldos y recuperación. Los documentos son previews HTML, no PDF exportados.
+
+## Verificación
+
+`node --test tests/*.test.cjs` ejecuta pruebas del modelo, migración, errores de escritura, cola de autosave, sesiones, continuidad, respaldos y regresiones. En PowerShell se puede usar `$testFiles = (Get-ChildItem tests -Filter '*.test.cjs').FullName; node --test $testFiles`.
+
+Abrir `/tests/browser/training-checks.html` y ejecutar las comprobaciones prueba IndexedDB real en una base temporal aislada, sin modificar los datos de la aplicación. El detalle de pruebas ejecutadas está en `docs/verification.md`.
 
 ## Estructura
 
-- `data.js`: referencia ficticia de personas y ejercicios.
-- `model.js`: copias independientes, rutinas, registros de muestra y filtros de períodos.
-- `ui-core.js`: iconos y elementos compartidos.
-- `views.js`: pantallas y previews de documentos.
-- `app.js`: navegación e interacciones de la demo.
-- `experience.js`: estados de rutinas, borradores, mapa corporal y personalización de documentos.
-- `experience.css`: estilos de la revisión 5.
-- `styles.css`: escritorio y móvil, sin dependencias externas.
-
-Los borradores no tienen vista de documento. Se pueden guardar incompletos; antes de activar hay que completar todos los ejercicios. Las correcciones de entrenamientos conservan los valores anteriores en el historial y Progreso consulta el registro corregido.
+- `training-schema.js`, `training-storage.js`: validación, migración y persistencia transaccional.
+- `training-domain.js`, `training-months.js`: sesiones, visitas, cambios e historial mensual.
+- `training-controller.js`: cola de guardado y entradas pendientes.
+- `training-app.js`, `training-editor.js`, `training-views.js`, `training.css`: integración, bloques y seguimiento.
+- `training-backup.js`: copias exportables y restauración.
+- `model.js`, `app.js`, `views.js`, `experience.js`, `history.js`, `calendar.js`: funcionalidades existentes integradas.
+- `data.js`, `anatomy.js`, `ui-core.js`, `styles.css`, `experience.css`: datos ficticios, mapa corporal y base visual.

@@ -19,5 +19,5 @@ const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><
 const btn = (label, action, type='', glyph='') => `<button class="btn ${type}" data-action="${action}">${glyph ? icon(glyph) : ''}${label}</button>`;
 const link = (label, route, type='', glyph='') => `<a class="btn ${type}" href="#${route}">${glyph ? icon(glyph) : ''}${label}</a>`;
 const tag = (label, color='') => `<span class="tag ${color}"><span class="dot"></span>${label}</span>`;
-const avatar = p => `<span class="avatar ${p.color||''}">${p.initials}</span>`;
+const avatar = p => `<span class="avatar ${escapeHTML(p.color||'')}">${escapeHTML(p.initials||p.name?.slice(0,2)||'')}</span>`;
 const escapeHTML = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

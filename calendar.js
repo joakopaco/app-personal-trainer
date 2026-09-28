@@ -13,16 +13,16 @@ function calendarWeekDates(){
   return WEEKDAYS.map((_,i)=>{const day=new Date(date);day.setUTCDate(day.getUTCDate()+i);return day.toISOString().slice(0,10)});
 }
 function calendarVisits(date){
-  const weekday=WEEKDAYS[(new Date(`${date}T12:00:00Z`).getUTCDay()+6)%7];
-  return DB.people.filter(p=>date===TODAY?p.attendanceDate===date:p.attendanceDate===date||p.weekdays.includes(weekday))
-    .map(p=>({person:p,time:(p.attendanceDate===date?p.attendanceTime:'')||scheduledTime(p,date)}))
-    .sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99')||a.person.name.localeCompare(b.person.name,'es'));
+  const weekday=WEEKDAYS[(new Date(`${date}T12:00:00`).getDay()+6)%7];
+  const visits=(DB.visits||[]).filter(v=>v.date===date).map(v=>copy(v));
+  for(const p of DB.people)if(p.weekdays.includes(weekday)&&!visits.some(v=>v.personId===p.id&&v.source==='schedule'))visits.push({id:`schedule-${p.id}-${date}`,personId:p.id,date,time:scheduledTime(p,date),status:'pending',source:'schedule',rescheduledFrom:null,rescheduledTo:null});
+  return visits.map(visit=>({visit,person:DB.people.find(p=>p.id===visit.personId),time:visit.time})).filter(x=>x.person).sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99')||a.person.name.localeCompare(b.person.name,'es'));
 }
 function showCalendar(date=TODAY){
   const dates=calendarWeekDates();
   if(!dates.includes(date))date=TODAY;
   const visits=calendarVisits(date);
   const label=new Date(`${date}T12:00:00Z`).toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});
-  modal('Personas y horarios','Elegí un día para ver quiénes vienen.',`<div class="week-strip calendar-picker" aria-label="Días de la semana">${dates.map((day,i)=>`<button type="button" class="calendar-day ${day===date?'selected':''}" data-action="calendar:${day}" aria-pressed="${day===date}" aria-label="${WEEKDAYS[i]} ${Number(day.slice(-2))}"><span>${WEEKDAYS[i]}</span><strong>${Number(day.slice(-2))}</strong></button>`).join('')}</div><div class="calendar-list-heading"><h3>${label}</h3><span>${visits.length} ${visits.length===1?'persona':'personas'}</span></div>${visits.length?`<ul class="calendar-visits">${visits.map(({person:p,time})=>`<li>${time?`<time datetime="${date}T${time}">${escapeHTML(time)}</time>`:'<span class="calendar-no-time">Sin horario</span>'}${avatar(p)}<span class="calendar-person-name">${escapeHTML(p.name)}</span></li>`).join('')}</ul>`:'<p class="calendar-empty">No hay personas previstas para este día.</p>'}<p class="fineprint">Semana del 21 al 27 de septiembre · Horarios de demostración.</p>`);
+  modal('Personas y horarios','Elegí un día para ver quiénes vienen.',`<div class="week-strip calendar-picker" aria-label="Días de la semana">${dates.map((day,i)=>`<button type="button" class="calendar-day ${day===date?'selected':''}" data-action="calendar:${day}" aria-pressed="${day===date}" aria-label="${WEEKDAYS[i]} ${Number(day.slice(-2))}"><span>${WEEKDAYS[i]}</span><strong>${Number(day.slice(-2))}</strong></button>`).join('')}</div><div class="calendar-list-heading"><h3>${label}</h3><span>${visits.length} ${visits.length===1?'persona':'personas'}</span></div>${visits.length?`<ul class="calendar-visits">${visits.map(({person:p,time})=>`<li>${time?`<time datetime="${date}T${time}">${escapeHTML(time)}</time>`:'<span class="calendar-no-time">Sin horario</span>'}${avatar(p)}<span class="calendar-person-name">${escapeHTML(p.name)}</span></li>`).join('')}</ul>`:'<p class="calendar-empty">No hay personas previstas para este día.</p>'}<p class="fineprint">${dateLabel(dates[0])} – ${dateLabel(dates[6])} · Horarios previstos.</p>`);
   $('#modal').querySelector(`[data-action="calendar:${date}"]`).focus();
 }
