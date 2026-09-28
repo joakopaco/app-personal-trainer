@@ -1,7 +1,7 @@
 # Seguimiento de entrenamientos en vivo
 
 Fecha: 28 de septiembre de 2026.
-Estado: flujo aprobado en conversación; especificación escrita pendiente de revisión. No implementado.
+Estado: especificación escrita aprobada por el usuario. Implementación pendiente.
 
 ## Objetivo y alcance
 
