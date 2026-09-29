@@ -36,3 +36,22 @@ test('progress document is not interactive and ignores selected muscle',async()=
 test('anatomical figures contain supported muscle groups',async()=>{const s=await session();for(const gender of ['masculino','femenino']){await s.run(`person().gender='${gender}'`);const groups=JSON.parse(s.get('JSON.stringify(MUSCLE_GROUPS)'));const map=s.get('bodyMap(progressData())');for(const group of groups)assert.ok(map.includes(`data-body-group="${group}"`))}});
 test('muscles without data remain selected with honest empty state',async()=>{const s=await session();await s.run("state.group='Antebrazos'");assert.equal(s.get('metricSelection(progressData()).selected'),undefined);assert.match(s.get('progressScreen()'),/Sin datos en este período/)});
 test('muscle aliases map correctly',async()=>{const s=await session();await s.run("globalThis.alias=[{...progressData()[0],group:'Gemelos'}];state.group='Pantorrillas';state.bodyMode='load'");assert.equal(s.get('groupMetrics(alias)[0].group'),'Pantorrillas');assert.equal(s.get('metricSelection(alias).group.length'),1)});
+test('saving draft concurrently with a live adjustment cannot overwrite session or audit',async()=>{
+ const s=await session();await s.run(`assignRoutine(person().routine);await saveDraft(person());await trainingController.execute({type:'start',personId:person().id,sessionId:'concurrent',dayId:person().routine.weeks[0][0].id,week:1,date:TODAY,time:'10:00'});mutateDays(d=>d.title='Nuevo título');const b=person().routine.weeks[0][0].blocks.find(b=>b.type==='main');const live=trainingController.execute({type:'edit',sessionId:'concurrent',blockId:b.id,exerciseId:b.exercises[0].id,field:'weight',value:99});const draft=saveDraft(person());await Promise.all([live,draft]);`);
+ const r=await session(s.saved());assert.equal(r.get("DB.sessions[0].blocks.find(b=>b.type==='main').exercises[0].weight"),99);assert.equal(r.get("person().history.filter(e=>e.field==='weight'&&e.after===99).length"),1);
+});
+test('saving a draft never persists another unsaved template',async()=>{
+ const s=await session();const before=s.get(`DB.templates[0].weeks[0][0].${main}[0].weight`);await s.run(`DB.templates[0].weeks[0][0].${main}[0].weight=111;assignRoutine(person().routine);await saveDraft(person())`);
+ assert.equal((await session(s.saved())).get(`DB.templates[0].weeks[0][0].${main}[0].weight`),before);
+});
+test('confirming start after midnight refreshes date and renews month',async()=>{
+ const s=await session();await s.run(`const NativeDate=Date;const nextDay=new NativeDate(2026,9,1,0,1).getTime();Date=class extends NativeDate{constructor(...args){super(...(args.length?args:[nextDay]))}};TODAY='2026-09-30';modalContext={trainingPerson:person().id};const day=person().routine.weeks[0][0].id;document.querySelector=key=>({'#training-day':{value:day},'#training-week':{value:'1'},'#training-time':{value:'00:01'}}[key]);openTraining=()=>{};await trainingAction('train-start-confirm');`);
+ assert.equal(s.get('DB.sessions[0].date'),'2026-10-01');assert.equal(s.get('DB.sessions[0].period'),'2026-10');assert.equal(s.get('person().routine.period'),'2026-10');
+});
+test('same-day session results display newest first',async()=>{
+ const s=await session();await s.run(`const p=person();for(const [id,hour] of [['early',10],['late',11]]){trainingContext.now=()=>new Date(TODAY+'T'+hour+':00:00');await trainingController.execute({type:'start',personId:p.id,sessionId:id,dayId:p.routine.weeks[0][0].id,week:1,date:TODAY,time:hour+':00'});await trainingController.execute({type:'finish',sessionId:id})}`);
+ assert.equal(s.get("historyEntries(person()).filter(e=>e.kind==='sessions'&&e.records[0].sessionId)[0].id"),'late');
+});
+test('navigation context restores the selected student and saved draft after hydration',async()=>{
+ const s=await session();await s.run("state.person=5;assignRoutine(person().routine);await saveDraft(person());const v={personId:person().id,draftMode:true,week:3,day:0};sessionStorage.getItem=key=>key==='pulso-view-v5'?JSON.stringify(v):null;state.person=0;state.draftMode=false;restoreTrainingContext()");assert.equal(s.get('state.person'),5);assert.equal(s.get('state.draftMode'),true);assert.equal(s.get('state.week'),3);
+});

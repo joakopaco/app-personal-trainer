@@ -21,3 +21,4 @@ test('validation rejects future schemas, duplicate persons and broken session re
   e=fixture();e.db.people.push(structuredClone(e.db.people[0]));assert.throws(()=>s.validate(e));
   e=fixture();e.db.sessions.push({id:'s',personId:'missing'});assert.throws(()=>s.validate(e));
 });
+test('backup boundary rejects malformed history and catalog entries',()=>{const s=schema();let e=fixture();e.db.people[0].history=[null];assert.throws(()=>s.validate(e));e=fixture();e.db.library=[{id:'bad',name:null,group:'Espalda'}];assert.throws(()=>s.validate(e));});

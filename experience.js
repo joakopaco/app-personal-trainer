@@ -1,6 +1,5 @@
 /* Estados explícitos de rutina, plantilla global y vista visual de progreso. */
 function saveViewContext(){try{sessionStorage.setItem('pulso-view-v5',JSON.stringify({personId:person().id,archiveId:state.archiveId,templateId:state.templateId,draftMode:state.draftMode,week:state.week,day:state.day,document:state.document}))}catch{}}
-try{const v=JSON.parse(sessionStorage.getItem('pulso-view-v5')||'null');if(v){const i=DB.people.findIndex(p=>p.id===v.personId);if(i>=0){state.person=i;state.archiveId=person().archives.some(r=>r.id===v.archiveId)?v.archiveId:null;state.templateId=DB.templates.some(r=>r.id===v.templateId)?v.templateId:null;state.draftMode=Boolean(v.draftMode&&person().draft);state.week=Math.min(4,Math.max(1,v.week||1));state.day=Math.max(0,v.day||0);state.document=v.document==='progress'?'progress':'routine'}}}catch{}
 function clearRoutineContext(){state.archiveId=null;state.templateId=null;state.draftMode=false;state.day=0}
 function routineStatus(){return state.templateId?'Plantilla del banco':state.archiveId?'Rutina anterior':state.draftMode?'Borrador':'Rutina actual'}
 function navigation(){
@@ -40,7 +39,7 @@ async function lifecycleAction(command){const [kind,arg]=command.split(':');
     const p=person();if(!p.draft||draftHasChanges(p)||blockActivation())return true;
     const previous={routine:p.routine,archives:copy(p.archives),draft:p.draft,saved:savedDrafts.get(p.id),history:copy(p.history||[])};
     if(p.routine)p.archives.unshift(copy(p.routine));p.routine=copy(p.draft);delete p.routine.baseRoutine;p.routine.period=TODAY.slice(0,7);p.routine.date=TODAY;p.routine.activatedAt=TODAY;recordHistory(p,'routine','Rutina activada',[p.routine.name,previous.routine?`Reemplaza a ${previous.routine.name}.`:'Primera rutina del alumno.',...routineChanges(previous.routine,p.routine)],{routineId:p.routine.id});delete p.draft;savedDrafts.delete(p.id);
-    if(!await persist()){p.routine=previous.routine;p.archives=previous.archives;p.draft=previous.draft;p.history=previous.history;if(previous.saved)savedDrafts.set(p.id,previous.saved);error('No se pudo activar la rutina. Reintentá.');return true}
+    if(!await persist({personId:p.id,fields:['routine','archives','draft','history'],rejectOpen:true})){p.routine=previous.routine;p.archives=previous.archives;p.draft=previous.draft;p.history=previous.history;if(previous.saved)savedDrafts.set(p.id,previous.saved);error('No se pudo activar la rutina. Reintentá.');return true}
     draftSaveErrors.delete(p.id);clearRoutineContext();closeModal();go('profile');toast('Nueva rutina activada. La anterior quedó en su historial.');return true
   }
   if(kind==='edit-template'){clearRoutineContext();state.templateId=DB.templates[Number(arg)].id;state.week=1;go('editor');return true}

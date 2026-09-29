@@ -1,10 +1,11 @@
 /* Pending UI strings never become durable state until the transaction completes. */
 globalThis.TrainingController=(()=>{
   function create({repo,snapshot,context,onState=()=>{}}){
-    let current=structuredClone(snapshot),tail=Promise.resolve(),active=0,failure=null,timer=null,drain=null,sequence=0;
+    let current=structuredClone(snapshot),tail=Promise.resolve(),active=0,failure=null,timer=null,drain=null,sequence=0,needsReview=false;
     const inputs=new Map();
     const key=x=>JSON.stringify([x.sessionId,x.blockId,x.exerciseId||'',x.field]);
     function status(){
+      if(needsReview)return {state:'conflict',message:'Compará los valores nuevos con tus cambios pendientes antes de aplicarlos.'};
       if(failure)return {state:failure.error.code==='CONFLICT'?'conflict':'error',message:failure.error.message};
       if([...inputs.values()].some(x=>!x.valid))return {state:'error',message:'Revisá los campos marcados. Los valores anteriores siguen guardados.'};
       if(active||inputs.size)return {state:'saving',message:'Guardando…'};
@@ -14,6 +15,7 @@ globalThis.TrainingController=(()=>{
     function commit(operationId,reduce,kind='generic'){
       const work=tail.then(async()=>{
         if(failure)throw failure.error;
+        if(needsReview)throw Object.assign(new Error('Revisá y aplicá o descartá los cambios pendientes.'),{code:'REVIEW_REQUIRED'});
         active++;emit();
         try{current=await repo.transact({expectedRevision:current.revision,operationId},reduce);return structuredClone(current)}
         catch(error){failure={error,operationId,reduce,kind};throw error}
@@ -24,13 +26,14 @@ globalThis.TrainingController=(()=>{
     function stage(input){
       const parsed=TrainingSchema.parseField(input.field,input.raw);
       inputs.set(key(input),{...input,valid:parsed.ok,value:parsed.value,sequence:++sequence,operationId:context.id()});
-      clearTimeout(timer);if(!failure)timer=setTimeout(()=>flush().catch(()=>{}),300);emit();
+      clearTimeout(timer);if(!failure&&!needsReview)timer=setTimeout(()=>flush().catch(()=>{}),300);emit();
     }
     async function flush(sessionId){
       clearTimeout(timer);
       if(drain){await drain;return flush(sessionId)}
       drain=(async()=>{
         if(failure)throw failure.error;
+        if(needsReview)throw Object.assign(new Error('Revisá y aplicá o descartá los cambios pendientes.'),{code:'REVIEW_REQUIRED'});
         while(true){
           const next=[...inputs.values()].find(x=>x.valid&&(!sessionId||x.sessionId===sessionId));if(!next)break;
           const command={type:'edit',sessionId:next.sessionId,blockId:next.blockId,exerciseId:next.exerciseId,field:next.field,value:next.value,operationId:next.operationId};
@@ -43,15 +46,16 @@ globalThis.TrainingController=(()=>{
       try{return await drain}finally{drain=null;emit()}
     }
     async function retry(){
-      const prior=failure;if(prior?.error.code==='CONFLICT')throw prior.error;failure=null;
-      if(prior&&prior.kind==='generic')await commit(prior.operationId,prior.reduce);
+      const prior=failure;if(prior?.error.code==='CONFLICT')throw prior.error;failure=null;needsReview=false;
+      if(prior)await commit(prior.operationId,prior.reduce,prior.kind);
       return flush();
     }
     async function reloadConflict(){
       await tail;const fresh=await repo.load();if(!fresh)throw new Error('No se encontraron datos.');
-      current=fresh;failure=null;emit();return structuredClone(current);
+      clearTimeout(timer);current=fresh;failure=null;needsReview=inputs.size>0;emit();return structuredClone(current);
     }
-    return {stage,flush,execute,commit,retry,reloadConflict,status,snapshot:()=>structuredClone(current),pending:()=>structuredClone([...inputs.values()]),busy:()=>active>0,dispose:()=>clearTimeout(timer)};
+    function discardPending(){clearTimeout(timer);inputs.clear();failure=null;needsReview=false;emit()}
+    return {stage,flush,execute,commit,retry,reloadConflict,discardPending,status,snapshot:()=>structuredClone(current),pending:()=>structuredClone([...inputs.values()]),busy:()=>active>0,dispose:()=>clearTimeout(timer)};
   }
   return {create};
 })();

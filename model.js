@@ -79,10 +79,35 @@ const savedDrafts=new Map(DB.people.filter(p=>p.draft).map(p=>[p.id,copy(p.draft
 const draftSaveErrors=new Set();
 function draftHasChanges(p){return Boolean(p.draft)&&JSON.stringify(p.draft)!==JSON.stringify(savedDrafts.get(p.id))}
 let trainingController=null,trainingRepo=null,trainingReady=false;
-async function persist(){
+async function persist(scope={}){
   const db=copy(DB);
   db.people.forEach(p=>{if(savedDrafts.has(p.id))p.draft=copy(savedDrafts.get(p.id));else delete p.draft});
-  try{if(!trainingController)throw Error('El almacenamiento aún no está listo.');await trainingController.commit(uid(),snapshot=>({...snapshot,db,serial}));storageAvailable=true;return true}catch{storageAvailable=false;return false}
+  try{
+    if(!trainingController)throw Error('El almacenamiento aún no está listo.');
+    const baseline=trainingController.snapshot();
+    await trainingController.commit(uid(),snapshot=>{
+      if(scope.personId){
+        const source=db.people.find(p=>p.id===scope.personId),base=baseline.db.people.find(p=>p.id===scope.personId);let target=snapshot.db.people.find(p=>p.id===scope.personId);
+        if(!source)throw Error('No se encontró el alumno a guardar.');
+        if(scope.rejectOpen&&snapshot.db.sessions.some(s=>s.personId===source.id&&s.status==='open'))throw Error('Finalizá el entrenamiento antes de activar otra rutina.');
+        if(!target){target=copy(source);snapshot.db.people.push(target)}
+        else for(const field of scope.fields||[]){
+          if(field==='history'){
+            const previousIds=new Set((base?.history||[]).map(e=>e.id));
+            const additions=(source.history||[]).filter(e=>!previousIds.has(e.id));
+            for(const event of additions)if(!target.history.some(e=>e.id===event.id))target.history.push(copy(event));
+          }else if(field==='records'){
+            const key=r=>JSON.stringify([r.sessionId||r.date,r.blockId||'',r.exerciseId||r.name,r.routineId||'',r.source||'']);
+            const previous=new Map((base?.records||[]).map(r=>[key(r),r]));
+            for(const record of source.records)if(JSON.stringify(record)!==JSON.stringify(previous.get(key(record)))){const index=target.records.findIndex(r=>key(r)===key(record));if(index<0)target.records.push(copy(record));else target.records[index]=copy(record)}
+          }else if(source[field]===undefined)delete target[field];else target[field]=copy(source[field]);
+        }
+      }
+      if(scope.library)snapshot.db.library=copy(db.library);
+      for(const id of scope.templateIds||[]){const source=db.templates.find(r=>r.id===id);if(!source)continue;const i=snapshot.db.templates.findIndex(r=>r.id===id);if(i<0)snapshot.db.templates.push(copy(source));else snapshot.db.templates[i]=copy(source)}
+      snapshot.serial=Math.max(snapshot.serial||0,serial);return snapshot;
+    });storageAvailable=true;return true;
+  }catch{storageAvailable=false;return false}
 }
 async function saveDraft(p){
   if(!p.draft)return false;
@@ -91,7 +116,7 @@ async function saveDraft(p){
   const history=copy(p.history||[]);
   p.draft.savedAt=new Date().toISOString();savedDrafts.set(p.id,copy(p.draft));
   recordHistory(p,'changes','Borrador guardado',routineChanges(previous,p.draft),{draftId:p.draft.id});
-  if(await persist()){draftSaveErrors.delete(p.id);return true}
+  if(await persist({personId:p.id,fields:['draft','history']})){draftSaveErrors.delete(p.id);return true}
   p.draft=working;p.history=history;
   if(previous)savedDrafts.set(p.id,previous);else savedDrafts.delete(p.id);
   draftSaveErrors.add(p.id);return false;
@@ -100,7 +125,7 @@ async function discardDraft(p){
   const working=p.draft,previous=savedDrafts.get(p.id),history=copy(p.history||[]);
   if(working)recordHistory(p,'changes','Borrador descartado',[working.name]);
   delete p.draft;savedDrafts.delete(p.id);
-  if(await persist()){draftSaveErrors.delete(p.id);return true}
+  if(await persist({personId:p.id,fields:['draft','history']})){draftSaveErrors.delete(p.id);return true}
   p.draft=working;p.history=history;if(previous)savedDrafts.set(p.id,previous);return false;
 }
 const state={page:'agenda',person:0,day:0,week:2,period:'six',group:'Espalda',metricName:'Remo con barra agarre prono',customStart:'2026-01-01',customEnd:'2026-03-31',document:'routine',archiveId:null,templateId:null,draftMode:false,bodyMode:'progress',bankPreview:null,empty:false};

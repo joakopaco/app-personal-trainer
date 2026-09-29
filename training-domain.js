@@ -16,7 +16,7 @@ globalThis.TrainingDomain=(()=>{
       if(c.visitId&&(!visit||visit.personId!==p.id||visit.status!=='pending'))fail('Esta visita no se puede iniciar.');
       if(!visit){visit={id:ctx.id(),personId:p.id,date:c.date,time:c.time,status:'pending',source:'walkin',rescheduledFrom:null,rescheduledTo:null};db.visits.push(visit)}
       visit.status='open';const blocks=structuredClone(day.blocks);for(const b of blocks)for(const e of b.exercises)e.skipped=false;
-      db.sessions.push({id:c.sessionId||ctx.id(),personId:p.id,visitId:visit.id,routineId:p.routine.id,period:p.routine.period,dayId:day.id,dayTitle:day.title,week:c.week,startedAt:stamp,date:visit.date,endedAt:null,status:'open',blocks});
+      db.sessions.push({id:c.sessionId||ctx.id(),personId:p.id,visitId:visit.id,routineId:p.routine.id,period:p.routine.period,dayId:day.id,dayTitle:day.title,week:c.week,startedAt:stamp,date:c.date,endedAt:null,status:'open',blocks});
       event(p,'Entrenamiento iniciado',[day.title,`${visit.date} · ${visit.time}`],{sessionId:db.sessions.at(-1).id});return s;
     }
     if(['absent','reschedule'].includes(c.type)){

@@ -33,7 +33,7 @@ async function trainingEditorAction(command){
   const [kind,id,eid]=command.split(':');
   if(kind==='save-draft'&&editorHasInvalid()){throw Error('Corregí el campo inválido antes de guardar el borrador.')}
   if(kind==='block-template-save'){
-    if(editorHasInvalid())throw Error('Corregí los campos marcados.');if(!await persist())throw Error('No se pudo guardar la plantilla. Reintentá.');render();toast('Plantilla guardada.');return true;
+    if(editorHasInvalid())throw Error('Corregí los campos marcados.');if(!await persist({templateIds:[state.templateId]}))throw Error('No se pudo guardar la plantilla. Reintentá.');render();toast('Plantilla guardada.');return true;
   }
   if(kind==='block-resolve'){
     const p=person();for(const [i,d] of modalContext.draftDifferences.entries())if($(`input[name="draft-resolution-${i}"]:checked`).value==='current'){

@@ -42,7 +42,7 @@ async function saveSession(p,records){
   });
   if(corrections.length)recordHistory(p,'changes','Registro de entrenamiento corregido',corrections.map(({before:a,after:b})=>`${b.name}: peso ${a.weight} → ${b.weight} kg · series ${a.sets} → ${b.sets} · reps ${a.reps} → ${b.reps}.`),{corrections});
   p.attendance='Confirmado';
-  if(await persist())return true;
+  if(await persist({personId:p.id,fields:['records','attendance','history']}))return true;
   p.records=previous;p.attendance=attendance;p.history=history;return false;
 }
 function historyEntries(p){
@@ -53,7 +53,7 @@ function historyEntries(p){
   p.records.forEach(r=>{const key=r.sessionId||`${r.date}|${r.routineId||'legacy'}|${r.source||'legacy'}`;if(!sessions.has(key))sessions.set(key,[]);sessions.get(key).push(r)});
   for(const [key,records] of sessions){
     const routine=routines.find(r=>r.id===records[0].routineId);
-    events.push({id:key,date:records[0].date,kind:'sessions',title:records[0].source==='demo'?'Registros de entrenamiento · Muestra':'Entrenamiento registrado',records,routineName:routine?.name||'Registros anteriores'});
+    events.push({id:key,date:records[0].date,recordedAt:records[0].startedAt||records[0].recordedAt,kind:'sessions',title:records[0].source==='demo'?'Registros de entrenamiento · Muestra':'Entrenamiento registrado',records,routineName:routine?.name||'Registros anteriores'});
   }
   return events.sort((a,b)=>b.date.localeCompare(a.date)||(b.recordedAt||'').localeCompare(a.recordedAt||''));
 }

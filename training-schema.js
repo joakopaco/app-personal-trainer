@@ -40,12 +40,15 @@ globalThis.TrainingSchema=(()=>{
   function validate(s){
     if(!object(s)||s.version!==6||!Number.isSafeInteger(s.revision)||s.revision<0||!Array.isArray(s.operationIds)||s.operationIds.some(id=>!text(id))||!object(s.db))fail('Formato de datos incompatible.');
     const db=s.db;unique(db.people,'alumnos');unique(db.templates,'plantillas');unique(db.library,'biblioteca');unique(db.visits,'visitas');unique(db.sessions,'sesiones');
+    if(!db.people.length)fail('La copia no contiene alumnos.');
+    for(const e of db.library)if(!text(e.name)||!e.name.trim()||!text(e.group)||!e.group.trim()||(e.notes!==undefined&&!text(e.notes)))fail('Entrada de biblioteca inválida.');
     if(!object(db.branding))fail('Configuración inválida.');
     const forbidden=new Set(['__proto__','prototype','constructor']);
     function safe(value){if(value&&typeof value==='object')for(const key of Object.keys(value)){if(forbidden.has(key))fail('Clave de datos no permitida.');safe(value[key])}}
     safe(s);
     for(const p of db.people){
       if(!text(p.name)||!Array.isArray(p.weekdays)||p.weekdays.some(v=>!['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].includes(v))||!Array.isArray(p.archives)||!Array.isArray(p.records)||!Array.isArray(p.history))fail('Datos del alumno incompletos.');
+      for(const e of p.history)if(!object(e)||!text(e.id)||!isDate(e.date)||!text(e.type)||!text(e.title)||!Array.isArray(e.details)||e.details.some(d=>!text(d))||(e.recordedAt!==undefined&&!Number.isFinite(Date.parse(e.recordedAt))))fail('Evento de historial inválido.');
       checkRoutine(p.routine);checkRoutine(p.draft);for(const r of p.archives)checkRoutine(r);
       for(const r of p.records){if(!isDate(r.date)||!text(r.name)||!text(r.group)||['weight','sets','reps'].some(k=>!Number.isFinite(r[k])||r[k]<0))fail('Registro anterior inválido.');if(r.sessionId&&!db.sessions.some(x=>x.id===r.sessionId&&x.personId===p.id&&x.status==='closed'))fail('Resultado sin sesión finalizada.');}
     }

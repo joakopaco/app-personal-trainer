@@ -20,8 +20,23 @@ function hydrateTraining(snapshot,preserveWorking=true){
   if(state.draftMode&&!person()?.draft)state.draftMode=false;
   trainingHydratedRevision=snapshot.revision;
 }
+function restoreTrainingContext(){
+  try{
+    const v=JSON.parse(sessionStorage.getItem('pulso-view-v5')||'null');if(!v)return;
+    const index=DB.people.findIndex(p=>p.id===v.personId);if(index<0)return;
+    state.person=index;state.archiveId=person().archives.some(r=>r.id===v.archiveId)?v.archiveId:null;
+    state.templateId=DB.templates.some(r=>r.id===v.templateId)?v.templateId:null;
+    state.draftMode=Boolean(v.draftMode&&person().draft);
+    state.week=Number.isInteger(v.week)?Math.min(4,Math.max(1,v.week)):1;
+    const days=activeRoutine()?.weeks[state.week-1]||[];
+    state.day=Number.isInteger(v.day)?Math.min(Math.max(0,days.length-1),Math.max(0,v.day)):0;
+    state.document=v.document==='progress'?'progress':'routine';
+  }catch{}
+}
 function updateTrainingStatus(){
   if(!trainingController)return;const status=trainingController.status();storageAvailable=!['error','conflict'].includes(status.state);
+  if(['error','conflict'].includes(status.state)&&!$('#training-recovery'))$('#main')?.insertAdjacentHTML('afterbegin','<aside id="training-recovery" class="training-notice" role="alert"><span data-training-status></span><div class="actions"><button type="button" class="btn" data-save-retry data-action="train-retry">Reintentar guardado</button><button type="button" class="btn" data-save-conflict data-action="train-conflict">Revisar otra versión</button></div></aside>');
+  if($('#training-recovery'))$('#training-recovery').hidden=!['error','conflict'].includes(status.state);
   document.querySelectorAll('[data-training-status]').forEach(el=>el.textContent=status.message);
   document.querySelectorAll('.training-savebar,.training-global-status').forEach(el=>el.dataset.state=status.state);
   document.querySelectorAll('[data-save-retry]').forEach(el=>el.hidden=!(status.state==='error'||(trainingController.pending().length&&!trainingController.busy()&&status.state!=='conflict')));
@@ -48,7 +63,7 @@ async function bootTraining(){
     }
     hydrateTraining(snapshot,false);
     trainingController=TrainingController.create({repo:trainingRepo,snapshot,context:trainingContext,onState:update=>{if(update.snapshot.revision!==trainingHydratedRevision)hydrateTraining(update.snapshot);updateTrainingStatus()}});
-    await renewTrainingMonth();
+    await renewTrainingMonth();restoreTrainingContext();
     try{const v=JSON.parse(sessionStorage.getItem('pulso-training-view')||'null');if(v&&DB.sessions.some(s=>s.id===v.sessionId))state.sessionId=v.sessionId}catch{}
     trainingReady=true;route();
     if(!$('.training-global-status'))$('.topbar-right').insertAdjacentHTML('afterbegin','<span class="training-global-status" data-training-status role="status"></span>');
@@ -59,7 +74,11 @@ async function bootTraining(){
   }
 }
 function reportTrainingError(e){
-  updateTrainingStatus();if($('#modal')?.open&&$('#form-error'))error(e.message);else toast(e.message);
+  updateTrainingStatus();
+  if($('#modal')?.open&&$('#form-error')){
+    error(e.message);const status=trainingController.status();
+    if(['error','conflict'].includes(status.state))$('#form-error').insertAdjacentHTML('beforeend',status.state==='conflict'?'<button type="button" class="btn" data-action="train-conflict">Revisar otra versión</button>':'<button type="button" class="btn" data-action="train-retry">Reintentar guardado</button>');
+  }else toast(e.message);
 }
 async function dispatchAction(command){
   if(!trainingReady)return;
@@ -70,12 +89,13 @@ async function dispatchAction(command){
     if(await trainingAction(command))return;
     if(await trainingEditorAction(command))return;
     const externalMutations=new Set(['save-new-exercise','save-student','save-empty-template','confirm-rename-template']);
-    const mustPersist=externalMutations.has(kind)||(state.templateId&&['save-day','remove-day'].includes(kind));
+    const mustPersist=externalMutations.has(kind);
     if(mustPersist)await trainingController.flush();
     const before=mustPersist?trainingController.snapshot():null;
     if(mustPersist)trainingFeedbackBuffer=[];
     if(!await lifecycleAction(command))await runAction(command);
-    if(mustPersist&&!await persist()){
+    const scope=kind==='save-new-exercise'?{library:true}:kind==='save-student'?{personId:person().id,fields:['name','initials','gender','scheduleTimes','scheduleTime','weekdays','count','days','history']}:kind==='save-empty-template'||kind==='confirm-rename-template'?{templateIds:[state.templateId]}:{};
+    if(mustPersist&&!await persist(scope)){
       trainingFeedbackBuffer=null;
       hydrateTraining(before);render();throw new Error('No se pudo guardar. La última versión confirmada sigue intacta. Reintentá desde el aviso de guardado.');
     }
@@ -116,6 +136,7 @@ async function trainingAction(command){
   if(kind==='train-quick-select'){showTrainingStart($('#training-person').value);return true}
   if(kind==='train-visit'){const row=calendarVisits(TODAY).find(x=>x.visit.id===id);if(row)showTrainingStart(row.person.id,row.visit);return true}
   if(kind==='train-start-confirm'){
+    await trainingController.flush();await renewTrainingMonth();
     const sessionId=uid();await commitTraining({type:'start',personId:modalContext.trainingPerson,visitId:trainingVisitContext?.id,sessionId,dayId:$('#training-day').value,week:Number($('#training-week').value),date:TODAY,time:$('#training-time').value},trainingVisitContext);
     const actual=DB.sessions.find(s=>s.personId===modalContext.trainingPerson&&s.status==='open');openTraining(actual.id);return true;
   }
@@ -133,12 +154,25 @@ async function trainingAction(command){
     await trainingController.flush(id);const s=DB.sessions.find(x=>x.id===id),rows=s.blocks.flatMap(b=>b.exercises),omitted=rows.filter(e=>e.skipped);
     modal('Finalizar entrenamiento',DB.people.find(p=>p.id===s.personId).name,`<p>Se registrarán <strong>${rows.length-omitted.length} ejercicios</strong> con los valores guardados.</p><p>${omitted.length} ejercicios marcados como no realizados.</p><p>Los ajustes anteriores quedan en el historial.</p>`,'Finalizar y guardar',`train-finish-confirm:${id}`);return true;
   }
-  if(kind==='train-finish-confirm'){await commitTraining({type:'finish',sessionId:id});await renewTrainingMonth();closeModal();render();toast('Entrenamiento finalizado y guardado.');return true}
-  if(kind==='train-retry'){await trainingController.retry();render();return true}
+  if(kind==='train-finish-confirm'){TODAY=TrainingSchema.dateKey(new Date());await commitTraining({type:'finish',sessionId:id});await renewTrainingMonth();closeModal();render();toast('Entrenamiento finalizado y guardado.');return true}
+  if(kind==='train-retry'){await trainingController.retry();await renewTrainingMonth();closeModal();render();return true}
   if(kind==='train-conflict'){
     modal('Hay una versión más nueva','Otra pestaña guardó datos antes que esta.',`<p>Primero cargá la versión nueva. Tus ${trainingController.pending().length} campos pendientes seguirán disponibles para revisar y volver a guardar.</p><p>Los cambios de formularios fuera del entrenamiento deben ingresarse de nuevo sobre esa versión.</p>`,'Cargar versión nueva','train-conflict-load');return true;
   }
-  if(kind==='train-conflict-load'){await trainingController.reloadConflict();closeModal();render();toast('Versión nueva cargada. Revisá los campos pendientes y pulsá Reintentar para aplicarlos.');return true}
+  if(kind==='train-conflict-load'){
+    await trainingController.reloadConflict();render();
+    const snapshot=trainingController.snapshot(),pending=trainingController.pending();
+    if(!pending.length){closeModal();toast('Versión nueva cargada. Podés volver a ingresar el cambio del formulario.');return true}
+    let canApply=true;
+    const rows=pending.map(input=>{
+      const s=snapshot.db.sessions.find(s=>s.id===input.sessionId),b=s?.blocks.find(b=>b.id===input.blockId),target=input.exerciseId?b?.exercises.find(e=>e.id===input.exerciseId):b;
+      const p=snapshot.db.people.find(p=>p.id===s?.personId);if(s?.status!=='open'||!target)canApply=false;
+      return `<div class="conflict-row"><strong>${escapeHTML(p?.name||'Alumno')} · ${escapeHTML(target?.name||'Ejercicio eliminado')}</strong><p>${trainingFieldLabels[input.field]} guardado: <strong>${escapeHTML(valueLabel(target?.[input.field]))}</strong><br>Tu cambio pendiente: <strong>${escapeHTML(input.raw)}</strong></p>${s?.status!=='open'?'<p>Esta sesión ya se cerró. Para cambiar el resultado, usá Corregir en el historial.</p>':''}</div>`;
+    }).join('');
+    modal('Comparar cambios pendientes','Nada se aplicará hasta que elijas.',`${rows}<div class="actions">${canApply?btn('Aplicar mis cambios','train-conflict-apply','primary'):''}${btn('Descartar cambios pendientes','train-conflict-discard')}</div>`);return true;
+  }
+  if(kind==='train-conflict-apply'){await trainingController.retry();closeModal();render();return true}
+  if(kind==='train-conflict-discard'){trainingController.discardPending();closeModal();render();return true}
   if(kind==='train-correct'){
     const s=DB.sessions.find(s=>s.id===id),b=s?.blocks.find(b=>b.id===bid),e=b?.exercises.find(e=>e.id===eid);if(!e)return true;
     modal('Corregir registro',e.name,`<p>El historial conservará los valores anteriores. La rutina vigente no cambia.</p>${valueControls(e,true)}`,'Guardar corrección',`train-correct-confirm:${id}:${bid}:${eid}`);return true;

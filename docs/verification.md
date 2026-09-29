@@ -105,7 +105,21 @@ Esta actualización reemplaza el guardado automático de borradores de la revisi
 
 ## Revisión 6 · 28 de septiembre de 2026
 
-- Node v24.19.0: 35 pruebas correctas (18 regresiones adaptadas al arranque asíncrono y 17 nuevas). Syntax checks de todos los JS y git diff --check correctos.
+- Node v24.19.0: 43 pruebas correctas (23 regresiones de integración y 20 de esquema, dominio, almacenamiento, controller y respaldo). Syntax checks de todos los JS y git diff --check correctos.
 - IndexedDB real en el navegador integrado: 10 comprobaciones correctas desde tests/browser/training-checks.html. Incluyen cinco sesiones, recuperación desde otra conexión, auditoría, aborto, conflicto, autosave, cierre idempotente, dos sesiones el mismo día, restauración y renovación mensual.
 - Recorrido UI: iniciar una sesión, cambiar 40 → 42 kg, esperar confirmación y recargar. La sesión sigue abierta y el campo conserva 42 kg.
-- Continúan las comprobaciones visuales y la revisión independiente; se documentarán sus resultados al concluir.
+- Recorrido UI adicional: cinco sesiones abiertas con selector, valor 44 kg recuperado tras recarga, conflicto real entre dos pestañas (44 remoto / 46 pendiente) y descarte explícito sin sobrescribir. Campo -1 rechazado y recuperación al corregirlo.
+- Camila: cuarto bloque «Fuerza extra», ejercicio agregado, 35 kg / 3 series / 8 repeticiones / micro 45 s, macro 90 s entre bloques. Guardar, recargar con el mismo alumno/borrador y activar conservó esos valores. Falta sin reprogramación confirmada y recuperada al recargar.
+- Revisión visual de escritorio a 1280 px y documento móvil dentro de iframe 390 × 640 px. El selector de alumnos queda accesible durante el desplazamiento y los campos tienen etiquetas y tamaño táctil. Se corrigió la superposición de la navegación fija móvil. Capturas: preview-v6-live-desktop.jpg, preview-v6-live-mobile.jpg y preview-v6-validation.jpg.
+- Limitación del entorno: el control de viewport no cambió el ancho real; se usó el iframe del arnés responsive-check.html. No se afirma haber verificado 1440 px ni un dispositivo físico.
+- Revisión independiente del conjunto hasta 462f593: corregidos el sobrescrito de autosave por un guardado genérico, reintento de cierre fallido, aplicación involuntaria de valores tras conflicto, fecha obsoleta al cruzar medianoche, filtración de una plantilla sin guardar y validación insuficiente de historial/biblioteca importados. Cada corrección tiene regresión; se corrigió también el orden de resultados del mismo día.
+- Los guardados genéricos ahora aplican únicamente los campos solicitados sobre la última revisión. Los pendientes tras conflicto permanecen bloqueados hasta aplicar o descartar explícitamente. Recuperación por error/conflicto accesible también en agenda y formularios.
+- Fuera del alcance aprobado: backend, autenticación, respaldo automático externo y PDF real. Ninguno se anuncia como implementado. Borrar datos del navegador elimina la base; guardar el JSON fuera del dispositivo es necesario para cubrir esa pérdida.
+
+### Decisiones de ejecución
+
+- Tareas 1–9 implementadas en la rama codex/entrenamiento-en-vivo, desde f4a4740. Persistencia y migración separadas de dominio, controlador e interfaz; integración en training-app.js y training-editor.js para mantener las operaciones puras comprobables.
+- Pruebas de dominio y continuidad comparten fixture/archivo. Las tareas de interfaz 5–8 comparten un commit de integración por sus dependencias asíncronas. Plantillas usan guardado explícito para preservar ediciones incompletas.
+- Servidor local en puerto 4175, porque había otros puertos de vista previa en uso. Pruebas de IndexedDB en base temporal aislada; recorridos visuales con datos ficticios.
+- El registro de ejecución se mantuvo con PowerShell en lugar de utilidades Bash. Se conserva este resumen versionado y se elimina solamente el directorio temporal de este plan.
+- Se conserva la rama y el worktree de Codex con la demo en ejecución. No se publica ni se integra a main en esta entrega.

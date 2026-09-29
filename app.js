@@ -1,5 +1,5 @@
 let modalContext={};
-function render(){saveViewContext();navigation();$('#main').innerHTML=views[state.page]();document.title=`Pulso — ${$('#breadcrumb').textContent}`;if(typeof updateTrainingStatus==='function')updateTrainingStatus();if(typeof restoreRoutineInputs==='function')restoreRoutineInputs()}
+function render(){if(typeof rememberTrainingLayout==='function')rememberTrainingLayout();saveViewContext();navigation();$('#main').innerHTML=views[state.page]();document.title=`Pulso — ${$('#breadcrumb').textContent}`;if(typeof updateTrainingStatus==='function')updateTrainingStatus();if(typeof restoreRoutineInputs==='function')restoreRoutineInputs()}
 function go(page){if(location.hash===`#${page}`){state.page=page;render()}else location.hash=page;window.scrollTo(0,0)}
 function route(){let page=location.hash.slice(1);state.page=views[page]?page:'agenda';render();window.scrollTo(0,0)}
 function toast(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),4500)}
