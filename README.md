@@ -1,8 +1,53 @@
-# Pulso · Seguimiento para personal trainers
+# Pulso · Herramienta para personal trainers
 
-La evolución a MVP web con cuentas, Supabase y Vercel está documentada en [Plan de desarrollo del MVP](docs/PLAN-MVP.md). Es una propuesta para revisión; la aplicación actual sigue siendo la demo local descrita abajo.
+MVP web implementado con React/TypeScript, Supabase Auth/Postgres y cola local en IndexedDB. El uso diario prioriza celular; la computadora permite preparar rutinas, plantillas y revisar progreso. Solo los entrenadores tienen cuenta; cada uno ve sus propios alumnos.
 
-Servir con `python -m http.server 4175 --bind 127.0.0.1` y abrir http://127.0.0.1:4175/#agenda. Mantener el mismo navegador y origen (dirección y puerto) para recuperar los datos locales.
+## Ejecutar la app nueva en local
+
+```text
+npm ci
+npm run db:start
+npm run local:setup
+npm run dev
+```
+
+Requiere Node 24 y Docker Desktop. Abrir **http://127.0.0.1:5173**. Las dos cuentas ficticias están en `.local/accounts.json` (archivo privado, ignorado por Git). `local:setup` rota sus contraseñas si se repite. La nueva app no importa la demo automáticamente.
+
+- Hoy: agenda, inasistencia sin reprogramar, cancelación y entrenamiento espontáneo; acceso rápido a alumnos entrenando.
+- Entrenamiento: peso/reps/series/descansos inline, alcance de ajuste elegible, series observadas, corrección con motivo y cierre explícito. Varios alumnos mantienen sus valores independientes.
+- Rutinas: cuatro semanas, días y bloques, copias independientes, borradores incompletos, publicación versionada y comparación de cambios. El mes nuevo continúa la última rutina cuando corresponde.
+- Biblioteca: catálogo inicial en español, favoritos, ejercicios propios, imágenes privadas y 12 ilustraciones con créditos verificables.
+- Historial: resultados cerrados, valores anteriores/nuevos, filtros, volumen, series por músculo y CSV. Los registros v6 se conservan como agregados antiguos.
+- Ajustes: reintentos, conflictos, recuperación de entrenamiento de otro mes, exportación e importación explícita v6. Salir o actualizar se bloquea mientras haya pendientes.
+
+**Guardado:** primero se confirma una transacción local; después la app indica sincronización cuando el servidor confirma. Recargar offline conserva los comandos ya guardados. La caché no reemplaza un backup: borrar datos del navegador puede perder cambios que todavía no llegaron al servidor. El acceso offline requiere preparación previa y se limita a 24 h desde la verificación.
+
+## Verificar
+
+```text
+npm run typecheck
+npm test
+npm run test:db
+npm run test:e2e
+npm run build
+npm run test:pwa
+npm run backup:local
+npm run restore:check
+```
+
+E2E requiere la instancia local y las cuentas generadas; utiliza datos ficticios y limpia sus fixtures. La prueba de carga crea temporalmente 500 alumnos y 25 sesiones. El ensayo de recuperación usa un destino aislado. No ejecutar pruebas destructivas contra un proyecto real.
+
+## Estado y operación
+
+[Verificación del MVP](docs/verification-mvp.md) distingue evidencia local y pendientes externos. [Despliegue](docs/ops/deploy.md), [respaldo y restauración](docs/ops/backup-restore.md), [incidentes](docs/ops/incident-response.md), [privacidad](docs/ops/privacy.md), [piloto](docs/ops/pilot.md) y [Android/iOS](docs/mobile-readiness.md).
+
+No hay publicación en Vercel ni Supabase remoto: el usuario indicó avanzar primero en local. SMTP real, backups externos, dispositivos físicos y la semana de piloto son pasos posteriores. La app no debe presentarse como un servicio productivo con recuperación garantizada antes de completarlos.
+
+Arquitectura: `apps/web` contiene la interfaz y adaptadores; `packages/domain` las reglas/contratos; `packages/sync` la persistencia/cola; `supabase/migrations` el esquema y las operaciones autorizadas. [Plan original](docs/PLAN-MVP.md) y [decisiones de implementación](docs/implementation-decisions.md).
+
+## Demo histórica v6 (se conserva aparte)
+
+La documentación que sigue describe exclusivamente la demo anterior, servida desde la raíz con `python -m http.server 4175 --bind 127.0.0.1`. No describe la persistencia del MVP nuevo.
 
 ## Entrenamiento en vivo · revisión 6
 

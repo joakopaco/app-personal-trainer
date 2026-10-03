@@ -12,7 +12,7 @@
   },
   "scripts": {
     "dev": "npm run dev --workspace apps/web",
-    "build": "npm run build --workspace apps/web",
+    "build": "node scripts/verify-build-env.mjs && npm run build --workspace apps/web && node scripts/build-pwa.mjs",
     "typecheck": "tsc --build --pretty false",
     "test": "npm run test:unit && npm run test:legacy",
     "test:unit": "vitest run",
@@ -20,7 +20,11 @@
     "test:e2e": "playwright test",
     "test:db": "supabase test db",
     "db:start": "supabase start",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "test:pwa": "playwright test --config playwright.pwa.config.ts",
+    "local:setup": "node scripts/setup-local.mjs",
+    "backup:local": "node scripts/ops/backup-local.mjs",
+    "restore:check": "node scripts/ops/restore-check-local.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",
@@ -42,6 +46,7 @@
     "@vitejs/plugin-react": "6.1.1",
     "fake-indexeddb": "6.2.5",
     "jsdom": "30.1.1",
+    "prettier": "3.9.9",
     "supabase": "2.119.0",
     "typescript": "7.0.2",
     "vite": "8.3.2",

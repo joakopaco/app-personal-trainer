@@ -10,7 +10,7 @@
 
 **Spec:** [Diseño completo](../specs/2026-10-03-mvp-web-cloud-design.md). Leer también la [investigación](../../research/2026-10-03-referencias-producto.md).
 
-Estado: planificación, ninguna tarea de este plan ejecutada. La implementación v6 previa es la referencia funcional, no prueba del backend futuro.
+Estado al 2026-10-03: implementación local y batería de aceptación ejecutadas. Ver `docs/verification-mvp.md` y `docs/implementation-decisions.md` para evidencias y desvíos. Las casillas originales que combinan trabajo local con staging/dispositivos/piloto permanecen pendientes hasta acreditar esos destinos.
 
 ## Global Constraints
 

@@ -1,0 +1,778 @@
+[
+  {
+    "exerciseId": "sentadilla-con-barra",
+    "sourceRevision": "aac599224bb9780305239607ef98540b7e0ce389",
+    "sourceUrl": "https://github.com/bryllim/workout-guide/tree/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/squat",
+    "frames": [
+      {
+        "path": "/exercise-art/sentadilla-con-barra-1.svg",
+        "sha256": "3c77a2088edf3271b7f2034154979e1adcdbb2e1c467ad2cc58cedc6e92d98b9",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/squat/frame-1.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "source": {
+            "name": "Everkinetic",
+            "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0122-tension.svg",
+            "license": "CC BY-SA 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+            "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+          }
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/sentadilla-con-barra-2.svg",
+        "sha256": "5bc4894cf2c9dc28d500ed6cae394c68ad9ae50cdc998414ff71f831fde5cd03",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/squat/frame-2.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/sentadilla-con-barra-3.svg",
+        "sha256": "147708f94d0dffc717433809eb97be64dc11ee2c5f0ae3f7bae2c66c248f3ff5",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/squat/frame-3.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "attribution": {
+      "creator": "Bryl Lim",
+      "creatorUrl": "https://bryllim.com",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source": {
+        "name": "Everkinetic",
+        "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0122-tension.svg",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+      }
+    },
+    "modifications": "None. Original SVG frames displayed as images with optional frame playback."
+  },
+  {
+    "exerciseId": "press-de-banca-con-barra",
+    "sourceRevision": "aac599224bb9780305239607ef98540b7e0ce389",
+    "sourceUrl": "https://github.com/bryllim/workout-guide/tree/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/bench-press",
+    "frames": [
+      {
+        "path": "/exercise-art/press-de-banca-con-barra-1.svg",
+        "sha256": "8d2e44a4623545d6de7318bd7e9e61ca6c70b79847ef0360973a8ad6ec4a7d27",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/bench-press/frame-1.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "source": {
+            "name": "Everkinetic",
+            "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0042-tension.svg",
+            "license": "CC BY-SA 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+            "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+          }
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/press-de-banca-con-barra-2.svg",
+        "sha256": "5803a111505f7d6e64c1f71e06d689ef2c701678e514147eca490a74608973fe",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/bench-press/frame-2.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/press-de-banca-con-barra-3.svg",
+        "sha256": "870ede64650ba4b2e5298dfe34388de5ea59cc433fadf7821d6f1440c2c9bd49",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/bench-press/frame-3.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "attribution": {
+      "creator": "Bryl Lim",
+      "creatorUrl": "https://bryllim.com",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source": {
+        "name": "Everkinetic",
+        "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0042-tension.svg",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+      }
+    },
+    "modifications": "None. Original SVG frames displayed as images with optional frame playback."
+  },
+  {
+    "exerciseId": "press-inclinado-con-barra",
+    "sourceRevision": "aac599224bb9780305239607ef98540b7e0ce389",
+    "sourceUrl": "https://github.com/bryllim/workout-guide/tree/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/incline-bench-press",
+    "frames": [
+      {
+        "path": "/exercise-art/press-inclinado-con-barra-1.svg",
+        "sha256": "732b5e42719b4799ec9646122a3ab763a57959e8fcb3ed6020d1ff46ac910516",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/incline-bench-press/frame-1.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "source": {
+            "name": "Everkinetic",
+            "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0043-tension.svg",
+            "license": "CC BY-SA 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+            "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+          }
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/press-inclinado-con-barra-2.svg",
+        "sha256": "e4073128dee0b0134ca07c4e88fa677a0e71984790bb6f9f3b2ba69d1f5f1314",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/incline-bench-press/frame-2.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/press-inclinado-con-barra-3.svg",
+        "sha256": "9bc47e911414d49da33869423b9be62305a7869a588efd06770789ba1289ecac",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/incline-bench-press/frame-3.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "attribution": {
+      "creator": "Bryl Lim",
+      "creatorUrl": "https://bryllim.com",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source": {
+        "name": "Everkinetic",
+        "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0043-tension.svg",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+      }
+    },
+    "modifications": "None. Original SVG frames displayed as images with optional frame playback."
+  },
+  {
+    "exerciseId": "press-de-banca-con-mancuernas",
+    "sourceRevision": "aac599224bb9780305239607ef98540b7e0ce389",
+    "sourceUrl": "https://github.com/bryllim/workout-guide/tree/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/dumbbell-bench-press",
+    "frames": [
+      {
+        "path": "/exercise-art/press-de-banca-con-mancuernas-1.svg",
+        "sha256": "11be05184926c40731c131b8925907253f54229b47bd3dd1ebb406e76f9a52cf",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/dumbbell-bench-press/frame-1.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "source": {
+            "name": "Everkinetic",
+            "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0055-tension.svg",
+            "license": "CC BY-SA 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+            "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+          }
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/press-de-banca-con-mancuernas-2.svg",
+        "sha256": "b40c240613024c2c625866ef677e27b6b1adb0f20c6c272d93e300025343f95b",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/dumbbell-bench-press/frame-2.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/press-de-banca-con-mancuernas-3.svg",
+        "sha256": "07d4c597a7c7ab8f042989ee6322df468efc5081c379a796cf10d4c2ea86ef38",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/dumbbell-bench-press/frame-3.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "attribution": {
+      "creator": "Bryl Lim",
+      "creatorUrl": "https://bryllim.com",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source": {
+        "name": "Everkinetic",
+        "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0055-tension.svg",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+      }
+    },
+    "modifications": "None. Original SVG frames displayed as images with optional frame playback."
+  },
+  {
+    "exerciseId": "peso-muerto-rumano",
+    "sourceRevision": "aac599224bb9780305239607ef98540b7e0ce389",
+    "sourceUrl": "https://github.com/bryllim/workout-guide/tree/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/romanian-deadlift",
+    "frames": [
+      {
+        "path": "/exercise-art/peso-muerto-rumano-1.svg",
+        "sha256": "d7fc95623dc527caaaa0528aacc682f42c7c2c42fc4824fc27ad211eff242bc5",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/romanian-deadlift/frame-1.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "source": {
+            "name": "Everkinetic",
+            "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0118-tension.svg",
+            "license": "CC BY-SA 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+            "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+          }
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/peso-muerto-rumano-2.svg",
+        "sha256": "199360ca192792c267414c01fce1f1170b7315577684fb107dc54f3426b921d3",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/romanian-deadlift/frame-2.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/peso-muerto-rumano-3.svg",
+        "sha256": "e558f71ab48e565116e29e42b05ea4e294ccd29e41e37a7c406632d68a86c6db",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/romanian-deadlift/frame-3.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "attribution": {
+      "creator": "Bryl Lim",
+      "creatorUrl": "https://bryllim.com",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source": {
+        "name": "Everkinetic",
+        "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0118-tension.svg",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+      }
+    },
+    "modifications": "None. Original SVG frames displayed as images with optional frame playback."
+  },
+  {
+    "exerciseId": "remo-con-barra",
+    "sourceRevision": "aac599224bb9780305239607ef98540b7e0ce389",
+    "sourceUrl": "https://github.com/bryllim/workout-guide/tree/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/barbell-row",
+    "frames": [
+      {
+        "path": "/exercise-art/remo-con-barra-1.svg",
+        "sha256": "83c883bca332edf8f30b8283245d7db131310804483c82a9bf66ae5d6bca7f4e",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/barbell-row/frame-1.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "source": {
+            "name": "Everkinetic",
+            "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0026-tension.svg",
+            "license": "CC BY-SA 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+            "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+          }
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/remo-con-barra-2.svg",
+        "sha256": "43c19bbe88c9a6736ee41c6c8bb9fe1568eeae129ebd72c12a5c7e3deacbfd48",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/barbell-row/frame-2.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/remo-con-barra-3.svg",
+        "sha256": "d096efdf4d2f9cfa75b27ce4b3f675443a1a36c467836c5389b753b9e82c1fa8",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/barbell-row/frame-3.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "attribution": {
+      "creator": "Bryl Lim",
+      "creatorUrl": "https://bryllim.com",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source": {
+        "name": "Everkinetic",
+        "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0026-tension.svg",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+      }
+    },
+    "modifications": "None. Original SVG frames displayed as images with optional frame playback."
+  },
+  {
+    "exerciseId": "jalon-al-pecho",
+    "sourceRevision": "aac599224bb9780305239607ef98540b7e0ce389",
+    "sourceUrl": "https://github.com/bryllim/workout-guide/tree/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/lat-pulldown",
+    "frames": [
+      {
+        "path": "/exercise-art/jalon-al-pecho-1.svg",
+        "sha256": "6bd3bf4edda543bb2cf255e0071122f00b0846d7f92f661c6139035271330e3e",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/lat-pulldown/frame-1.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "source": {
+            "name": "Everkinetic",
+            "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0093-tension.svg",
+            "license": "CC BY-SA 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+            "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+          }
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/jalon-al-pecho-2.svg",
+        "sha256": "2141b7381f05cb6756a787039db8e26e58b98af4fc5a7aeca62c33d661986ef2",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/lat-pulldown/frame-2.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/jalon-al-pecho-3.svg",
+        "sha256": "79964e577839b16e4612af09431993f668f5c52812d2aaeeafcf670c5571a281",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/lat-pulldown/frame-3.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "attribution": {
+      "creator": "Bryl Lim",
+      "creatorUrl": "https://bryllim.com",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source": {
+        "name": "Everkinetic",
+        "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0093-tension.svg",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+      }
+    },
+    "modifications": "None. Original SVG frames displayed as images with optional frame playback."
+  },
+  {
+    "exerciseId": "hip-thrust-con-barra",
+    "sourceRevision": "aac599224bb9780305239607ef98540b7e0ce389",
+    "sourceUrl": "https://github.com/bryllim/workout-guide/tree/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/hip-thrust",
+    "frames": [
+      {
+        "path": "/exercise-art/hip-thrust-con-barra-1.svg",
+        "sha256": "67afc4108e8e6e523a26fa59c9239346f368cc86d300da49c593de28deaf016e",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/hip-thrust/frame-1.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/hip-thrust-con-barra-2.svg",
+        "sha256": "f13c222022d3eef114f179766fd7936623061bd94c85d92f653a310cc35e2e72",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/hip-thrust/frame-2.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/hip-thrust-con-barra-3.svg",
+        "sha256": "cdf1026096f5ab12d7b183eb10f7e102f56e5061288947af2db7b6739549ba46",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/hip-thrust/frame-3.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "attribution": {
+      "creator": "Bryl Lim",
+      "creatorUrl": "https://bryllim.com",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    "modifications": "None. Original SVG frames displayed as images with optional frame playback."
+  },
+  {
+    "exerciseId": "curl-con-barra",
+    "sourceRevision": "aac599224bb9780305239607ef98540b7e0ce389",
+    "sourceUrl": "https://github.com/bryllim/workout-guide/tree/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/bicep-curl",
+    "frames": [
+      {
+        "path": "/exercise-art/curl-con-barra-1.svg",
+        "sha256": "d1af040a7d87a0778dbdb18417a877f7bfe0b8c5f3d1333c36739f5e8e4a83d9",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/bicep-curl/frame-1.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "source": {
+            "name": "Everkinetic",
+            "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0224-tension.svg",
+            "license": "CC BY-SA 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+            "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+          }
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/curl-con-barra-2.svg",
+        "sha256": "28d48b887e25fdf20f958044f1fc7e7d3510612b690b6506052145fa66d83b36",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/bicep-curl/frame-2.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/curl-con-barra-3.svg",
+        "sha256": "c80fb53d7ec15379eb2e57fcec366da053589d0241930201548df78ceb9e9b98",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/bicep-curl/frame-3.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "attribution": {
+      "creator": "Bryl Lim",
+      "creatorUrl": "https://bryllim.com",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source": {
+        "name": "Everkinetic",
+        "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0224-tension.svg",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+      }
+    },
+    "modifications": "None. Original SVG frames displayed as images with optional frame playback."
+  },
+  {
+    "exerciseId": "elevaciones-laterales",
+    "sourceRevision": "aac599224bb9780305239607ef98540b7e0ce389",
+    "sourceUrl": "https://github.com/bryllim/workout-guide/tree/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/lateral-raise",
+    "frames": [
+      {
+        "path": "/exercise-art/elevaciones-laterales-1.svg",
+        "sha256": "51716817454492e555ac9796a030fc985b244c6b2b169e44ec51a9896902c34d",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/lateral-raise/frame-1.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "source": {
+            "name": "Everkinetic",
+            "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0018-tension.svg",
+            "license": "CC BY-SA 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+            "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+          }
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/elevaciones-laterales-2.svg",
+        "sha256": "29537f101f7d0a4bcd3cf302ae2fb7e5c38a88dfbb7ee80c4d3dd273892e163b",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/lateral-raise/frame-2.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/elevaciones-laterales-3.svg",
+        "sha256": "19295b5e0208b38a8efefbcfb7c5716132fa67273c5e7accd170004672025eb2",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/lateral-raise/frame-3.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "attribution": {
+      "creator": "Bryl Lim",
+      "creatorUrl": "https://bryllim.com",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source": {
+        "name": "Everkinetic",
+        "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0018-tension.svg",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+      }
+    },
+    "modifications": "None. Original SVG frames displayed as images with optional frame playback."
+  },
+  {
+    "exerciseId": "plancha-frontal",
+    "sourceRevision": "aac599224bb9780305239607ef98540b7e0ce389",
+    "sourceUrl": "https://github.com/bryllim/workout-guide/tree/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/plank",
+    "frames": [
+      {
+        "path": "/exercise-art/plancha-frontal-1.svg",
+        "sha256": "0f65a842d151f80918e4ee45d1a9f659dd5a82e2d9857c9ad6ae06832a872e94",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/plank/frame-1.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/plancha-frontal-2.svg",
+        "sha256": "00210f9137bfe8e801e9287f1ba9427fe841b1128a4e8f69ea8b1bcb96c9d4a7",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/plank/frame-2.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/plancha-frontal-3.svg",
+        "sha256": "d768cc8d2ad533e840eece02df9e79ad4836f59990dc6dea5e1b2005b27e892c",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/plank/frame-3.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "attribution": {
+      "creator": "Bryl Lim",
+      "creatorUrl": "https://bryllim.com",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    "modifications": "None. Original SVG frames displayed as images with optional frame playback."
+  },
+  {
+    "exerciseId": "flexiones-de-brazos",
+    "sourceRevision": "aac599224bb9780305239607ef98540b7e0ce389",
+    "sourceUrl": "https://github.com/bryllim/workout-guide/tree/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/push-up",
+    "frames": [
+      {
+        "path": "/exercise-art/flexiones-de-brazos-1.svg",
+        "sha256": "52513e555c392c30e2b3f33a4b99cd4308295ca8b9fb843acd566c287f13a316",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/push-up/frame-1.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "source": {
+            "name": "Everkinetic",
+            "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0077-tension.svg",
+            "license": "CC BY-SA 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+            "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+          }
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/flexiones-de-brazos-2.svg",
+        "sha256": "2a9b7c9ee2a1aac8c72365ecabb17fc4bbbaf256cf1d7bcfdc7d0be50268673d",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/push-up/frame-2.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      },
+      {
+        "path": "/exercise-art/flexiones-de-brazos-3.svg",
+        "sha256": "2737d04ab40534ce25a6be5579fe24002dd64fa4bcce69cee46b213deeeaa20d",
+        "sourceUrl": "https://raw.githubusercontent.com/bryllim/workout-guide/aac599224bb9780305239607ef98540b7e0ce389/packages/workout-guide/assets/push-up/frame-3.svg",
+        "attribution": {
+          "creator": "Bryl Lim",
+          "creatorUrl": "https://bryllim.com",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "attribution": {
+      "creator": "Bryl Lim",
+      "creatorUrl": "https://bryllim.com",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source": {
+        "name": "Everkinetic",
+        "url": "https://github.com/everkinetic/data/blob/main/dist/svg/0077-tension.svg",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "changes": "Rasterized on a transparent 512 × 512 canvas, recolored for monochrome display, and vector-traced."
+      }
+    },
+    "modifications": "None. Original SVG frames displayed as images with optional frame playback."
+  }
+]

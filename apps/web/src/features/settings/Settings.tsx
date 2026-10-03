@@ -1,11 +1,486 @@
-import {useState} from 'react';
-import {useData} from '../../app/DataProvider';
-import {useAuth} from '../auth/AuthProvider';
-import {cloud} from '../../adapters/supabase';
-import {gateway} from '../../adapters/supabase-gateway';
-export function download(name:string,value:unknown){const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-export function Settings(){const data=useData(),auth=useAuth();const[message,setMessage]=useState(''),[password,setPassword]=useState(''),[deleting,setDeleting]=useState(false);const[busy,setBusy]=useState(false);
- async function signOut(){setBusy(true);try{if(await data.db.hasPending())throw Error('Hay cambios pendientes. Sincronizalos o exportalos y revisalos antes de salir.');if((await data.db.meta.toArray()).some(m=>m.key.startsWith('admin:')||m.key.startsWith('draft:')))throw Error('Hay borradores u operaciones administrativas sin confirmar. Guardalos o exportalos antes de salir.');await data.db.purge();const{error}=await cloud().auth.signOut({scope:'local'});if(error)throw error;location.assign('/login');}catch(e){setMessage((e as Error).message);}finally{setBusy(false);}}
- return <><p className="eyebrow">TU ESPACIO</p><h1>Ajustes</h1>{message&&<p className="notice" role="status">{message}</p>}<div className="stack"><section className="card"><h2>Cuenta</h2><p>{auth.session?.user.email}</p><button className="button secondary" disabled={busy} onClick={signOut}>Cerrar sesión</button><p className="auth-note">Al salir se limpia la caché privada de este navegador. Los datos confirmados permanecen en el servidor.</p></section><section className="card stack"><h2>Centro de sincronización</h2><p>{data.pending.length?`${data.pending.length} operaciones por confirmar`:'No hay operaciones de entrenamiento pendientes.'}</p><div className="row"><button className="button" onClick={()=>void data.sync(true)}>Reintentar sincronización</button><button className="button secondary" onClick={async()=>download('pulso-pendientes.json',await data.db.exportPending())}>Exportar pendientes</button><button className="button secondary" onClick={()=>void data.refresh()}>Actualizar datos</button></div>{data.pending.filter(p=>p.state==='conflict'||p.state==='rejected').map(p=><div className="notice" key={p.operationId}><h3>{data.rows.find(r=>r.studentId===p.studentId)?.projection.student.name}</h3><p>{p.error}</p><p>Operación: {p.command.kind} · Valor local: {JSON.stringify(p.command.payload.value??p.command.payload)}</p>{p.remote&&<p>Versión remota: {p.remote.revision}. Consultá el valor confirmado antes de reemplazarlo.</p>}<div className="row"><button className="button secondary" onClick={async()=>{download('pulso-conflicto-'+p.studentId+'.json',await data.db.exportPending());setMessage('Copia descargada. Podés conservar la versión remota con el botón de descarte explícito.');}}>Exportar antes de resolver</button><button className="button danger" onClick={async()=>{if(!confirm('Descartar TODOS los cambios pendientes de este alumno y conservar la versión del servidor. ¿Continuar?'))return;try{const remote=await gateway(data.db.scope).fetchStudent(data.db.scope,p.studentId);await data.db.discardStudentQueue(p.studentId,remote);setMessage('Se conservó la versión del servidor.');}catch(e){setMessage((e as Error).message);}}}>Descartar cola de este alumno</button></div></div>)}</section><ExportSection/><section className="card"><h2>Solicitud de eliminación de cuenta</h2><p>Es distinta de archivar un alumno. Requiere verificar tu acceso y revisión del responsable del servicio.</p><button className="link-button" onClick={()=>setDeleting(!deleting)}>Solicitar eliminación</button>{deleting&&<form className="stack" onSubmit={async e=>{e.preventDefault();try{const{error}=await cloud().auth.signInWithPassword({email:auth.session!.user.email!,password});if(error)throw error;const result=await cloud().rpc('request_account_deletion');if(result.error)throw result.error;setMessage('Solicitud registrada. La cuenta aún no fue eliminada.');setPassword('');setDeleting(false);}catch{setMessage('No se pudo verificar la identidad o registrar la solicitud.');}}}><label className="field">Confirmar contraseña<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="button danger">Registrar solicitud</button></form>}</section></div></>;
+import { queueHealth } from "../../adapters/telemetry";
+import { eventNames } from "@pulso/domain/audit-display";
+import { saveLibrary, type LibraryCommand } from "../../adapters/library";
+import { liveQuery } from "dexie";
+import type { CommandEnvelope } from "@pulso/domain/contracts";
+import { ImportPreview } from "./ImportPreview";
+import { useEffect, useState } from "react";
+import { useData } from "../../app/DataProvider";
+import { useAuth } from "../auth/AuthProvider";
+import { cloud } from "../../adapters/supabase";
+import { gateway } from "../../adapters/supabase-gateway";
+export function download(name: string, value: unknown) {
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),
+  );
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function ExportSection(){const{db}=useData();const[message,setMessage]=useState('');return <section className="card"><h2>Copia de tus datos</h2><p>Descargá los registros confirmados. Esta exportación no reemplaza el respaldo operativo del servidor.</p><button className="button secondary" onClick={async()=>{try{const tables=['students','routine_periods','routine_revisions','routine_drafts','schedule_rules','visits','sessions','session_items','session_sets','audit_events'];const result:Record<string,unknown>={schemaVersion:1,workspaceId:db.scope.workspaceId,exportedAt:new Date().toISOString()};for(const table of tables){const all:unknown[]=[];for(let from=0;;from+=500){const{data,error}=await cloud().from(table).select('*').eq('workspace_id',db.scope.workspaceId).order('id').range(from,from+499);if(error)throw error;all.push(...data);if(data.length<500)break;}result[table]=all;}download('pulso-exportacion.json',result);setMessage('Exportación descargada.');}catch{setMessage('No se pudo completar la exportación. Reintentá con conexión.');}}}>Exportar datos confirmados</button>{message&&<p role="status">{message}</p>}</section>;}
+export function Settings() {
+  const data = useData(),
+    auth = useAuth();
+  const health = queueHealth(data.pending);
+  const [message, setMessage] = useState(""),
+    [password, setPassword] = useState(""),
+    [deleting, setDeleting] = useState(false);
+  const [busy, setBusy] = useState(false);
+  async function signOut() {
+    setBusy(true);
+    try {
+      if (await data.db.hasPending())
+        throw Error(
+          "Hay cambios pendientes. Sincronizalos o exportalos y revisalos antes de salir.",
+        );
+      if (
+        (await data.db.meta.toArray()).some(
+          (m) =>
+            m.key.startsWith("admin:") ||
+            m.key.startsWith("draft:") ||
+            m.key === "library-pending",
+        )
+      )
+        throw Error(
+          "Hay borradores u operaciones administrativas sin confirmar. Guardalos o exportalos antes de salir.",
+        );
+      data.suspend();
+      localStorage.removeItem("pulso-access:" + data.db.scope.userId);
+      await data.db.purge();
+      const { error } = await cloud().auth.signOut({ scope: "local" });
+      if (error) throw error;
+      location.assign("/login");
+    } catch (e) {
+      setMessage((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <p className="eyebrow">TU ESPACIO</p>
+      <h1>Ajustes</h1>
+      {message && (
+        <p className="notice" role="status">
+          {message}
+        </p>
+      )}
+      <div className="stack">
+        <section className="card">
+          <h2>Cuenta</h2>
+          <p>{auth.session?.user.email}</p>
+          <button
+            className="button secondary"
+            disabled={busy}
+            onClick={signOut}
+          >
+            Cerrar sesión
+          </button>
+          <p className="auth-note">
+            Al salir se limpia la caché privada de este navegador. Los datos
+            confirmados permanecen en el servidor.
+          </p>
+        </section>
+        <section className="card stack">
+          <h2>Centro de sincronización</h2>
+          {health.pending > 0 && (
+            <p className="muted">
+              Cambio pendiente más antiguo:{" "}
+              {Math.max(1, Math.ceil(health.oldestSeconds / 60))} min.{" "}
+              {health.needsRetry
+                ? "Hay envíos que necesitan un reintento manual."
+                : ""}
+            </p>
+          )}
+          <p>
+            {data.pending.length
+              ? `${data.pending.length} operaciones por confirmar`
+              : "No hay operaciones de entrenamiento pendientes."}
+          </p>
+          <div className="row">
+            <button className="button" onClick={() => void data.sync(true)}>
+              Reintentar sincronización
+            </button>
+            <button
+              className="button secondary"
+              onClick={async () =>
+                download("pulso-pendientes.json", await data.db.exportPending())
+              }
+            >
+              Exportar pendientes
+            </button>
+            <button
+              className="button secondary"
+              onClick={() => void data.refresh()}
+            >
+              Actualizar datos
+            </button>
+          </div>
+          {data.pending
+            .filter((p) => p.state === "conflict" || p.state === "rejected")
+            .map((p) => (
+              <div className="notice" key={p.operationId}>
+                <h3>
+                  {
+                    data.rows.find((r) => r.studentId === p.studentId)
+                      ?.projection.student.name
+                  }
+                </h3>
+                <p>{p.error}</p>
+                <p>
+                  {eventNames[p.command.kind] ?? "Cambio pendiente"} · Valor
+                  local:{" "}
+                  {JSON.stringify(
+                    p.command.payload.value ??
+                      (p.command.kind === "record_set"
+                        ? {
+                            peso: p.command.payload.weight,
+                            repeticiones: p.command.payload.reps,
+                            segundos: p.command.payload.durationSec,
+                          }
+                        : "Registro de entrenamiento"),
+                  )}
+                </p>
+                {p.remote && (
+                  <p>
+                    Versión remota: {p.remote.revision}. Valor confirmado:{" "}
+                    {JSON.stringify(
+                      (() => {
+                        const item = p
+                          .remote!.sessions.find(
+                            (s) => s.id === p.command.payload.sessionId,
+                          )
+                          ?.items.find(
+                            (i) => i.id === p.command.payload.itemId,
+                          );
+                        const field = String(p.command.payload.field);
+                        return field === "macroRest"
+                          ? item?.macro_rest
+                          : field === "macroTarget"
+                            ? item?.macro_target
+                            : item?.prescription[
+                                field as keyof NonNullable<
+                                  typeof item
+                                >["prescription"]
+                              ];
+                      })(),
+                    ) ?? "La sesión o el ejercicio ya no está disponible"}
+                  </p>
+                )}
+                <div className="row">
+                  {data.rows
+                    .find((r) => r.studentId === p.studentId)
+                    ?.projection.sessions.some(
+                      (s) =>
+                        s.date.slice(0, 7) <
+                        new Date()
+                          .toLocaleDateString("en-CA", {
+                            timeZone: "America/Argentina/Buenos_Aires",
+                          })
+                          .slice(0, 7),
+                    ) && (
+                    <button
+                      className="button secondary"
+                      onClick={async () => {
+                        if (
+                          !confirm(
+                            "Recuperar estos cambios en el entrenamiento del mes anterior y cerrarlo. Las series pendientes se confirmarán con sus valores actuales. La rutina vigente no se modifica. ¿Confirmás que revisaste los valores?",
+                          )
+                        )
+                          return;
+                        const reason = prompt("Motivo de la recuperación:");
+                        if (!reason || reason.trim().length < 3) {
+                          setMessage(
+                            "Ingresá un motivo de al menos 3 caracteres.",
+                          );
+                          return;
+                        }
+                        try {
+                          download(
+                            "pulso-antes-de-recuperar.json",
+                            await data.db.exportPending(),
+                          );
+                          const remote = await gateway(
+                            data.db.scope,
+                          ).fetchStudent(data.db.scope, p.studentId);
+                          await data.db.reconcileHistorical(
+                            p.studentId,
+                            remote,
+                            reason.trim(),
+                          );
+                          await data.sync(true);
+                        } catch (e) {
+                          setMessage((e as Error).message);
+                        }
+                      }}
+                    >
+                      Recuperar y cerrar en su mes original
+                    </button>
+                  )}
+                  {p.remote && (
+                    <button
+                      className="button"
+                      onClick={async () => {
+                        try {
+                          const remote = await gateway(
+                            data.db.scope,
+                          ).fetchStudent(data.db.scope, p.studentId);
+                          if (remote.revision !== p.remote!.revision)
+                            throw Error(
+                              "La versión volvió a cambiar. Actualizá y revisá antes de aplicar.",
+                            );
+                          await data.db.reapplyStudentQueue(
+                            p.studentId,
+                            remote,
+                          );
+                          await data.sync(true);
+                          setMessage(
+                            "Se envió una operación nueva con tu resolución.",
+                          );
+                        } catch (e) {
+                          setMessage((e as Error).message);
+                        }
+                      }}
+                    >
+                      Aplicar mi cambio revisado
+                    </button>
+                  )}
+                  <button
+                    className="button secondary"
+                    onClick={async () => {
+                      download(
+                        "pulso-conflicto-" + p.studentId + ".json",
+                        await data.db.exportPending(),
+                      );
+                      setMessage(
+                        "Copia descargada. Podés conservar la versión remota con el botón de descarte explícito.",
+                      );
+                    }}
+                  >
+                    Exportar antes de resolver
+                  </button>
+                  <button
+                    className="button danger"
+                    onClick={async () => {
+                      if (
+                        !confirm(
+                          "Descartar TODOS los cambios pendientes de este alumno y conservar la versión del servidor. ¿Continuar?",
+                        )
+                      )
+                        return;
+                      try {
+                        const remote = await gateway(
+                          data.db.scope,
+                        ).fetchStudent(data.db.scope, p.studentId);
+                        await data.db.discardStudentQueue(p.studentId, remote);
+                        setMessage("Se conservó la versión del servidor.");
+                      } catch (e) {
+                        setMessage((e as Error).message);
+                      }
+                    }}
+                  >
+                    Descartar cola de este alumno
+                  </button>
+                </div>
+              </div>
+            ))}
+        </section>
+        <AdministrativePending />
+        <ExportSection />
+        <ImportPreview />
+        <section className="card">
+          <h2>Solicitud de eliminación de cuenta</h2>
+          <p>
+            Es distinta de archivar un alumno. Requiere verificar tu acceso y
+            revisión del responsable del servicio.
+          </p>
+          <button
+            className="link-button"
+            onClick={() => setDeleting(!deleting)}
+          >
+            Solicitar eliminación
+          </button>
+          {deleting && (
+            <form
+              className="stack"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const { error } = await cloud().auth.signInWithPassword({
+                    email: auth.session!.user.email!,
+                    password,
+                  });
+                  if (error) throw error;
+                  const result = await cloud().rpc("request_account_deletion");
+                  if (result.error) throw result.error;
+                  setMessage(
+                    "Solicitud registrada. La cuenta aún no fue eliminada.",
+                  );
+                  setPassword("");
+                  setDeleting(false);
+                } catch {
+                  setMessage(
+                    "No se pudo verificar la identidad o registrar la solicitud.",
+                  );
+                }
+              }}
+            >
+              <label className="field">
+                Confirmar contraseña
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </label>
+              <button className="button danger">Registrar solicitud</button>
+            </form>
+          )}
+        </section>
+      </div>
+    </>
+  );
+}
+function ExportSection() {
+  const { db } = useData();
+  const [message, setMessage] = useState("");
+  return (
+    <section className="card">
+      <h2>Copia de tus datos</h2>
+      <p>
+        Descargá los registros confirmados. Esta exportación no reemplaza el
+        respaldo operativo del servidor.
+      </p>
+      <button
+        className="button secondary"
+        onClick={async () => {
+          try {
+            const { data: result, error } = await cloud().rpc(
+              "export_workspace",
+              { workspace_id: db.scope.workspaceId },
+            );
+            if (error || !result) throw Error("No se pudo exportar");
+            const serialized = JSON.stringify(result);
+            const digest = await crypto.subtle.digest(
+              "SHA-256",
+              new TextEncoder().encode(serialized),
+            );
+            result.integrity = {
+              algorithm: "SHA-256",
+              hash: Array.from(new Uint8Array(digest))
+                .map((x) => x.toString(16).padStart(2, "0"))
+                .join(""),
+            };
+            download("pulso-exportacion.json", result);
+            setMessage("Exportación descargada.");
+          } catch {
+            setMessage(
+              "No se pudo completar la exportación. Reintentá con conexión.",
+            );
+          }
+        }}
+      >
+        Exportar datos confirmados
+      </button>
+      {message && <p role="status">{message}</p>}
+    </section>
+  );
+}
+function AdministrativePending() {
+  const data = useData();
+  const [entries, setEntries] = useState<{ key: string; value: unknown }[]>([]),
+    [message, setMessage] = useState("");
+  useEffect(() => {
+    const sub = liveQuery(() => data.db.meta.toArray()).subscribe((rows) =>
+      setEntries(
+        rows.filter(
+          (r) =>
+            r.key.startsWith("admin:") ||
+            r.key.startsWith("draft:") ||
+            r.key === "library-pending",
+        ),
+      ),
+    );
+    return () => sub.unsubscribe();
+  }, [data.db]);
+  if (!entries.length) return null;
+  return (
+    <section className="card stack">
+      <h2>Programación pendiente</h2>
+      <p>Conservada en este dispositivo hasta recibir confirmación.</p>
+      {entries.map((entry) => {
+        if (entry.key === "library-pending")
+          return (
+            <div key={entry.key}>
+              <p>Biblioteca o plantilla pendiente</p>
+              <button
+                className="button secondary"
+                onClick={async () => {
+                  try {
+                    await saveLibrary(data.db, entry.value as LibraryCommand);
+                    setMessage("Biblioteca confirmada.");
+                  } catch (e) {
+                    setMessage((e as Error).message);
+                  }
+                }}
+              >
+                Reintentar biblioteca
+              </button>
+            </div>
+          );
+        const id = entry.key.split(":")[1];
+        const name =
+          data.rows.find((r) => r.studentId === id)?.projection.student.name ??
+          "Alumno nuevo";
+        return (
+          <div className="notice" key={entry.key}>
+            <strong>{name}</strong>
+            {entry.key.startsWith("draft:") ? (
+              <div>
+                <a href={"/rutinas/" + id}>Abrir borrador</a>
+                <button
+                  className="link-button"
+                  onClick={async () => {
+                    download("pulso-borrador-" + id + ".json", entry.value);
+                    if (
+                      confirm(
+                        "Se descargó una copia. ¿Descartar este borrador local? La rutina publicada se conserva.",
+                      )
+                    )
+                      await data.db.meta.delete(entry.key);
+                  }}
+                >
+                  Exportar y descartar borrador local
+                </button>
+              </div>
+            ) : (
+              <button
+                className="button secondary"
+                onClick={async () => {
+                  const c = entry.value as CommandEnvelope;
+                  try {
+                    await data.onlineCommand(
+                      c.studentId,
+                      c.kind,
+                      c.payload,
+                      c.expectedRevision,
+                    );
+                    setMessage("Operación confirmada.");
+                  } catch (e) {
+                    setMessage((e as Error).message);
+                  }
+                }}
+              >
+                Reintentar operación guardada
+              </button>
+            )}
+          </div>
+        );
+      })}
+      {message && <p role="status">{message}</p>}
+    </section>
+  );
+}
