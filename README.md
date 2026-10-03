@@ -1,5 +1,7 @@
 # Pulso · Seguimiento para personal trainers
 
+La evolución a MVP web con cuentas, Supabase y Vercel está documentada en [Plan de desarrollo del MVP](docs/PLAN-MVP.md). Es una propuesta para revisión; la aplicación actual sigue siendo la demo local descrita abajo.
+
 Servir con `python -m http.server 4175 --bind 127.0.0.1` y abrir http://127.0.0.1:4175/#agenda. Mantener el mismo navegador y origen (dirección y puerto) para recuperar los datos locales.
 
 ## Entrenamiento en vivo · revisión 6
