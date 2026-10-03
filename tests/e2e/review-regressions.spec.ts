@@ -28,7 +28,9 @@ test("unregistered annotations remain reviewable and exportable from sync center
     await page.goto("/entrenar/" + a.studentId);
     await page.getByRole("button", { name: /Detalle de series/ }).click();
     await page.getByLabel("Peso serie 2", { exact: true }).fill("27,5");
-    await page.goto("/sincronizacion");
+    await page
+      .getByRole("link", { name: "Revisar cambios pendientes", exact: true })
+      .click();
     await expect(
       page.getByRole("heading", { name: "Anotaciones sin registrar" }),
     ).toBeVisible();

@@ -40,7 +40,9 @@ test("remote and local values are compared and only an explicit resolution overw
     );
     expect(remote.status).toBe("applied");
     await page.unroute("http://127.0.0.1:54341/**");
-    await page.goto("/sincronizacion");
+    await page
+      .getByRole("link", { name: "Revisar cambios pendientes", exact: true })
+      .click();
     await page
       .getByRole("button", { name: "Reintentar sincronización" })
       .click();
