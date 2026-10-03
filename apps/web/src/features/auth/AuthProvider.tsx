@@ -31,8 +31,10 @@ export function AuthProvider({children}:{children:ReactNode}){
     setLoading(true);setError('');
     supabase.rpc('ensure_workspace').then(({data,error})=>{
       if(!active)return;
-      if(error)setError('No pudimos preparar tu espacio. Reintentá cuando tengas conexión.');
-      else setScope(Object.freeze({userId,workspaceId:data.id}));
+      if(error){
+        const cached=localStorage.getItem('pulso-access:'+userId);
+        try{const access=JSON.parse(cached??'null');if(access?.userId===userId&&typeof access.workspaceId==='string'&&Date.now()-access.verifiedAt<86_400_000){setScope(Object.freeze({userId,workspaceId:access.workspaceId}));}else setError('Reconectá para verificar tu acceso. Tus cambios locales se conservan.');}catch{setError('No pudimos preparar tu espacio. Reintentá cuando tengas conexión.');}
+      }else {setScope(Object.freeze({userId,workspaceId:data.id}));localStorage.setItem('pulso-access:'+userId,JSON.stringify({userId,workspaceId:data.id,verifiedAt:Date.now()}));}
       setLoading(false);
     });
     return()=>{active=false;};
