@@ -1,3 +1,5 @@
+> **Actualización 2026-10-03:** Pulso permite registro de entrenadores con confirmación de email, recuperación y reenvío. El selector Alumno muestra Próximamente; no crea cuentas. Una identidad Auth por correo. Logo y paleta lima/negro/blanco actualizados. La app aún corre localmente; configurar Vercel, Supabase cloud, SMTP y Turnstile siguiendo [despliegue](docs/ops/deploy.md) antes del piloto público. El correo local se ve en http://127.0.0.1:54344 y no llega a casillas reales.
+
 # Pulso · Herramienta para personal trainers
 
 MVP web implementado con React/TypeScript, Supabase Auth/Postgres y cola local en IndexedDB. El uso diario prioriza celular; la computadora permite preparar rutinas, plantillas y revisar progreso. Solo los entrenadores tienen cuenta; cada uno ve sus propios alumnos.

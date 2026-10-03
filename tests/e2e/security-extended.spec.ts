@@ -7,7 +7,7 @@ import {
   dropFixture,
 } from "../fixtures/cloud";
 import { prepared } from "../fixtures/prepared";
-test("all private collections deny a second trainer and public signup is disabled", async () => {
+test("all private collections deny a second trainer and unconfirmed signup stays anonymous", async () => {
   const a = await prepared(),
     b = await accountClient(1);
   try {
@@ -54,7 +54,9 @@ test("all private collections deny a second trainer and public signup is disable
     });
     if (signup.data.user)
       await adminClient().auth.admin.deleteUser(signup.data.user.id);
-    expect(signup.error?.code).toBe("signup_disabled");
+    expect(signup.error).toBeNull();
+    expect(signup.data.session).toBeNull();
+    expect((await anon.rpc("ensure_workspace")).error).toBeTruthy();
   } finally {
     await dropFixture(a.studentId);
   }

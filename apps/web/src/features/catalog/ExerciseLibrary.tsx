@@ -209,9 +209,7 @@ export function ExerciseArt({ exerciseId }: { exerciseId: string }) {
     );
   return (
     <>
-      <div
-        style={{ background: "#f7f8f4", borderRadius: 12, textAlign: "center" }}
-      >
+      <div className="exercise-art">
         {failed ? (
           <p>La ilustración no está disponible sin conexión.</p>
         ) : (

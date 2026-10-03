@@ -15,6 +15,13 @@ if (key.split(".").length === 3) {
 }
 if (env.VERCEL) {
   if (
+    !env.VITE_TURNSTILE_SITE_KEY ||
+    /^[123]x0{10}/.test(env.VITE_TURNSTILE_SITE_KEY)
+  )
+    throw Error(
+      "A real Turnstile site key is required for public deployments; enable server-side CAPTCHA in Supabase too.",
+    );
+  if (
     url.protocol !== "https:" ||
     url.hostname !== env.PULSO_EXPECTED_SUPABASE_HOST
   )

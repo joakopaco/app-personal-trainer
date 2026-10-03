@@ -1,31 +1,95 @@
 import { useState, type FormEvent } from "react";
-import { Activity, ArrowRight } from "lucide-react";
+import { ArrowRight, ShieldCheck, Users } from "lucide-react";
 import { cloud, supabase } from "../../adapters/supabase";
+import { Captcha, captchaRequired, captchaSiteKey } from "./Captcha";
+import { Brand } from "../../components/Brand";
+type Mode = "login" | "signup" | "recovery" | "resend";
 export function Login() {
+  const [role, setRole] = useState("trainer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"login" | "recovery">("login");
+  const [repeat, setRepeat] = useState("");
+  const [mode, setMode] = useState<Mode>("login");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [captcha, setCaptcha] = useState("");
+  const [captchaAttempt, setCaptchaAttempt] = useState(0);
+  function changeMode(next: Mode) {
+    setMode(next);
+    setError("");
+    setMessage("");
+    setPassword("");
+    setRepeat("");
+    setCaptcha("");
+    setCaptchaAttempt((x) => x + 1);
+  }
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (
+      busy ||
+      role !== "trainer" ||
+      ((captchaRequired || captchaSiteKey) && !captcha)
+    )
+      return;
+    if (mode === "signup" && password !== repeat) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
     setBusy(true);
     setError("");
     setMessage("");
+    const normalizedEmail = email.trim().toLowerCase();
+    const captchaToken = captcha || undefined;
     try {
-      if (mode === "recovery") {
-        const { error } = await cloud().auth.resetPasswordForEmail(email, {
-          redirectTo: location.origin + "/auth/callback",
+      if (mode === "signup") {
+        const { error, data } = await cloud().auth.signUp({
+          email: normalizedEmail,
+          password,
+          options: {
+            emailRedirectTo: location.origin + "/auth/callback",
+            captchaToken,
+          },
         });
+        // Keep the same message even if a cloud instance was misconfigured
+        // to report existing addresses. Auth must obfuscate these server-side too.
+        if (error && error.code !== "user_already_exists") throw error;
+        if (data.session) await cloud().auth.signOut({ scope: "local" });
+        setPassword("");
+        setRepeat("");
+        setMessage(
+          "Revisá tu correo. Si el email puede registrarse, recibirás un enlace para confirmar tu cuenta. Si ya tenés una cuenta, ingresá o recuperá tu contraseña.",
+        );
+      } else if (mode === "recovery") {
+        const { error } = await cloud().auth.resetPasswordForEmail(
+          normalizedEmail,
+          {
+            redirectTo: location.origin + "/auth/callback",
+            captchaToken,
+          },
+        );
         if (error) throw error;
         setMessage(
           "Si el email tiene una cuenta, recibirás un enlace para recuperar el acceso.",
         );
+      } else if (mode === "resend") {
+        const { error } = await cloud().auth.resend({
+          type: "signup",
+          email: normalizedEmail,
+          options: {
+            emailRedirectTo: location.origin + "/auth/callback",
+            captchaToken,
+          },
+        });
+        if (error) throw error;
+        setMessage(
+          "Si tu cuenta está pendiente de confirmación, recibirás un nuevo enlace. Revisá también el correo no deseado.",
+        );
       } else {
         const { error } = await cloud().auth.signInWithPassword({
-          email,
+          email: normalizedEmail,
           password,
+          options: { captchaToken },
         });
         if (error) throw error;
       }
@@ -33,19 +97,18 @@ export function Login() {
       setError(
         mode === "login"
           ? "No pudimos ingresar. Revisá tus datos, la confirmación del email y tu conexión."
-          : "No pudimos solicitar el enlace. Intentá nuevamente.",
+          : "No pudimos completar la solicitud. Revisá los datos y tu conexión; si ya lo intentaste, esperá un minuto.",
       );
     } finally {
       setBusy(false);
+      setCaptcha("");
+      setCaptchaAttempt((x) => x + 1);
     }
   }
   return (
     <div className="auth-page">
       <section className="auth-story">
-        <div className="brand">
-          <Activity />
-          <span>pulso.</span>
-        </div>
+        <Brand />
         <div>
           <p className="eyebrow">EL ENTRENAMIENTO, EN TUS MANOS</p>
           <h2>
@@ -62,78 +125,193 @@ export function Login() {
       </section>
       <section className="auth-panel">
         <div>
-          <p className="eyebrow">TU ESPACIO PRIVADO</p>
-          <h1>
-            {mode === "login" ? "Tu jornada empieza acá" : "Recuperá tu acceso"}
-          </h1>
-          <p className="muted">
-            {mode === "login"
-              ? "Ingresá con tu cuenta de entrenador."
-              : "Te enviamos un enlace para elegir una contraseña nueva."}
-          </p>
-          {!supabase && (
-            <p className="notice">
-              Falta conectar el entorno local. Ejecutá la preparación indicada
-              en el README.
-            </p>
-          )}
-          <form className="stack" onSubmit={submit}>
-            <label className="field">
-              Email
-              <input
-                type="email"
-                autoComplete="username"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
-            {mode === "login" && (
-              <label className="field">
-                Contraseña
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </label>
-            )}
-            {error && (
-              <p className="error" role="alert">
-                {error}
-              </p>
-            )}
-            {message && (
-              <p className="notice" role="status">
-                {message}
-              </p>
-            )}
-            <button className="button" disabled={busy || !supabase}>
-              {busy
-                ? "Un momento…"
-                : mode === "login"
-                  ? "Ingresar"
-                  : "Enviar enlace"}
-              <ArrowRight size={17} />
-            </button>
-            <button
-              type="button"
-              className="link-button"
-              onClick={() => {
-                setMode(mode === "login" ? "recovery" : "login");
-                setError("");
-                setMessage("");
+          <div className="auth-mobile-brand">
+            <Brand />
+          </div>
+          <label className="field account-picker">
+            Tipo de cuenta
+            <select
+              value={role}
+              disabled={busy}
+              onChange={(e) => {
+                setRole(e.target.value);
+                changeMode("login");
               }}
             >
-              {mode === "login" ? "Olvidé mi contraseña" : "Volver al ingreso"}
-            </button>
-          </form>
-          <p className="auth-note">
-            Acceso por invitación. Cada entrenador tiene su propio espacio y
-            administra las fichas de sus alumnos.
-          </p>
+              <option value="trainer">Entrenador</option>
+              <option value="student">Alumno · Próximamente</option>
+            </select>
+          </label>
+          {role === "student" ? (
+            <div className="coming-soon">
+              <Users size={32} aria-hidden="true" />
+              <p className="eyebrow">EN DESARROLLO</p>
+              <h1>Alumnos, próximamente</h1>
+              <p>
+                Estamos preparando tu espacio para acompañar cada entrenamiento.
+                Por ahora, tu entrenador administra tu ficha.
+              </p>
+              <button
+                className="button secondary"
+                onClick={() => setRole("trainer")}
+              >
+                Volver a entrenador
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="eyebrow">TU ESPACIO PRIVADO</p>
+              <h1>
+                {mode === "login"
+                  ? "Tu jornada empieza acá"
+                  : mode === "signup"
+                    ? "Creá tu cuenta"
+                    : mode === "resend"
+                      ? "Confirmá tu email"
+                      : "Recuperá tu acceso"}
+              </h1>
+              <p className="muted">
+                {mode === "signup"
+                  ? "Un espacio propio para vos y tus alumnos. Confirmá tu correo para empezar."
+                  : mode === "login"
+                    ? "Ingresá con tu cuenta de entrenador."
+                    : mode === "resend"
+                      ? "Te enviamos un nuevo enlace de confirmación."
+                      : "Te enviamos un enlace para elegir una contraseña nueva."}
+              </p>
+              {!supabase && (
+                <p className="notice">
+                  El acceso está en preparación. Intentá más tarde.
+                </p>
+              )}
+              <form className="stack" onSubmit={submit}>
+                <label className="field">
+                  Email
+                  <input
+                    type="email"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    required
+                    value={email}
+                    disabled={busy}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </label>
+                {(mode === "login" || mode === "signup") && (
+                  <label className="field">
+                    Contraseña
+                    <input
+                      type="password"
+                      aria-label="Contraseña"
+                      aria-describedby={
+                        mode === "signup" ? "password-hint" : undefined
+                      }
+                      autoComplete={
+                        mode === "signup" ? "new-password" : "current-password"
+                      }
+                      minLength={mode === "signup" ? 12 : undefined}
+                      required
+                      value={password}
+                      disabled={busy}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    {mode === "signup" && (
+                      <small id="password-hint">
+                        Usá al menos 12 caracteres. Podés usar una frase larga.
+                      </small>
+                    )}
+                  </label>
+                )}
+                {mode === "signup" && (
+                  <label className="field">
+                    Repetí la contraseña
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      required
+                      value={repeat}
+                      disabled={busy}
+                      onChange={(e) => setRepeat(e.target.value)}
+                    />
+                  </label>
+                )}
+                <Captcha key={captchaAttempt} onToken={setCaptcha} />
+                {error && (
+                  <p className="error" role="alert">
+                    {error}
+                  </p>
+                )}
+                {message && (
+                  <p className="notice" role="status">
+                    {message}
+                  </p>
+                )}
+                <button
+                  className="button"
+                  disabled={
+                    busy ||
+                    !supabase ||
+                    (!!(captchaRequired || captchaSiteKey) && !captcha)
+                  }
+                >
+                  {busy
+                    ? "Un momento…"
+                    : mode === "login"
+                      ? "Ingresar"
+                      : mode === "signup"
+                        ? "Crear mi cuenta"
+                        : mode === "resend"
+                          ? "Reenviar confirmación"
+                          : "Enviar enlace"}
+                  <ArrowRight size={17} />
+                </button>
+                <div className="auth-actions">
+                  {mode === "login" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        disabled={busy}
+                        onClick={() => changeMode("signup")}
+                      >
+                        Crear cuenta
+                      </button>
+                      <button
+                        type="button"
+                        className="link-button"
+                        disabled={busy}
+                        onClick={() => changeMode("recovery")}
+                      >
+                        Olvidé mi contraseña
+                      </button>
+                      <button
+                        type="button"
+                        className="link-button"
+                        disabled={busy}
+                        onClick={() => changeMode("resend")}
+                      >
+                        No recibí la confirmación
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="link-button"
+                      disabled={busy}
+                      onClick={() => changeMode("login")}
+                    >
+                      Volver al ingreso
+                    </button>
+                  )}
+                </div>
+              </form>
+              <p className="auth-note">
+                <ShieldCheck size={16} aria-hidden="true" /> Una cuenta por
+                email. Cada entrenador tiene su espacio privado.
+              </p>
+            </>
+          )}
         </div>
       </section>
     </div>

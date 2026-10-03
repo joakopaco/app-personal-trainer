@@ -11,6 +11,7 @@ import { prepared } from "../fixtures/prepared";
 test("offline edits survive a reload and synchronize exactly once", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   const a = await prepared();
   try {
     await page.goto("/login");
@@ -39,7 +40,11 @@ test("offline edits survive a reload and synchronize exactly once", async ({
       .getByRole("button", { name: "Reintentar sincronización" })
       .click();
     await page.goto("/entrenar/" + a.studentId);
-    await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible();
+    // Navigation can interrupt an in-flight send. The durable lease expires
+    // after 30s and the next 2.5s worker tick safely replays its receipt.
+    await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible({
+      timeout: 35_000,
+    });
     const sets = await a.client
       .from("session_sets")
       .select("weight")

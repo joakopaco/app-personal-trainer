@@ -12,9 +12,26 @@ export function AuthCallback() {
   const [verifiedUser, setVerifiedUser] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(true);
   const started = useRef(false);
+  const signupToken = useRef(
+    (() => {
+      const params = new URLSearchParams(location.search);
+      return ["signup", "email"].includes(params.get("type") ?? "")
+        ? params.get("token_hash")
+        : null;
+    })(),
+  );
+  const [confirmingSignup, setConfirmingSignup] = useState(
+    Boolean(signupToken.current),
+  );
   useEffect(() => {
     if (started.current) return;
     started.current = true;
+    if (signupToken.current) {
+      // A GET from an email scanner must not consume a single-use link.
+      history.replaceState(null, "", "/auth/callback");
+      setVerifying(false);
+      return;
+    }
     void (async () => {
       try {
         const params = new URLSearchParams(location.search),
@@ -50,6 +67,28 @@ export function AuthCallback() {
       }
     })();
   }, []);
+  async function confirmSignup() {
+    if (busy || !signupToken.current) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await cloud().auth.verifyOtp({
+        token_hash: signupToken.current,
+        type: "signup",
+      });
+      if (result.error || !result.data.session?.user.email_confirmed_at)
+        throw Error("Invalid confirmation");
+      signupToken.current = null;
+      auth.finishRecovery();
+      navigate("/hoy", { replace: true });
+    } catch {
+      setInvalidLink(true);
+      setConfirmingSignup(false);
+      setError("El enlace ya fue utilizado o venció. Solicitá uno nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
   async function submit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -81,39 +120,53 @@ export function AuthCallback() {
   return (
     <div className="auth-panel">
       <div>
-        <h1>Elegí tu contraseña</h1>
+        <h1>
+          {confirmingSignup ? "Confirmá tu email" : "Elegí tu contraseña"}
+        </h1>
+        {confirmingSignup && (
+          <div className="stack">
+            <p>
+              Confirmá tu correo para activar tu cuenta de entrenador y abrir tu
+              espacio privado.
+            </p>
+            <button className="button" disabled={busy} onClick={confirmSignup}>
+              {busy ? "Verificando…" : "Confirmar mi email"}
+            </button>
+          </div>
+        )}
         {error && (
           <p className="error" role="alert">
             {error}
           </p>
         )}
-        {!verifying &&
-        verifiedUser &&
-        auth.session?.user.id === verifiedUser &&
-        !invalidLink ? (
-          <form className="stack" onSubmit={submit}>
-            <label className="field">
-              Nueva contraseña
-              <input
-                type="password"
-                minLength={12}
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </label>
-            <button className="button" disabled={busy}>
-              Guardar contraseña
-            </button>
-          </form>
-        ) : (
-          <p>
-            {verifying
-              ? "Verificando el enlace…"
-              : "Si el enlace no se pudo validar, volvé al ingreso y pedí uno nuevo."}
-          </p>
-        )}
+        {!confirmingSignup &&
+          (!verifying &&
+          verifiedUser &&
+          auth.session?.user.id === verifiedUser &&
+          !invalidLink ? (
+            <form className="stack" onSubmit={submit}>
+              <label className="field">
+                Nueva contraseña
+                <input
+                  type="password"
+                  minLength={12}
+                  autoComplete="new-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </label>
+              <button className="button" disabled={busy}>
+                Guardar contraseña
+              </button>
+            </form>
+          ) : (
+            <p>
+              {verifying
+                ? "Verificando el enlace…"
+                : "Si el enlace no se pudo validar, volvé al ingreso y pedí uno nuevo."}
+            </p>
+          ))}
         <a href="/login">Volver al ingreso</a>
       </div>
     </div>

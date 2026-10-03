@@ -18,3 +18,20 @@ Las restricciones de integridad se mantienen: RLS por entrenador, comandos trans
 
 12. **Archivados es un flujo necesario.** El revisor lo etiquetó menor; se reclasificó importante porque sin filtro el entrenador no podía encontrar al alumno para restaurarlo. Se corrigió y probó. Coste si se sobredimensionó: un control y una regresión adicionales.
 13. **Rama local conservada.** Se mantienen la rama y el worktree para seguir trabajando y probar la app. No se integra ni publica sin una solicitud de ese destino. Coste: los cambios nuevos están en este worktree, no en el checkout de la demo.
+
+
+## Cambio solicitado el 2026-10-03: registro público e identidad visual
+
+La solicitud posterior autoriza preparar despliegue en Vercel y reemplaza la decisión inicial de acceso solo por invitación. Registro público exclusivamente de entrenadores, email confirmado, una identidad por correo. El selector Alumno queda como Próximamente: las fichas existentes siguen siendo datos del entrenador. La misma identidad Auth debe usarse en una futura implementación de alumnos; la metadata editable nunca otorga privilegios. Se mantienen aislamiento, historial y persistencia del MVP.
+
+Se reutilizan sin alterar los dos PNG entregados por el usuario: logo completo para acceso/navegación e isotipo cuadrado para favicon e instalación. El recorte de márgenes del logo se hace solo en la presentación CSS. Verde lima, blanco y negro, con texto oscuro sobre botones lima para contraste.
+
+Quedan separados implementación local y activación cloud. CAPTCHA integrado pero requiere widget y enforcement de Supabase; SMTP real y proyectos cloud pendientes. No se promete seguridad absoluta ni MFA de entrenadores. Las credenciales administrativas permanecen fuera del frontend.
+
+
+### Ajuste visual posterior solicitado
+
+La paleta se aplica de forma completa en tema oscuro: negro #090909 de fondo, superficies neutras #161616/#222222, blanco #f5f5f5 y lima #adff35 para acciones y gráficos. Todos los colores de componentes viven en variables semánticas de styles.css; no quedan colores oliva/crema locales en componentes. Campos, autofill, selectores nativos, progreso, diálogos, catálogo, sincronización, agenda e historial usan el mismo tema. Error y pendiente conservan colores semánticos accesibles. La impresión usa blanco y negro; los SVG de ejercicios de terceros conservan sus originales y atribución.
+
+
+El usuario prefirió después fondo blanco: el tema final usa blanco puro, texto negro, superficies gris neutro y lima original en acciones, selección y gráficos. Se conserva el negro del área de marca y navegación; enlaces y texto sobre blanco usan negro para legibilidad. Queda reemplazada la propuesta de tema oscuro.

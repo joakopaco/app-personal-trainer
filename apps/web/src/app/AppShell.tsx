@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { DialogFocus } from "../components/DialogFocus";
 import { NavLink } from "react-router-dom";
+import { Brand } from "../components/Brand";
 import {
   CalendarDays,
   Users,
   ClipboardList,
   Settings,
-  Activity,
 } from "lucide-react";
 const links = [
   ["/hoy", "Hoy", CalendarDays],
@@ -23,10 +23,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
       <aside className="sidebar">
         <a className="brand" href="/hoy">
-          <Activity aria-hidden="true" />
-          <span>
-            pulso<span className="brand-dot">.</span>
-          </span>
+          <Brand />
         </a>
         <p className="brand-caption">TU ESPACIO DE ENTRENAMIENTO</p>
         <nav aria-label="Principal">
