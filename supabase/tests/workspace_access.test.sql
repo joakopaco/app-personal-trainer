@@ -1,0 +1,13 @@
+begin;
+select plan(9);
+select has_table('public','workspaces','workspaces exist');
+select has_table('public','students','students exist');
+select has_function('public','ensure_workspace',array[]::text[],'bootstrap exists');
+select has_function('public','apply_training_command',array['jsonb'],'command gateway exists');
+select ok(not has_table_privilege('anon','public.students','SELECT'),'anonymous cannot read students');
+select ok(not has_table_privilege('authenticated','public.students','INSERT'),'no direct student insert');
+select ok(not has_table_privilege('authenticated','public.students','UPDATE'),'no direct student update');
+select ok(not has_table_privilege('authenticated','public.audit_events','DELETE'),'audit cannot be erased');
+select ok(not has_function_privilege('anon','public.apply_training_command(jsonb)','EXECUTE'),'anonymous cannot execute commands');
+select * from finish();
+rollback;

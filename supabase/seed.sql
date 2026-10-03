@@ -1,0 +1,2 @@
+-- Accounts are provisioned with the local-only Admin API by scripts/setup-local.mjs.
+-- No production users or credentials belong in migrations or seeds.
