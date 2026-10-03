@@ -2,15 +2,17 @@
 
 Fecha: 2026-10-03. Entorno: Windows, Node 24.19, Supabase CLI 2.119, Docker local, Chromium automatizado. URL: `http://127.0.0.1:5173`. Datos de prueba ficticios; credenciales y logs privados en `.local`, excluidos de Git.
 
+**Resultado final: 141 comprobaciones aprobadas (38 + 43 + 23 + 35 + 2), además de typecheck y build.**
+
 ## Resultado de la batería
 
 | Comprobación | Evidencia |
 |---|---|
 | TypeScript | `npm run typecheck`, sin errores |
-| Dominio, persistencia, aislamiento y recursos | `npm run test:unit`, 33/33 |
+| Dominio, persistencia, aislamiento y recursos | `npm run test:unit`, 38/38 |
 | Regresiones de la demo conservada | `npm run test:legacy`, 43/43 |
 | SQL y permisos | `npm run test:db`, 23/23 |
-| Flujos reales contra Supabase local | `npm run test:e2e`, 27/27 |
+| Flujos reales contra Supabase local | `npm run test:e2e`, 35/35 |
 | Build y shell público versionado | `npm run build`, correcto |
 | Dependencias | `npm audit`, cero vulnerabilidades informadas |
 | PWA | `npm run test:pwa`, 2/2: arranque offline y actualización con pendientes |
@@ -47,4 +49,25 @@ Estas puertas siguen en [piloto](ops/pilot.md), [despliegue](ops/deploy.md) y [t
 
 ## Revisión final
 
-Se solicita una revisión independiente de toda la rama, con foco en autorización, atomicidad, cola, cambios de cuenta y conciliación histórica. Los hallazgos y su resolución se incorporarán aquí antes de cerrar la entrega.
+La revisión independiente de toda la rama se hizo con contexto fresco, sobre `3733f55..1688e62`. Encontró siete hallazgos importantes y uno menor. El acceso a archivados se reclasificó importante porque impedía encontrar al alumno para restaurarlo. Se corrigieron los ocho en una pasada; no se solicitó una segunda revisión.
+
+| Hallazgo | Corrección y evidencia |
+|---|---|
+| Una confirmación consumía texto más nuevo | Comparación del borrador exacto dentro de la transacción; captura atómica del valor base. Regresión de carrera RED→GREEN |
+| Reducir series dejaba anotaciones huérfanas | No permite eliminar una posición con borrador; Ajustes lista anotaciones y permite exportar/descarte explícito con comparación. Unit RED→GREEN y recorrido real |
+| Reaplicar conflicto alteraba el cierre sin revisión | Compara también las series afectadas por cierre/omisión; la cola original se conserva si cambian. Dos regresiones RED→GREEN |
+| Callback podía usar la cuenta anterior | Espera validación, fija identidad y cambia contraseña con cliente ligado a esa sesión. Callback demorado RED→GREEN; recuperación PKCE con correo de Mailpit local también probada |
+| Plantilla con menos días rompía el constructor | Ajusta índices seleccionados al reemplazar documento; también comparación y descarte. E2E RED→GREEN |
+| CSV/historial renumeraban series | Recupera, ordena y presenta `ordinal`; omitir la primera no cambia el número de la segunda. E2E RED→GREEN |
+| Omitir sin números bloqueaba la cola | Cliente y SQL almacenan omisión sin resultados inventados; migración 015 cubre ejecución normal e histórica. E2E RED→GREEN |
+| No había acceso visible a archivados | Filtro y restauración desde la lista. E2E RED→GREEN |
+
+No quedan hallazgos materiales de esa revisión sin corregir, ni menores diferidos. Los elementos que el revisor no evaluó son los gates externos ya documentados y la fase nativa/video; no se declaran validados.
+
+Las migraciones 001–014 se aplicaron desde cero tras respaldar y verificar que la instancia contenía solo dos cuentas ficticias y ningún alumno/objeto. La 015 se aplicó inmediatamente sobre ese esquema. SQL 23/23 volvió a pasar. El guard de build probó cuatro configuraciones: staging permitido; preview conectado a producción, clave secreta y hostname incorrecto rechazados. El escaneo de valores secretos conocidos en fuentes y bundle pasó.
+
+La prueba de actualización PWA encontró una carrera del propio test: intentaba navegar mientras la actualización recargaba la página. Se corrigió esperando el evento real de carga, sin pausas arbitrarias ni reintentos que oculten errores.
+
+Evidencia pública sin identificadores personales: [carga local](evidence/local-load.json) y [restauración local](evidence/local-restore.json). El detalle de decisiones está en [decisiones de implementación](implementation-decisions.md).
+
+Registro de ejecución conservado: [ledger](evidence/execution-ledger.md). El worktree permanece en la rama local `codex/mvp-web-cloud`; no se integró ni publicó.

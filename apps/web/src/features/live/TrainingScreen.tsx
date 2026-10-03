@@ -546,8 +546,7 @@ function SetEditor({
     write.current = write.current
       .catch(() => {})
       .then(async () => {
-        const row = await data.db.read(studentId);
-        await data.db.rawInputs.put({
+        await data.db.captureRaw({
           id: rawId,
           studentId,
           sessionId,
@@ -555,7 +554,6 @@ function SetEditor({
           setId: set.id,
           field: "setDraft",
           raw: JSON.stringify(next),
-          revision: row!.confirmed.revision,
           baseValue: base.current,
         });
         onFieldState(rawId, null);
@@ -572,7 +570,14 @@ function SetEditor({
   async function discard() {
     try {
       await write.current.catch(() => {});
-      await data.db.rawInputs.delete(rawId);
+      const saved = await data.db.rawInputs.get(rawId);
+      if (saved) {
+        if (saved.raw !== JSON.stringify(latest.current))
+          throw Error(
+            "La anotación cambió en otra pestaña. Volvé a abrir el detalle.",
+          );
+        await data.db.discardRaw(saved);
+      }
       changed.current = false;
       setDirty(false);
       base.current = set;
@@ -586,13 +591,14 @@ function SetEditor({
     }
   }
   async function save(state: "done" | "skipped") {
+    const captured = { ...latest.current };
     setBusy(true);
     onFieldState(rawId, "writing");
     try {
       await write.current;
-      const w = parseNumber("weight", values.weight),
-        r = parseNumber("reps", values.reps),
-        d = parseNumber("durationSec", values.duration);
+      const w = parseNumber("weight", captured.weight),
+        r = parseNumber("reps", captured.reps),
+        d = parseNumber("durationSec", captured.duration);
       if (
         state === "done" &&
         ((type === "load_reps" && !w.ok) ||
@@ -602,6 +608,10 @@ function SetEditor({
         throw Error("Completá valores válidos.");
       const row = await data.db.read(studentId);
       const saved = await data.db.rawInputs.get(rawId);
+      if (saved && saved.raw !== JSON.stringify(captured))
+        throw Error(
+          "La anotación cambió en otra pestaña. Se conserva el valor nuevo; volvé a abrir el detalle.",
+        );
       await data.db.stage(
         data.makeCommand(
           studentId,
@@ -619,6 +629,7 @@ function SetEditor({
           row!.confirmed.revision,
         ),
         saved ? rawId : undefined,
+        saved,
       );
       changed.current = false;
       setDirty(false);
@@ -637,8 +648,14 @@ function SetEditor({
       <div className="set-row">
         <strong>Serie {set.ordinal}</strong>
         <span>
-          {set.weight !== null ? set.weight + " kg · " : ""}
-          {type === "time" ? set.duration_sec + " s" : set.reps + " reps"}
+          {set.state === "skipped" ? (
+            "Sin resultado"
+          ) : (
+            <>
+              {set.weight !== null ? set.weight + " kg · " : ""}
+              {type === "time" ? set.duration_sec + " s" : set.reps + " reps"}
+            </>
+          )}
         </span>
         <span className="badge">
           {set.state === "done" ? "Registrada" : "Omitida"}
@@ -777,8 +794,9 @@ function LiveInput({
           saved.revision,
         ),
         rawId,
+        saved,
       );
-      if (active.current) setState("");
+      if (active.current && latest.current === text) setState("");
       void data.sync();
     } catch (e) {
       if (active.current) setState("No confirmado");
@@ -793,8 +811,7 @@ function LiveInput({
     if (timer.current) clearTimeout(timer.current);
     write.current = write.current
       .then(async () => {
-        const row = await data.db.read(studentId);
-        await data.db.rawInputs.put({
+        await data.db.captureRaw({
           id: rawId,
           studentId,
           sessionId: session.id,
@@ -802,15 +819,6 @@ function LiveInput({
           field,
           raw: text,
           scope,
-          revision: row!.confirmed.revision,
-          baseValue: (() => {
-            const current = row!.projection.sessions
-              .find((s) => s.id === session.id)
-              ?.items.find((i) => i.id === item.id);
-            return field === "macroRest"
-              ? current?.macro_rest
-              : current?.prescription[field];
-          })(),
         });
         onFieldState(rawId, null);
         if (active.current && latest.current === text)

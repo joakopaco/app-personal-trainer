@@ -10,6 +10,7 @@ export function StudentList() {
     [name, setName] = useState(""),
     [failure, setFailure] = useState(""),
     [busy, setBusy] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [id, setId] = useState(() => crypto.randomUUID());
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -28,7 +29,7 @@ export function StudentList() {
   }
   const filtered = rows.filter(
     (r) =>
-      !r.projection.student.archived &&
+      (showArchived || !r.projection.student.archived) &&
       r.projection.student.name
         .toLocaleLowerCase()
         .includes(search.toLocaleLowerCase()),
@@ -89,6 +90,14 @@ export function StudentList() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </label>
+      <label className="row blocks">
+        <input
+          type="checkbox"
+          checked={showArchived}
+          onChange={(e) => setShowArchived(e.target.checked)}
+        />
+        Mostrar alumnos archivados
+      </label>
       <div className="grid">
         {filtered.map(({ projection: s }) => (
           <Link
@@ -102,7 +111,10 @@ export function StudentList() {
                   {s.student.name.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <h3>{s.student.name}</h3>
+                  <h3>
+                    {s.student.name}
+                    {s.student.archived ? " · Archivado" : ""}
+                  </h3>
                   <small>
                     {s.routine?.document.name ?? "Sin rutina asignada"}
                   </small>

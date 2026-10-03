@@ -43,7 +43,9 @@ test("service worker update waits for pending edits and leaves private cache int
     await expect(
       page.getByText("No hay operaciones de entrenamiento pendientes."),
     ).toBeVisible({ timeout: 45000 });
+    const reloaded = page.waitForEvent("load");
     await page.getByRole("button", { name: "Actualizar ahora" }).click();
+    await reloaded;
     await expect(
       page.getByRole("heading", { name: "Ajustes", exact: true }),
     ).toBeVisible();

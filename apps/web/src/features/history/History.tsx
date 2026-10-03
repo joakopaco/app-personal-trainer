@@ -9,6 +9,7 @@ import { useData } from "../../app/DataProvider";
 import { volume } from "@pulso/domain/metrics";
 type ResultSet = {
   id: string;
+  ordinal: number;
   state: string;
   source: string;
   weight: number | null;
@@ -67,7 +68,7 @@ export function History() {
       const a = await cloud()
         .from("sessions")
         .select(
-          "id,date,ended_at,session_items(id,name,type,warmup,skipped,exercise_id,group,session_sets(id,state,source,weight,reps,duration_sec))",
+          "id,date,ended_at,session_items(id,name,type,warmup,skipped,exercise_id,group,session_sets(id,ordinal,state,source,weight,reps,duration_sec))",
         )
         .eq("student_id", id!)
         .eq("status", "closed")
@@ -94,7 +95,11 @@ export function History() {
       if (!active) return;
       if (a.error || b.error) setError("No se pudo cargar el historial.");
       else {
-        setSessions(a.data as unknown as ResultSession[]);
+        const result = a.data as unknown as ResultSession[];
+        for (const session of result)
+          for (const item of session.session_items)
+            item.session_sets.sort((x, y) => x.ordinal - y.ordinal);
+        setSessions(result);
         setEvents(b.data);
       }
     })();
@@ -330,7 +335,7 @@ export function History() {
                       .map((set, n) => [
                         s.date,
                         i.name,
-                        n + 1,
+                        set.ordinal,
                         set.weight ?? "",
                         set.reps ?? "",
                         set.duration_sec ?? "",
@@ -375,12 +380,18 @@ export function History() {
                 </h3>
                 {i.session_sets.map((set, index) => (
                   <div className="set-row" key={set.id}>
-                    <span>Serie {index + 1}</span>
+                    <span>Serie {set.ordinal}</span>
                     <strong>
-                      {set.weight !== null ? set.weight + " kg · " : ""}
-                      {i.type === "time"
-                        ? set.duration_sec + " s"
-                        : set.reps + " reps"}
+                      {set.state !== "done" ? (
+                        "—"
+                      ) : (
+                        <>
+                          {set.weight !== null ? set.weight + " kg · " : ""}
+                          {i.type === "time"
+                            ? set.duration_sec + " s"
+                            : set.reps + " reps"}
+                        </>
+                      )}
                     </strong>
                     <small>
                       {set.state !== "done"

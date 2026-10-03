@@ -188,3 +188,177 @@ test("quota failure rolls back projection and keeps the raw input recoverable", 
   expect(await db.listPending()).toHaveLength(1);
   await db.delete();
 });
+
+test("a stale raw commit cannot delete a newer keystroke captured before its transaction", async () => {
+  const { scope, snapshot, command } = fixture();
+  const db = new LocalStore(scope);
+  const started = projectCommand(snapshot, command);
+  await db.cache(started);
+  const session = started.sessions[0],
+    item = session.items[0];
+  const raw = {
+    id: session.id + ":" + item.id + ":weight",
+    studentId: command.studentId,
+    sessionId: session.id,
+    itemId: item.id,
+    field: "weight",
+    raw: "42",
+    revision: 1,
+    baseValue: 20,
+  };
+  await db.rawInputs.put({ ...raw, raw: "44" });
+  const edit = {
+    ...command,
+    kind: "adjust_prescription" as const,
+    payload: {
+      sessionId: session.id,
+      itemId: item.id,
+      field: "weight",
+      value: 42,
+      scope: "session_and_future",
+    },
+  };
+  await expect(
+    Reflect.apply(db.stage, db, [edit, raw.id, raw]),
+  ).rejects.toThrow();
+  expect((await db.rawInputs.get(raw.id))?.raw).toBe("44");
+  expect(await db.listPending()).toHaveLength(0);
+  expect(
+    (await db.read(command.studentId))?.projection.sessions[0].items[0]
+      .prescription.weight,
+  ).toBe(20);
+  await db.delete();
+});
+
+test("reducing prescribed sets cannot strand an unregistered detailed series draft", async () => {
+  const { scope, snapshot, command } = fixture();
+  const db = new LocalStore(scope);
+  const started = projectCommand(snapshot, command);
+  await db.cache(started);
+  const session = started.sessions[0],
+    item = session.items[0],
+    set = item.sets[1];
+  const raw = {
+    id: session.id + ":" + set.id + ":set-draft",
+    studentId: command.studentId,
+    sessionId: session.id,
+    itemId: item.id,
+    setId: set.id,
+    field: "setDraft",
+    raw: JSON.stringify({ weight: "27,5", reps: "9", duration: "" }),
+    revision: 1,
+    baseValue: set,
+  };
+  await db.rawInputs.put(raw);
+  await expect(
+    db.stage({
+      ...command,
+      kind: "adjust_prescription",
+      payload: {
+        sessionId: session.id,
+        itemId: item.id,
+        field: "sets",
+        value: 1,
+        scope: "session_and_future",
+      },
+    }),
+  ).rejects.toThrow();
+  expect(
+    (await db.read(command.studentId))?.projection.sessions[0].items[0].sets,
+  ).toHaveLength(2);
+  expect(await db.rawInputs.get(raw.id)).toEqual(raw);
+  expect(await db.listPending()).toHaveLength(0);
+  await db.delete();
+});
+
+test.each(["finish_session", "skip_item"] as const)(
+  "reapplying a weight conflict cannot silently %s using changed remote result values",
+  async (kind) => {
+    const { scope, snapshot, command } = fixture();
+    const db = new LocalStore(scope);
+    const started = projectCommand(snapshot, command);
+    await db.cache(started);
+    const session = started.sessions[0],
+      item = session.items[0];
+    await db.stage({
+      ...command,
+      operationId: crypto.randomUUID(),
+      kind: "adjust_prescription",
+      payload: {
+        sessionId: session.id,
+        itemId: item.id,
+        field: "weight",
+        value: 44,
+        scope: "session_only",
+      },
+    });
+    await db.stage({
+      ...command,
+      operationId: crypto.randomUUID(),
+      kind,
+      payload:
+        kind === "finish_session"
+          ? {
+              sessionId: session.id,
+              quickConfirmItemIds: [item.id],
+              allowEmpty: false,
+            }
+          : { sessionId: session.id, itemId: item.id, skipped: true },
+    });
+    const remote = {
+      ...projectCommand(started, {
+        ...command,
+        kind: "adjust_prescription",
+        payload: {
+          sessionId: session.id,
+          itemId: item.id,
+          field: "reps",
+          value: 20,
+          scope: "session_only",
+        },
+      }),
+      revision: 2,
+    };
+    const old = await db.listPending();
+    await expect(
+      db.reapplyStudentQueue(command.studentId, remote),
+    ).rejects.toThrow();
+    expect(await db.listPending()).toEqual(old);
+    await db.delete();
+  },
+);
+
+test("closing from another tab cannot consume a still unregistered raw series", async () => {
+  const { scope, snapshot, command } = fixture();
+  const db = new LocalStore(scope);
+  const started = projectCommand(snapshot, command);
+  await db.cache(started);
+  const session = started.sessions[0],
+    item = session.items[0],
+    set = item.sets[0];
+  await db.rawInputs.put({
+    id: "draft",
+    studentId: command.studentId,
+    sessionId: session.id,
+    itemId: item.id,
+    setId: set.id,
+    field: "setDraft",
+    raw: "unregistered",
+    revision: 1,
+    baseValue: set,
+  });
+  await expect(
+    db.stage({
+      ...command,
+      kind: "finish_session",
+      payload: {
+        sessionId: session.id,
+        quickConfirmItemIds: [item.id],
+        allowEmpty: false,
+      },
+    }),
+  ).rejects.toThrow();
+  expect(await db.rawInputs.count()).toBe(1);
+  expect(await db.listPending()).toHaveLength(0);
+  await db.delete();
+});

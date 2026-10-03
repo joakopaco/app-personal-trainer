@@ -15,3 +15,6 @@ Fecha: 2026-10-03. Rama `codex/mvp-web-cloud`, base `3733f55`. El usuario autori
 11. **Componentes según responsabilidad real.** Progreso vive junto a historial; manifest/SW se generan en build; invitación y respaldo son scripts operativos. Se evitó crear directorios vacíos solo para reproducir el árbol propuesto. Coste: algunos nombres de archivos difieren del plan.
 
 Las restricciones de integridad se mantienen: RLS por entrenador, comandos transaccionales, revisiones y deduplicación, series observadas inmutables salvo corrección auditada, pendientes por cuenta, cierre explícito y ningún aviso de sincronización basado solamente en estar conectado.
+
+12. **Archivados es un flujo necesario.** El revisor lo etiquetó menor; se reclasificó importante porque sin filtro el entrenador no podía encontrar al alumno para restaurarlo. Se corrigió y probó. Coste si se sobredimensionó: un control y una regresión adicionales.
+13. **Rama local conservada.** Se mantienen la rama y el worktree para seguir trabajando y probar la app. No se integra ni publica sin una solicitud de ese destino. Coste: los cambios nuevos están en este worktree, no en el checkout de la demo.

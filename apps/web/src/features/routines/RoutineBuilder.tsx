@@ -166,6 +166,10 @@ export function RoutineBuilder() {
     };
   }, [row?.studentId, db, id]);
   function change(next: RoutineDocument) {
+    setWeek((w) => Math.min(w, next.weeks.length - 1));
+    setDay((d) =>
+      Math.min(d, next.weeks[Math.min(week, next.weeks.length - 1)].length - 1),
+    );
     const valid = new Set(
       next.weeks.flatMap((w) =>
         w.flatMap((d) =>
@@ -368,6 +372,9 @@ export function RoutineBuilder() {
             )
               return;
             const current = await gateway(db.scope).fetchStudent(db.scope, id!);
+            setWeek(0);
+            setDay(0);
+            rawValues.current = {};
             setDoc(current.routine?.document ?? blankRoutine());
             setBase(current.routine?.id ?? null);
             setDraftId(crypto.randomUUID());
@@ -391,6 +398,9 @@ export function RoutineBuilder() {
             const nextId = crypto.randomUUID(),
               nextBase = comparison.remote.routine!.id,
               nextRevision = comparison.remote.revision;
+            setWeek(0);
+            setDay(0);
+            rawValues.current = {};
             setDoc(next);
             setBase(nextBase);
             setDraftId(nextId);

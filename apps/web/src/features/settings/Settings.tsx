@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import type { RawInput } from "@pulso/sync/local-db";
 import { queueHealth } from "../../adapters/telemetry";
 import { eventNames } from "@pulso/domain/audit-display";
 import { saveLibrary, type LibraryCommand } from "../../adapters/library";
@@ -117,6 +119,7 @@ export function Settings() {
               Actualizar datos
             </button>
           </div>
+          <RawPending />
           {data.pending
             .filter((p) => p.state === "conflict" || p.state === "rejected")
             .map((p) => (
@@ -482,5 +485,99 @@ function AdministrativePending() {
       })}
       {message && <p role="status">{message}</p>}
     </section>
+  );
+}
+
+function RawPending() {
+  const { db, rows } = useData();
+  const [inputs, setInputs] = useState<RawInput[]>([]),
+    [error, setError] = useState("");
+  useEffect(() => {
+    const sub = liveQuery(() => db.rawInputs.toArray()).subscribe({
+      next: setInputs,
+      error: () =>
+        setError("No se pudieron consultar las anotaciones pendientes."),
+    });
+    return () => sub.unsubscribe();
+  }, [db]);
+  const labels: Record<string, string> = {
+    weight: "Peso (kg)",
+    reps: "Repeticiones",
+    sets: "Series",
+    durationSec: "Duración (s)",
+    microRest: "Descanso micro (s)",
+    macroRest: "Descanso macro (s)",
+    setDraft: "Detalle de serie",
+  };
+  function value(input: RawInput) {
+    if (input.setId) {
+      try {
+        const v = JSON.parse(input.raw);
+        return (
+          [
+            ["Peso", v.weight],
+            ["Reps", v.reps],
+            ["Segundos", v.duration],
+          ]
+            .filter(([, v]) => v !== "")
+            .map(([k, v]) => k + ": " + v)
+            .join(" · ") || "Campos vacíos"
+        );
+      } catch {
+        return input.raw;
+      }
+    }
+    return input.raw || "Campo vacío";
+  }
+  return (
+    <>
+      {error && <p role="alert">{error}</p>}
+      {inputs.length > 0 && (
+        <section className="stack">
+          <h3>Anotaciones sin registrar</h3>
+          <p>
+            Estos valores están en este dispositivo. Volvé al entrenamiento para
+            registrarlos o exportalos antes de descartarlos.
+          </p>
+          {inputs.map((input) => (
+            <div className="notice" key={input.id}>
+              <strong>
+                {rows.find((r) => r.studentId === input.studentId)?.projection
+                  .student.name ?? "Alumno"}{" "}
+                · {labels[input.field] ?? "Anotación"}
+              </strong>
+              <p>{value(input)}</p>
+              <div className="row">
+                <Link
+                  className="button secondary"
+                  to={"/entrenar/" + input.studentId}
+                >
+                  Revisar entrenamiento
+                </Link>
+                <button
+                  className="link-button"
+                  onClick={async () => {
+                    if (
+                      !confirm(
+                        "Se descargará una copia de esta anotación antes de descartarla. ¿Continuar?",
+                      )
+                    )
+                      return;
+                    try {
+                      download("pulso-anotacion-pendiente.json", input);
+                      await db.discardRaw(input);
+                    } catch (e) {
+                      setError((e as Error).message);
+                    }
+                  }}
+                >
+                  Exportar y descartar anotación
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+    </>
   );
 }

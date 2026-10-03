@@ -137,9 +137,9 @@ export function projectCommand(
     Object.assign(set, {
       state: p.state,
       source: "observed",
-      weight: p.weight,
-      reps: p.reps,
-      duration_sec: p.durationSec,
+      weight: p.state === "skipped" ? null : p.weight,
+      reps: p.state === "skipped" ? null : p.reps,
+      duration_sec: p.state === "skipped" ? null : p.durationSec,
     });
   }
   return snapshot;

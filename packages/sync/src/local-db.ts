@@ -91,7 +91,59 @@ export class LocalStore extends Dexie {
       },
     );
   }
-  async stage(command: CommandEnvelope, rawId?: string) {
+  async captureRaw(input: Omit<RawInput, "revision">) {
+    await this.transaction(
+      "rw",
+      this.students,
+      this.rawInputs,
+      this.outbox,
+      async () => {
+        const row = await this.students.get(input.studentId);
+        const item = row?.projection.sessions
+          .find((s) => s.id === input.sessionId)
+          ?.items.find((i) => i.id === input.itemId);
+        if (!row || !item)
+          throw Error("La sesión o el ejercicio ya no está disponible.");
+        if (
+          (await this.listPending(input.studentId)).some((p) =>
+            ["finish_session", "reconcile_offline_session"].includes(
+              p.command.kind,
+            ),
+          )
+        )
+          throw Error("La finalización está pendiente de confirmar.");
+        const current = input.setId
+          ? item.sets.find((s) => s.id === input.setId)
+          : input.field === "macroRest"
+            ? item.macro_rest
+            : item.prescription[input.field as keyof typeof item.prescription];
+        if (input.setId && !current)
+          throw Error(
+            "La serie ya no está disponible. Conservá el valor para revisarlo.",
+          );
+        await this.rawInputs.put({
+          ...input,
+          revision: row.confirmed.revision,
+          baseValue: "baseValue" in input ? input.baseValue : current,
+        });
+      },
+    );
+  }
+  async discardRaw(expected: RawInput) {
+    await this.transaction("rw", this.rawInputs, async () => {
+      const current = await this.rawInputs.get(expected.id);
+      if (JSON.stringify(current) !== JSON.stringify(expected))
+        throw Error(
+          "La anotación cambió. Revisá el valor nuevo antes de descartarlo.",
+        );
+      await this.rawInputs.delete(expected.id);
+    });
+  }
+  async stage(
+    command: CommandEnvelope,
+    rawId?: string,
+    expectedRaw?: RawInput,
+  ) {
     if (command.workspaceId !== this.scope.workspaceId)
       throw Error("Cuenta incorrecta");
     await this.transaction(
@@ -115,7 +167,15 @@ export class LocalStore extends Dexie {
           throw Error("La finalización está pendiente de confirmar.");
         if (rawId) {
           const input = await this.rawInputs.get(rawId);
-          if (!input) return;
+          if (
+            !input ||
+            !expectedRaw ||
+            JSON.stringify(input) !== JSON.stringify(expectedRaw)
+          )
+            throw Object.assign(
+              Error("La anotación cambió. Se conserva el valor más reciente."),
+              { code: "RAW_CHANGED" },
+            );
           const item = row.projection.sessions
             .find((s) => s.id === input.sessionId)
             ?.items.find((i) => i.id === input.itemId);
@@ -136,7 +196,25 @@ export class LocalStore extends Dexie {
           command = { ...command, expectedRevision: row.confirmed.revision };
         } else if (command.expectedRevision !== row.confirmed.revision)
           throw Error("El contexto cambió. Revisá el valor y volvé a guardar.");
+        const raw = await this.rawInputs
+          .where("studentId")
+          .equals(command.studentId)
+          .toArray();
+        if (command.kind === "finish_session" && raw.length)
+          throw Error(
+            "Hay anotaciones sin registrar. Revisalas antes de finalizar.",
+          );
         const projection = projectCommand(row.projection, command);
+        for (const draft of raw.filter((r) => r.setId && r.id !== rawId)) {
+          const retained = projection.sessions
+            .find((s) => s.id === draft.sessionId)
+            ?.items.find((i) => i.id === draft.itemId)
+            ?.sets.some((s) => s.id === draft.setId);
+          if (!retained)
+            throw Error(
+              "Hay una serie con anotaciones pendientes. Registrala o descartá su edición antes de reducir las series.",
+            );
+        }
         await this.outbox.add({
           operationId: command.operationId,
           studentId: command.studentId,
@@ -275,6 +353,31 @@ export class LocalStore extends Dexie {
           throw Error(
             "Esta operación necesita reconciliación estructural. Exportá los pendientes.",
           );
+        if (
+          row.command.kind === "finish_session" ||
+          row.command.kind === "skip_item"
+        ) {
+          const p = row.command.payload;
+          const affected = (snapshot: StudentSnapshot) => {
+            const session = snapshot.sessions.find((s) => s.id === p.sessionId);
+            if (!session) return null;
+            const ids = p.quickConfirmItemIds as string[] | undefined;
+            return session.items
+              .filter((i) =>
+                row.command.kind === "skip_item"
+                  ? i.id === p.itemId
+                  : ids?.includes(i.id),
+              )
+              .map((i) => ({ id: i.id, skipped: i.skipped, sets: i.sets }));
+          };
+          if (
+            JSON.stringify(affected(row.base)) !==
+            JSON.stringify(affected(projection))
+          )
+            throw Error(
+              "Las series que se van a confirmar u omitir cambiaron. Conservá los pendientes y revisá el entrenamiento antes de cerrar.",
+            );
+        }
         // Explicitly applying the head does not grant permission to overwrite unrelated dependent fields.
         if (index > 0 && row.command.kind === "adjust_prescription") {
           const p = row.command.payload;

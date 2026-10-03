@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "counts": {
+    "users": 2,
+    "students": 1,
+    "sessions": 1,
+    "sets": 2,
+    "events": 5
+  },
+  "objects": 1,
+  "elapsedSeconds": 4.128,
+  "backupCapturedAt": "2026-10-03T21:15:10.860Z",
+  "verifiedAt": "2026-10-03T21:15:15.124Z",
+  "limits": "Isolated database in local cluster and temporary private bucket. Production project/Auth provider recreation and offsite key storage still require staging rehearsal."
+}

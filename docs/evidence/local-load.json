@@ -1,0 +1,10 @@
+{
+  "trainers": 5,
+  "students": 500,
+  "openSessions": 25,
+  "clients": 10,
+  "createStudentP95Ms": 101,
+  "elapsedSeconds": 7.803,
+  "environment": "Local Docker; not a cloud latency estimate",
+  "verifiedAt": "2026-10-03T21:15:41.628Z"
+}
