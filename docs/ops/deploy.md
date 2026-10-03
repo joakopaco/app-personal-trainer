@@ -1,6 +1,18 @@
 # Entornos y despliegue
 
-El usuario solicitó publicar en Vercel con Supabase y registro público de entrenadores (2026-10-03). La implementación y las pruebas siguen en local: faltan proyectos remotos, acceso a sus cuentas, dominio de envío y SMTP. No se crearon proyectos pagos ni se publicaron datos. La configuración local no modifica automáticamente los proyectos cloud.
+El piloto usa Vercel `joako-personal/app-personal-trainer` y Supabase `dnsakonvrdwwmssftkpa`, creados por el usuario. URL: https://app-personal-trainer-one.vercel.app. Producción se actualiza desde `main` del repositorio `joakopaco/app-personal-trainer`. La configuración local no modifica automáticamente los proyectos cloud.
+
+## Piloto sin envío de correo (decisión del usuario, 2026-10-03)
+
+- Registro únicamente de entrenadores con email y contraseña (mínimo 12 caracteres). Supabase conserva una identidad única por email. Los alumnos siguen siendo fichas y su acceso muestra Próximamente.
+- En producción `Confirm email` está desactivado y `VITE_AUTH_EMAIL_ENABLED=false`. Supabase autoconfirma el alta y devuelve una sesión: la app la conserva y abre el espacio privado. El frontend no concede permisos ni modifica `email_confirmed_at`; las políticas y RPC siguen verificando al usuario en el servidor.
+- No hay SMTP propio, verificación de titularidad del correo ni recuperación automática habilitada en la interfaz. Conservar contraseñas. La recuperación manual requiere comprobar la identidad del participante con el operador; no conceder acceso solamente porque alguien declara un email. No marcar estos correos como verificados por su titular.
+- Las respuestas duplicadas se presentan de forma genérica en la UI, pero Auth puede revelar que un email ya existe cuando la confirmación está desactivada. Turnstile y límites siguen habilitados; no afirmar resistencia completa a enumeración de cuentas.
+- Turnstile Managed restringido a `app-personal-trainer-one.vercel.app`; secreto únicamente en Supabase Auth. Vercel recibe solo URL, clave publicable y site key públicos. Las siete variables son exclusivas de Production; las previews no pueden usar esta base.
+- Las 15 migraciones iniciales se aplicaron en una transacción sobre el esquema público vacío y se registraron en `supabase_migrations.schema_migrations`. Nunca volver a ejecutar el bootstrap sobre una base usada: futuros cambios mediante migraciones incrementales.
+- Para activar correo después: configurar SMTP y remitente verificado, activar confirmación, poner `VITE_AUTH_EMAIL_ENABLED=true`, aplicar el template de confirmación y probar alta/reenvío/recuperación. Las cuentas autoconfirmadas del piloto requieren un proceso explícito de verificación; activar el flag no verifica retroactivamente su titularidad.
+
+Las siguientes instrucciones de correo describen esa fase posterior. El entorno local conserva confirmación y Mailpit para probar ambos recorridos sin depender de un proveedor real.
 
 ## Local reproducible
 

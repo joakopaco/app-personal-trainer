@@ -4,6 +4,8 @@ import { cloud, supabase } from "../../adapters/supabase";
 import { Captcha, captchaRequired, captchaSiteKey } from "./Captcha";
 import { Brand } from "../../components/Brand";
 type Mode = "login" | "signup" | "recovery" | "resend";
+// Controls available email actions, never authorization. Supabase owns signup policy.
+const emailEnabled = import.meta.env.VITE_AUTH_EMAIL_ENABLED !== "false";
 export function Login() {
   const [role, setRole] = useState("trainer");
   const [email, setEmail] = useState("");
@@ -29,6 +31,7 @@ export function Login() {
     if (
       busy ||
       role !== "trainer" ||
+      (!emailEnabled && (mode === "recovery" || mode === "resend")) ||
       ((captchaRequired || captchaSiteKey) && !captcha)
     )
       return;
@@ -51,14 +54,15 @@ export function Login() {
             captchaToken,
           },
         });
-        // Keep the same message even if a cloud instance was misconfigured
-        // to report existing addresses. Auth must obfuscate these server-side too.
         if (error && error.code !== "user_already_exists") throw error;
-        if (data.session) await cloud().auth.signOut({ scope: "local" });
         setPassword("");
         setRepeat("");
         setMessage(
-          "Revisá tu correo. Si el email puede registrarse, recibirás un enlace para confirmar tu cuenta. Si ya tenés una cuenta, ingresá o recuperá tu contraseña.",
+          data.session
+            ? "Cuenta creada. Abriendo tu espacio…"
+            : emailEnabled
+              ? "Revisá tu correo. Si el email puede registrarse, recibirás un enlace para confirmar tu cuenta. Si ya tenés una cuenta, ingresá o recuperá tu contraseña."
+              : "No se pudo abrir una cuenta nueva. Intentá ingresar con tus datos; si el problema continúa, contactá al administrador del piloto.",
         );
       } else if (mode === "recovery") {
         const { error } = await cloud().auth.resetPasswordForEmail(
@@ -96,7 +100,9 @@ export function Login() {
     } catch {
       setError(
         mode === "login"
-          ? "No pudimos ingresar. Revisá tus datos, la confirmación del email y tu conexión."
+          ? emailEnabled
+            ? "No pudimos ingresar. Revisá tus datos, la confirmación del email y tu conexión."
+            : "No pudimos ingresar. Revisá tu email, contraseña y conexión."
           : "No pudimos completar la solicitud. Revisá los datos y tu conexión; si ya lo intentaste, esperá un minuto.",
       );
     } finally {
@@ -172,7 +178,9 @@ export function Login() {
               </h1>
               <p className="muted">
                 {mode === "signup"
-                  ? "Un espacio propio para vos y tus alumnos. Confirmá tu correo para empezar."
+                  ? emailEnabled
+                    ? "Un espacio propio para vos y tus alumnos. Confirmá tu correo para empezar."
+                    : "Un espacio propio para vos y tus alumnos. Creá tu cuenta y empezá a entrenar."
                   : mode === "login"
                     ? "Ingresá con tu cuenta de entrenador."
                     : mode === "resend"
@@ -277,22 +285,26 @@ export function Login() {
                       >
                         Crear cuenta
                       </button>
-                      <button
-                        type="button"
-                        className="link-button"
-                        disabled={busy}
-                        onClick={() => changeMode("recovery")}
-                      >
-                        Olvidé mi contraseña
-                      </button>
-                      <button
-                        type="button"
-                        className="link-button"
-                        disabled={busy}
-                        onClick={() => changeMode("resend")}
-                      >
-                        No recibí la confirmación
-                      </button>
+                      {emailEnabled && (
+                        <button
+                          type="button"
+                          className="link-button"
+                          disabled={busy}
+                          onClick={() => changeMode("recovery")}
+                        >
+                          Olvidé mi contraseña
+                        </button>
+                      )}
+                      {emailEnabled && (
+                        <button
+                          type="button"
+                          className="link-button"
+                          disabled={busy}
+                          onClick={() => changeMode("resend")}
+                        >
+                          No recibí la confirmación
+                        </button>
+                      )}
                     </>
                   ) : (
                     <button
@@ -306,6 +318,13 @@ export function Login() {
                   )}
                 </div>
               </form>
+              {!emailEnabled && (
+                <p className="muted">
+                  Durante el piloto no enviamos correos de confirmación ni de
+                  recuperación. Guardá tu contraseña; si perdés el acceso,
+                  contactá al administrador del piloto.
+                </p>
+              )}
               <p className="auth-note">
                 <ShieldCheck size={16} aria-hidden="true" /> Una cuenta por
                 email. Cada entrenador tiene su espacio privado.
