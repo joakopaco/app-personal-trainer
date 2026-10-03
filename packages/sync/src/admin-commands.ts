@@ -28,7 +28,7 @@ export async function sendAdministrative(
           JSON.stringify(old.payload) !== JSON.stringify(proposed.payload)
         )
           throw Error(
-            "Hay una operación administrativa sin confirmar. Reintentala desde Ajustes.",
+            "Hay una operación administrativa sin confirmar. Reintentala desde el centro de sincronización.",
           );
         return old;
       }

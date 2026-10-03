@@ -34,12 +34,14 @@ test("logout blocks pending edits, then another trainer never sees the prior cac
       ),
     ).toBeVisible();
     await page.unroute("http://127.0.0.1:54341/**");
+    await page.goto("/sincronizacion");
     await page
       .getByRole("button", { name: "Reintentar sincronización" })
       .click();
     await expect(
       page.getByText("No hay operaciones de entrenamiento pendientes."),
     ).toBeVisible();
+    await page.getByRole("link", { name: "Ajustes", exact: true }).click();
     await page
       .getByRole("button", { name: "Cerrar sesión", exact: true })
       .click();

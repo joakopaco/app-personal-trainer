@@ -200,7 +200,7 @@ export function TrainingScreen() {
         <div className="error">
           <h2>Este alumno necesita una revisión</h2>
           <p>{conflict.error}</p>
-          <Link to="/ajustes">Abrir centro de sincronización</Link>
+          <Link to="/sincronizacion">Abrir centro de sincronización</Link>
         </div>
       )}
       {closing && (
@@ -433,7 +433,7 @@ function ExerciseRow({
         ))}
       </div>
       <details className="exercise-guide">
-        <summary>Ver ilustración</summary>
+        <summary>Referencia del ejercicio</summary>
         <ExerciseArt exerciseId={item.exercise_id} />
       </details>
       <button className="link-button" onClick={() => setDetail(!detail)}>

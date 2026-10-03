@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { cloud } from "../../adapters/supabase";
-import { download } from "../settings/Settings";
+import { download } from "../settings/SyncCenter";
 type Legacy = {
   original_person: {
     name: string;

@@ -1153,12 +1153,6 @@ th {
   color: var(--ink);
   background: var(--surface-raised);
 }
-.exercise-art {
-  background: var(--control);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  text-align: center;
-}
 .auth-panel {
   background: var(--canvas);
 }
@@ -1234,6 +1228,120 @@ th {
 .coming-soon > svg {
   color: var(--ink);
 }
-.exercise-art {
-  background: #f3f3f3;
+.catalog-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+  margin: 28px 0 20px;
+}
+.catalog-toolbar .field {
+  flex: 1 1 230px;
+}
+.catalog-toolbar > .button {
+  flex-shrink: 0;
+}
+.exercise-group {
+  margin: 32px 0;
+}
+.exercise-group > h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.exercise-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 245px), 1fr));
+}
+.exercise-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px;
+}
+.exercise-card h3,
+.exercise-card p {
+  margin: 0;
+}
+.exercise-card > .row {
+  margin-top: auto;
+  padding-top: 10px;
+}
+.exercise-card .button.secondary:first-child {
+  flex: 1;
+}
+.favorite-button {
+  width: 44px;
+  padding: 10px;
+}
+.favorite-button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--black);
+  border-color: var(--accent);
+}
+.exercise-placeholder {
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  background: var(--surface-raised);
+  border-radius: 12px;
+  color: var(--muted);
+}
+.exercise-placeholder strong {
+  color: var(--ink);
+}
+.exercise-placeholder span {
+  font-size: 13px;
+}
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.routine-empty {
+  max-width: 680px;
+  margin-top: 30px;
+  padding: clamp(24px, 4vw, 40px);
+}
+.routine-empty p {
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+.profile-settings {
+  max-width: 720px;
+}
+.profile-settings h2 {
+  margin: 0;
+}
+.profile-settings input[readonly] {
+  color: var(--muted);
+  background: var(--surface-raised);
+}
+@media (max-width: 540px) {
+  .catalog-toolbar > .button,
+  .page-actions > .button {
+    width: 100%;
+  }
+  .profile-settings .row.spread {
+    align-items: flex-start;
+  }
+  .profile-settings .row.spread .button {
+    flex-shrink: 0;
+  }
+}
+
+.agenda-data-link {
+  margin-top: 36px;
+}
+.agenda-data-link a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 13px;
+  color: var(--muted);
 }

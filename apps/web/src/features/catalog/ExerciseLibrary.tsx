@@ -1,17 +1,19 @@
 import { saveLibrary } from "../../adapters/library";
-import { PrivateMedia } from "./PrivateMedia";
+import { Link } from "react-router-dom";
+import { Star, ImageOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   catalog,
   searchExercises,
   type ExerciseDefinition,
 } from "@pulso/domain/catalog";
-import art from "@pulso/domain/art";
 import { cloud } from "../../adapters/supabase";
 import { useData } from "../../app/DataProvider";
 export function ExerciseLibrary() {
   const { db } = useData();
   const [query, setQuery] = useState(""),
+    [filter, setFilter] = useState(""),
+    [saving, setSaving] = useState(false),
     [own, setOwn] = useState<ExerciseDefinition[]>([]),
     [favorites, setFavorites] = useState<string[]>([]),
     [selected, setSelected] = useState<ExerciseDefinition | null>(null),
@@ -30,33 +32,58 @@ export function ExerciseLibrary() {
   useEffect(() => {
     void refresh();
   }, []);
+  const groups = [...new Set([...catalog, ...own].map((e) => e.group))];
+  const results = searchExercises(query, [...own, ...catalog]).filter(
+    (e) => !filter || e.group === filter,
+  );
   return (
     <>
       <p className="eyebrow">BIBLIOTECA</p>
       <h1>Ejercicios</h1>
       <p className="muted">
-        {catalog.length} ejercicios iniciales. Las ilustraciones se abren a
-        pedido.
+        {catalog.length + own.length} ejercicios organizados por grupo muscular.
       </p>
-      <div className="row spread">
+      <div className="catalog-toolbar">
         <label className="field">
           Buscar ejercicio
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Nombre, músculo, equipo"
+            placeholder="Nombre, músculo o material"
           />
         </label>
-        <button className="button" onClick={() => setForm(!form)}>
+        <label className="field">
+          Filtrar por grupo muscular
+          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <option value="">Todos los grupos</option>
+            {groups.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          className="button"
+          aria-expanded={form}
+          onClick={() => setForm(!form)}
+        >
           Crear ejercicio propio
         </button>
       </div>
-      {message && <p className="notice">{message}</p>}
+      {message && (
+        <p className="notice" role="status">
+          {message} <Link to="/sincronizacion">Revisar cambios pendientes</Link>
+        </p>
+      )}
       {form && (
         <form
           className="card stack blocks"
           onSubmit={async (e) => {
             e.preventDefault();
+            if (saving) return;
+            setSaving(true);
+            setMessage("");
             try {
               await saveLibrary(db, {
                 workspaceId: db.scope.workspaceId,
@@ -64,12 +91,22 @@ export function ExerciseLibrary() {
                 id: crypto.randomUUID(),
                 expectedRevision: 0,
                 kind: "exercise",
-                payload: { name, group, equipment, type },
+                payload: {
+                  name: name.trim(),
+                  group,
+                  equipment: equipment.trim() || "Sin material",
+                  type,
+                },
               });
               setForm(false);
-              void refresh();
+              setName("");
+              setGroup("");
+              setEquipment("");
+              await refresh();
             } catch (e) {
               setMessage((e as Error).message);
+            } finally {
+              setSaving(false);
             }
           }}
         >
@@ -83,75 +120,135 @@ export function ExerciseLibrary() {
             />
           </label>
           <label className="field">
-            Músculo principal
-            <input
+            Grupo muscular
+            <select
+              aria-label="Grupo muscular"
               required
-              maxLength={80}
               value={group}
               onChange={(e) => setGroup(e.target.value)}
-            />
+            >
+              <option value="">Elegí un grupo</option>
+              {groups.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="field">
-            Equipo
+            Material
             <input
+              placeholder="Por ejemplo: barra, mancuernas o sin material"
+              maxLength={80}
               value={equipment}
               onChange={(e) => setEquipment(e.target.value)}
             />
           </label>
           <label className="field">
-            Registro
+            Qué vas a registrar
             <select
               value={type}
               onChange={(e) => setType(e.target.value as typeof type)}
             >
-              <option value="load_reps">Carga y repeticiones</option>
-              <option value="reps">Repeticiones</option>
-              <option value="time">Tiempo</option>
+              <option value="load_reps">Peso (kg) y repeticiones</option>
+              <option value="reps">Solo repeticiones</option>
+              <option value="time">Tiempo (segundos)</option>
             </select>
           </label>
-          <button className="button">Guardar ejercicio</button>
+          <p className="muted">
+            El material es lo que se usa para realizar el ejercicio. El tipo de
+            registro define los valores que vas a anotar durante el
+            entrenamiento.
+          </p>
+          <div className="row">
+            <button className="button" disabled={saving}>
+              {saving ? "Guardando…" : "Guardar ejercicio"}
+            </button>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => setForm(false)}
+            >
+              Cancelar
+            </button>
+          </div>
         </form>
       )}
-      <div className="grid blocks">
-        {searchExercises(query, [...own, ...catalog]).map((e) => (
-          <div className="card" key={e.id}>
-            <h3>{e.name}</h3>
-            <p className="muted">
-              {e.group} · {e.equipment}
-            </p>
-            <div className="row">
-              <button
-                className="button secondary"
-                onClick={() => setSelected(e)}
-              >
-                Ver detalle
-              </button>
-              <button
-                className="link-button"
-                aria-label={"Favorito " + e.name}
-                onClick={async () => {
-                  try {
-                    await saveLibrary(db, {
-                      workspaceId: db.scope.workspaceId,
-                      operationId: crypto.randomUUID(),
-                      kind: "favorite",
-                      payload: {
-                        exerciseId: e.id,
-                        enabled: !favorites.includes(e.id),
-                      },
-                    });
-                    void refresh();
-                  } catch (e) {
-                    setMessage((e as Error).message);
-                  }
-                }}
-              >
-                {favorites.includes(e.id) ? "★ Favorito" : "☆"}
-              </button>
+      <p className="muted" role="status">
+        {results.length} ejercicios encontrados
+      </p>
+      {!results.length && (
+        <div className="card">
+          <h2>No encontramos ejercicios</h2>
+          <p>Probá con otro nombre o elegí otro grupo muscular.</p>
+        </div>
+      )}
+      {groups
+        .filter((g) => results.some((e) => e.group === g))
+        .map((g) => (
+          <section className="exercise-group" key={g} aria-label={g}>
+            <h2>
+              {g}{" "}
+              <span className="badge">
+                {results.filter((e) => e.group === g).length}
+              </span>
+            </h2>
+            <div className="grid exercise-grid">
+              {results
+                .filter((e) => e.group === g)
+                .map((e) => (
+                  <article className="card exercise-card" key={e.id}>
+                    <h3>{e.name}</h3>
+                    <p className="muted">
+                      {e.group} · {e.equipment}
+                    </p>
+                    <div className="row">
+                      <button
+                        className="button secondary"
+                        onClick={() => setSelected(e)}
+                      >
+                        Ver detalle
+                      </button>
+                      <button
+                        className="button secondary favorite-button"
+                        aria-pressed={favorites.includes(e.id)}
+                        aria-label={"Favorito " + e.name}
+                        onClick={async () => {
+                          try {
+                            await saveLibrary(db, {
+                              workspaceId: db.scope.workspaceId,
+                              operationId: crypto.randomUUID(),
+                              kind: "favorite",
+                              payload: {
+                                exerciseId: e.id,
+                                enabled: !favorites.includes(e.id),
+                              },
+                            });
+                            void refresh();
+                          } catch (e) {
+                            setMessage((e as Error).message);
+                          }
+                        }}
+                      >
+                        <Star
+                          size={18}
+                          aria-hidden="true"
+                          fill={
+                            favorites.includes(e.id) ? "currentColor" : "none"
+                          }
+                        />
+                        <span className="sr-only">
+                          {favorites.includes(e.id)
+                            ? "Favorito"
+                            : "Agregar a favoritos"}
+                        </span>
+                      </button>
+                    </div>
+                  </article>
+                ))}
             </div>
-          </div>
+          </section>
         ))}
-      </div>
       {selected && (
         <div className="modal-backdrop">
           <section
@@ -167,14 +264,15 @@ export function ExerciseLibrary() {
               </button>
             </div>
             <ExerciseArt exerciseId={selected.id} />
-            {own.some((e) => e.id === selected.id) && (
-              <PrivateMedia exerciseId={selected.id} />
-            )}
             <p>
               {selected.group} · {selected.equipment}
             </p>
             <p className="muted">
-              Carga registrada en kg, bajo la misma convención en cada sesión.
+              {selected.type === "load_reps"
+                ? "Registrá el peso en kg y las repeticiones."
+                : selected.type === "reps"
+                  ? "Registrá la cantidad de repeticiones."
+                  : "Registrá el tiempo en segundos."}{" "}
               El entrenador define la técnica y adaptación.
             </p>
           </section>
@@ -183,85 +281,12 @@ export function ExerciseLibrary() {
     </>
   );
 }
-export function ExerciseArt({ exerciseId }: { exerciseId: string }) {
-  const item = art.find((a) => a.exerciseId === exerciseId);
-  const [frame, setFrame] = useState(0),
-    [playing, setPlaying] = useState(false),
-    [failed, setFailed] = useState(false);
-  useEffect(() => {
-    setFrame(0);
-    setPlaying(false);
-    setFailed(false);
-  }, [exerciseId]);
-  useEffect(() => {
-    if (!playing || !item) return;
-    const timer = setInterval(
-      () => setFrame((x) => (x + 1) % item.frames.length),
-      850,
-    );
-    return () => clearInterval(timer);
-  }, [playing, item]);
-  if (!item)
-    return (
-      <p className="notice">
-        Sin ilustración disponible. Podés registrar el ejercicio normalmente.
-      </p>
-    );
+export function ExerciseArt(_props: { exerciseId: string }) {
   return (
-    <>
-      <div className="exercise-art">
-        {failed ? (
-          <p>La ilustración no está disponible sin conexión.</p>
-        ) : (
-          <img
-            loading="lazy"
-            src={item.frames[frame].path}
-            width={280}
-            height={280}
-            style={{ maxWidth: "100%", height: "auto" }}
-            alt={"Posición " + (frame + 1) + " del ejercicio"}
-            onError={() => setFailed(true)}
-          />
-        )}
-      </div>
-      <div className="row">
-        <button
-          className="button secondary"
-          onClick={() => setPlaying(!playing)}
-        >
-          {playing ? "Pausar" : "Reproducir posiciones"}
-        </button>
-        <button
-          className="link-button"
-          onClick={() => {
-            setPlaying(false);
-            setFrame((frame + 1) % item.frames.length);
-          }}
-        >
-          Siguiente posición
-        </button>
-      </div>
-      <small>
-        Ilustraciones de{" "}
-        <a href={item.attribution.creatorUrl} target="_blank" rel="noreferrer">
-          {item.attribution.creator}
-        </a>{" "}
-        ·{" "}
-        <a href={item.attribution.licenseUrl} target="_blank" rel="noreferrer">
-          {item.attribution.license}
-        </a>
-        .{" "}
-        {"source" in item.attribution ? (
-          <>
-            Derivación atribuida a{" "}
-            <a href={item.attribution.source!.url}>Everkinetic</a>.{" "}
-          </>
-        ) : null}
-        <a href="/exercise-art/credits.json" target="_blank">
-          Origen y créditos por cuadro
-        </a>
-        . Sin modificaciones del arte.
-      </small>
-    </>
+    <div className="exercise-placeholder">
+      <ImageOff size={32} aria-hidden="true" />
+      <strong>Sin ilustración disponible</strong>
+      <span>Podés registrar el ejercicio normalmente.</span>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 # Incidentes de guardado
 
 1. Leer el estado del alumno. **Sincronizado** exige confirmación del servidor. **Guardado en este dispositivo** conserva una operación durable pendiente; no es una copia en otro equipo. **Campo pendiente** puede ser texto incompleto.
-2. Conservar el dispositivo y entrar en la misma cuenta. No borrar datos del navegador, desinstalar la PWA ni cerrar una sesión con cambios pendientes. Ajustes permite descargar la cola y reintentar.
+2. Conservar el dispositivo y entrar en la misma cuenta. No borrar datos del navegador, desinstalar la PWA ni cerrar una sesión con cambios pendientes. Hoy → Datos y sincronización permite descargar la cola y reintentar.
 3. Si otro equipo modificó el alumno, comparar valores. Aplicar el cambio revisado genera una operación nueva; conservar el remoto descarta explícitamente la cola de ese alumno. Una edición posterior dependiente no se aplica a ciegas.
 4. Si cambió el mes, revisar y recuperar el entrenamiento en su mes original. Requiere motivo y cierre explícito; no modifica la rutina vigente. Si el servidor ya cerró la sesión o no hay una correspondencia segura, conservar la exportación y corregir los resultados individualmente.
 5. Si falta espacio local, la transacción falla y se muestra el error. No afirmar que se guardó. Liberar espacio ajeno a la app, exportar lo disponible y reintentar; no borrar su base para liberar espacio.

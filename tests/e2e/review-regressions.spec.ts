@@ -19,7 +19,7 @@ async function login(page: Page) {
   await expect(page.getByRole("navigation")).toBeVisible();
 }
 
-test("unregistered annotations remain reviewable and exportable from settings", async ({
+test("unregistered annotations remain reviewable and exportable from sync center", async ({
   page,
 }, info) => {
   const a = await prepared();
@@ -28,7 +28,7 @@ test("unregistered annotations remain reviewable and exportable from settings", 
     await page.goto("/entrenar/" + a.studentId);
     await page.getByRole("button", { name: /Detalle de series/ }).click();
     await page.getByLabel("Peso serie 2", { exact: true }).fill("27,5");
-    await page.getByRole("link", { name: "Ajustes", exact: true }).click();
+    await page.goto("/sincronizacion");
     await expect(
       page.getByRole("heading", { name: "Anotaciones sin registrar" }),
     ).toBeVisible();

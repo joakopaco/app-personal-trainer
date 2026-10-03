@@ -23,7 +23,7 @@ export async function saveLibrary(db: LocalStore, proposed: LibraryCommand) {
         JSON.stringify(old.payload) !== JSON.stringify(proposed.payload))
     )
       throw Error(
-        "Reintentá primero la operación pendiente de biblioteca desde Ajustes.",
+        "Reintentá primero la operación pendiente de biblioteca desde el centro de sincronización.",
       );
     const command = old ?? proposed;
     if (!old) await db.meta.put({ key, value: command });

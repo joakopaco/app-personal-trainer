@@ -3,6 +3,7 @@ import { DialogFocus } from "../components/DialogFocus";
 import { NavLink } from "react-router-dom";
 import { Brand } from "../components/Brand";
 import {
+  Dumbbell,
   CalendarDays,
   Users,
   ClipboardList,
@@ -12,6 +13,7 @@ const links = [
   ["/hoy", "Hoy", CalendarDays],
   ["/alumnos", "Alumnos", Users],
   ["/rutinas", "Rutinas", ClipboardList],
+  ["/biblioteca", "Ejercicios", Dumbbell],
   ["/ajustes", "Ajustes", Settings],
 ] as const;
 export function AppShell({ children }: { children: ReactNode }) {

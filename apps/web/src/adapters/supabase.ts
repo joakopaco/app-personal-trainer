@@ -19,6 +19,7 @@ export function cloud() {
 export async function updateVerifiedPassword(
   session: Session,
   password: string,
+  currentPassword?: string,
 ) {
   const bound = createClient(url, key, {
     auth: {
@@ -34,6 +35,11 @@ export async function updateVerifiedPassword(
   });
   if (signed.error || signed.data.user?.id !== session.user.id)
     throw Error("El acceso validado cambió. Solicitá un enlace nuevo.");
-  const changed = await bound.auth.updateUser({ password });
+  const changed = await bound.auth.updateUser({
+    password,
+    ...(currentPassword !== undefined
+      ? { current_password: currentPassword }
+      : {}),
+  });
   if (changed.error) throw changed.error;
 }

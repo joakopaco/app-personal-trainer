@@ -35,7 +35,7 @@ test("offline edits survive a reload and synchronize exactly once", async ({
       "pendiente de sincronizar",
     );
     await page.unroute("http://127.0.0.1:54341/**");
-    await page.getByRole("link", { name: "Ajustes", exact: true }).click();
+    await page.goto("/sincronizacion");
     await page
       .getByRole("button", { name: "Reintentar sincronización" })
       .click();

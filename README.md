@@ -1,4 +1,4 @@
-> **Actualización 2026-10-03:** Pulso permite registro de entrenadores con confirmación de email, recuperación y reenvío. El selector Alumno muestra Próximamente; no crea cuentas. Una identidad Auth por correo. Logo y paleta lima/negro/blanco actualizados. La app aún corre localmente; configurar Vercel, Supabase cloud, SMTP y Turnstile siguiendo [despliegue](docs/ops/deploy.md) antes del piloto público. El correo local se ve en http://127.0.0.1:54344 y no llega a casillas reales.
+> **Actualización 2026-10-03:** Pulso está publicado en https://app-personal-trainer-one.vercel.app, con Supabase cloud y Turnstile. El piloto usa email y contraseña; verificación y recuperación por correo se posponen por decisión del producto. No se debe confundir la confirmación automática con validar la titularidad del email. El entorno local mantiene Mailpit para probar el flujo futuro.
 
 # Pulso · Herramienta para personal trainers
 
@@ -18,9 +18,10 @@ Requiere Node 24 y Docker Desktop. Abrir **http://127.0.0.1:5173**. Las dos cuen
 - Hoy: agenda, inasistencia sin reprogramar, cancelación y entrenamiento espontáneo; acceso rápido a alumnos entrenando.
 - Entrenamiento: peso/reps/series/descansos inline, alcance de ajuste elegible, series observadas, corrección con motivo y cierre explícito. Varios alumnos mantienen sus valores independientes.
 - Rutinas: cuatro semanas, días y bloques, copias independientes, borradores incompletos, publicación versionada y comparación de cambios. El mes nuevo continúa la última rutina cuando corresponde.
-- Biblioteca: catálogo inicial en español, favoritos, ejercicios propios, imágenes privadas y 12 ilustraciones con créditos verificables.
+- Biblioteca: catálogo en español organizado por grupo muscular, búsqueda, favoritos y ejercicios propios. Sin imágenes ni animaciones por decisión del producto.
 - Historial: resultados cerrados, valores anteriores/nuevos, filtros, volumen, series por músculo y CSV. Los registros v6 se conservan como agregados antiguos.
-- Ajustes: reintentos, conflictos, recuperación de entrenamiento de otro mes, exportación e importación explícita v6. Salir o actualizar se bloquea mientras haya pendientes.
+- Ajustes: perfil, edición de nombre y cambio de contraseña actual. Email de solo lectura hasta habilitar correo verificado.
+- Centro de sincronización: reintentos, conflictos, recuperación de entrenamiento de otro mes, exportación e importación explícita v6. Accesible desde Hoy → Datos y sincronización y desde el aviso de cambios pendientes. Salir o actualizar se bloquea mientras haya pendientes.
 
 **Guardado:** primero se confirma una transacción local; después la app indica sincronización cuando el servidor confirma. Recargar offline conserva los comandos ya guardados. La caché no reemplaza un backup: borrar datos del navegador puede perder cambios que todavía no llegaron al servidor. El acceso offline requiere preparación previa y se limita a 24 h desde la verificación.
 

@@ -36,7 +36,9 @@ test("service worker update waits for pending edits and leaves private cache int
     ).toBeVisible();
     await expect(page.getByLabel("Peso kg")).toHaveValue("48");
     await page.unroute("http://127.0.0.1:54341/**");
-    await page.getByRole("link", { name: "Ajustes", exact: true }).click();
+    await page
+      .getByRole("link", { name: "Revisar cambios pendientes", exact: true })
+      .click();
     await page
       .getByRole("button", { name: "Reintentar sincronización" })
       .click();
@@ -47,7 +49,10 @@ test("service worker update waits for pending edits and leaves private cache int
     await page.getByRole("button", { name: "Actualizar ahora" }).click();
     await reloaded;
     await expect(
-      page.getByRole("heading", { name: "Ajustes", exact: true }),
+      page.getByRole("heading", {
+        name: "Centro de sincronización",
+        exact: true,
+      }),
     ).toBeVisible();
     await page.goto("/entrenar/" + a.studentId);
     await expect(page.getByLabel("Peso kg")).toHaveValue("48");

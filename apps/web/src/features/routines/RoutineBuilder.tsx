@@ -25,37 +25,48 @@ import { gateway } from "../../adapters/supabase-gateway";
 import type { StudentSnapshot } from "@pulso/domain/contracts";
 export function RoutineList() {
   const { rows } = useData();
+  const active = rows.filter((r) => !r.projection.student.archived);
   return (
     <>
       <p className="eyebrow">PREPARÁ EL PRÓXIMO PASO</p>
       <h1>Rutinas</h1>
-      <Link className="button secondary" to="/biblioteca">
-        Explorar biblioteca de ejercicios
-      </Link>
+      <p className="muted">
+        Elegí un alumno para crear o editar su rutina mensual.
+      </p>
       <div className="grid">
-        {rows
-          .filter((r) => !r.projection.student.archived)
-          .map((r) => (
-            <Link
-              className="card student-card"
-              key={r.studentId}
-              to={"/rutinas/" + r.studentId}
-            >
-              <h2>{r.projection.student.name}</h2>
-              <p>
-                {r.projection.routine?.document.name ??
-                  "Crear su primera rutina"}
-              </p>
-              <span className="badge">
-                {r.projection.period?.month ?? "Sin asignar"}
-              </span>
-            </Link>
-          ))}
+        {active.map((r) => (
+          <Link
+            className="card student-card"
+            key={r.studentId}
+            to={"/rutinas/" + r.studentId}
+          >
+            <h2>{r.projection.student.name}</h2>
+            <p>
+              {r.projection.routine?.document.name ?? "Crear su primera rutina"}
+            </p>
+            <span className="badge">
+              {r.projection.period?.month ?? "Sin asignar"}
+            </span>
+          </Link>
+        ))}
       </div>
-      {!rows.length && (
-        <Link className="button" to="/alumnos">
-          Agregar alumnos
-        </Link>
+      {!active.length && (
+        <section className="card routine-empty">
+          <h2>Prepará la primera rutina</h2>
+          <p>
+            Agregá un alumno para armar sus bloques, ejercicios y objetivos de
+            entrenamiento.
+          </p>
+          <div className="page-actions">
+            <Link className="button" to="/alumnos">
+              <Plus size={18} aria-hidden="true" />
+              Agregar alumno
+            </Link>
+            <Link className="button secondary" to="/biblioteca">
+              Explorar ejercicios
+            </Link>
+          </div>
+        </section>
       )}
     </>
   );

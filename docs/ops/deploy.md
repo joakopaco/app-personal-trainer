@@ -64,3 +64,11 @@ El proveedor email debe seguir habilitado en `[auth.email]`; `[auth].enable_sign
 Volver a un deployment anterior de frontend no revierte SQL. Usar migraciones aditivas y probar la versión anterior con el esquema nuevo. No borrar IndexedDB ni la outbox para forzar una actualización.
 
 La instalación y los deep links de Android/iOS físicos siguen siendo una verificación externa pendiente. Un navegador de escritorio con viewport móvil no reemplaza ese ensayo.
+
+## Estado del piloto publicado (2026-10-03)
+
+La URL de producción es https://app-personal-trainer-one.vercel.app. Email confirmado se pospuso por decisión del producto: `VITE_AUTH_EMAIL_ENABLED=false` y Confirm email OFF. Mantener Turnstile activo. Las instrucciones anteriores de SMTP/confirmación describen el siguiente hito, no el estado actual.
+
+Aplicada migración `202610030016_profile.sql`: modificación del nombre solo por `auth.uid()`, sin permisos de escritura directa a `profiles`. El cambio de email permanece fuera de la interfaz hasta habilitar correo. Supabase Auth → Email → **Require current password when updating** está activado y comprobado tras recargar; el SDK envía `current_password`. La recuperación por enlace queda exenta en Auth. Esta opción aún no figura en la configuración de la CLI local usada aquí: la prueba local comprueba el cambio y sus parámetros, pero no demuestra el rechazo de contraseña actual incorrecta en producción. Conservar y revisar esta opción al configurar otros entornos.
+
+Ajustes contiene únicamente perfil y contraseña. Los controles de recuperación/exportación/importación viven en `/sincronizacion`, accesibles siempre desde Hoy → Datos y sincronización, y desde los avisos de cambios pendientes.
