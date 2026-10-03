@@ -20,25 +20,20 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-async function signup() {
+async function signup(password = "Long-password-123") {
   const { Login } = await import("../../apps/web/src/features/auth/Login");
   render(<Login />);
   const user = userEvent.setup();
-  await user.click(
-    screen.getByRole("button", { name: /^Crear cuenta$/ }),
-  );
+  await user.click(screen.getByRole("button", { name: /^Crear cuenta$/ }));
   await user.type(
     screen.getByLabelText("Email", { exact: true }),
     "Trainer@Example.test",
   );
   await user.type(
     screen.getByLabelText("Contraseña", { exact: true }),
-    "long-password-123",
+    password,
   );
-  await user.type(
-    screen.getByLabelText("Repetí la contraseña"),
-    "long-password-123",
-  );
+  await user.type(screen.getByLabelText("Repetí la contraseña"), password);
   await user.click(screen.getByRole("button", { name: "Crear mi cuenta" }));
 }
 
@@ -97,3 +92,22 @@ test("verified-email mode still guides a pending signup to its confirmation", as
     ),
   );
 });
+
+test("an eight-character password with upper/lowercase and a digit can register", async () => {
+  auth.signUp.mockResolvedValue({
+    error: null,
+    data: { user: { id: "trainer" }, session: { user: { id: "trainer" } } },
+  });
+  await signup("Entrena1");
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toContain("Cuenta creada"),
+  );
+});
+
+test.each(["entrenamiento1", "Entrenamiento", "ENTRENAMIENTO1", "Entren1"])(
+  "rejects password missing policy requirements: %s",
+  async (password) => {
+    await signup(password);
+    expect(auth.signUp).not.toHaveBeenCalled();
+  },
+);

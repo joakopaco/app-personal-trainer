@@ -30,7 +30,8 @@ test("signup confirms email in a fresh browser and keeps one identity across pro
 }) => {
   const admin = adminClient(),
     email = "signup-" + crypto.randomUUID() + "@pulso.local";
-  const password = "Pulso-" + crypto.randomUUID();
+  // Eight characters is the actual minimum accepted by browser and Auth.
+  const password = "Entrena1";
   const anonymous = createClient(config.url, config.anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });

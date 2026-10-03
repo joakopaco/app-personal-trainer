@@ -4,7 +4,7 @@ El piloto usa Vercel `joako-personal/app-personal-trainer` y Supabase `dnsakonvr
 
 ## Piloto sin envío de correo (decisión del usuario, 2026-10-03)
 
-- Registro únicamente de entrenadores con email y contraseña (mínimo 12 caracteres). Supabase conserva una identidad única por email. Los alumnos siguen siendo fichas y su acceso muestra Próximamente.
+- Registro únicamente de entrenadores con email y contraseña (mínimo 8 caracteres, mayúscula, minúscula y número). Supabase conserva una identidad única por email. Los alumnos siguen siendo fichas y su acceso muestra Próximamente.
 - En producción `Confirm email` está desactivado y `VITE_AUTH_EMAIL_ENABLED=false`. Supabase autoconfirma el alta y devuelve una sesión: la app la conserva y abre el espacio privado. El frontend no concede permisos ni modifica `email_confirmed_at`; las políticas y RPC siguen verificando al usuario en el servidor.
 - No hay SMTP propio, verificación de titularidad del correo ni recuperación automática habilitada en la interfaz. Conservar contraseñas. La recuperación manual requiere comprobar la identidad del participante con el operador; no conceder acceso solamente porque alguien declara un email. No marcar estos correos como verificados por su titular.
 - Las respuestas duplicadas se presentan de forma genérica en la UI, pero Auth puede revelar que un email ya existe cuando la confirmación está desactivada. Turnstile y límites siguen habilitados; no afirmar resistencia completa a enumeración de cuentas.
@@ -33,14 +33,14 @@ Web: http://127.0.0.1:5173. Studio: http://127.0.0.1:54343. Correo de ensayo: ht
 
 ## Preparación de staging y producción
 
-1. Crear proyectos Supabase separados. Habilitar registro por email de entrenadores, contraseña mínima de 12 caracteres y confirmación obligatoria. Desactivar login anónimo, teléfono y proveedores que no se utilicen. Configurar SMTP propio, URL principal y callbacks exactos `/auth/callback`. Copiar `supabase/templates/confirmation.html` al template Confirm signup: usa SiteURL y token_hash, funciona desde otro dispositivo y exige pulsar un botón antes de consumir el enlace. Mantener recuperación PKCE.
+1. Crear proyectos Supabase separados. Habilitar registro por email de entrenadores, contraseña mínima de 8 caracteres, mayúscula, minúscula y número y confirmación obligatoria. Desactivar login anónimo, teléfono y proveedores que no se utilicen. Configurar SMTP propio, URL principal y callbacks exactos `/auth/callback`. Copiar `supabase/templates/confirmation.html` al template Confirm signup: usa SiteURL y token_hash, funciona desde otro dispositivo y exige pulsar un botón antes de consumir el enlace. Mantener recuperación PKCE.
 2. Revisar las migraciones SQL y aplicarlas primero en staging. Mantener RLS, permisos de funciones y bucket `exercise-media` privado. Solo el operador dispone de la clave administrativa.
 3. Crear proyecto Vercel: raíz del repositorio, build `npm run build`, salida `apps/web/dist`. `vercel.json` incluye navegación SPA y cabeceras de seguridad. Configurar dominio HTTPS.
 4. Variables públicas: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (anon o publishable) y `VITE_TURNSTILE_SITE_KEY`. Crear un widget Turnstile para los dominios exactos de cada entorno, guardar su secreto exclusivamente en Supabase Auth y habilitar allí CAPTCHA con proveedor Turnstile. No basta con mostrar un widget: probar que Auth rechace signup/login/reset sin token y con token inválido. El build Vercel rechaza claves de prueba o site key ausente. Variables de control de build: `PULSO_TARGET=staging|production`, `PULSO_EXPECTED_SUPABASE_HOST` y `PULSO_PRODUCTION_SUPABASE_HOST`. Una preview falla si intenta usar el hostname productivo, si falta la comparación o si lleva una clave administrativa.
 5. Configurar secretos de migración solo en un entorno CI protegido. Nunca exponer Admin API al frontend. Probar alta, confirmación, reenvío, recuperación, expiración y repetición del enlace con el SMTP real, incluyendo apertura del email en otro teléfono. Desactivar tracking de enlaces en el proveedor SMTP. Los mensajes de alta y recuperación no confirman si otro usuario existe.
 6. Ensayar backup/restauración en un proyecto independiente. Aprobar proveedor, presupuesto, retención y responsables. Recién entonces habilitar un entrenador real.
 
-No hay un workflow remoto que publique o migre automáticamente a producción. `.github/workflows/checks.yml` levanta Supabase local, prueba, construye y verifica PWA. Crear el workflow de entrega cuando existan los destinos aprobados; no inventar IDs ni secretos.
+Vercel publica automáticamente desde main; las migraciones SQL remotas siguen siendo una operación separada. `.github/workflows/checks.yml` levanta Supabase local, prueba, construye y verifica PWA. No conectar previews a la base productiva ni publicar claves administrativas.
 
 ## Seguridad y verificación previa a habilitar acceso real
 

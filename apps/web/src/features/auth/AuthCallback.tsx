@@ -2,6 +2,11 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { cloud, updateVerifiedPassword } from "../../adapters/supabase";
 import { useAuth } from "./AuthProvider";
+import {
+  passwordHint,
+  passwordPattern,
+  validPassword,
+} from "../../adapters/password";
 export function AuthCallback() {
   const auth = useAuth();
   const navigate = useNavigate();
@@ -91,6 +96,10 @@ export function AuthCallback() {
   }
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!validPassword(password)) {
+      setError(passwordHint);
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -111,7 +120,9 @@ export function AuthCallback() {
       navigate("/hoy", { replace: true });
     } catch {
       setError(
-        "No se pudo cambiar la contraseña. Usá al menos 12 caracteres o solicitá un enlace nuevo.",
+        "No se pudo cambiar la contraseña. " +
+          passwordHint +
+          " Si el enlace venció, solicitá uno nuevo.",
       );
     } finally {
       setBusy(false);
@@ -149,12 +160,15 @@ export function AuthCallback() {
                 Nueva contraseña
                 <input
                   type="password"
-                  minLength={12}
+                  minLength={8}
+                  pattern={passwordPattern}
+                  aria-describedby="new-password-hint"
                   autoComplete="new-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <small id="new-password-hint">{passwordHint}</small>
               </label>
               <button className="button" disabled={busy}>
                 Guardar contraseña

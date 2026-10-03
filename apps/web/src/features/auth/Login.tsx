@@ -3,6 +3,11 @@ import { ArrowRight, ShieldCheck, Users } from "lucide-react";
 import { cloud, supabase } from "../../adapters/supabase";
 import { Captcha, captchaRequired, captchaSiteKey } from "./Captcha";
 import { Brand } from "../../components/Brand";
+import {
+  passwordHint,
+  passwordPattern,
+  validPassword,
+} from "../../adapters/password";
 type Mode = "login" | "signup" | "recovery" | "resend";
 // Controls available email actions, never authorization. Supabase owns signup policy.
 const emailEnabled = import.meta.env.VITE_AUTH_EMAIL_ENABLED !== "false";
@@ -35,6 +40,10 @@ export function Login() {
       ((captchaRequired || captchaSiteKey) && !captcha)
     )
       return;
+    if (mode === "signup" && !validPassword(password)) {
+      setError(passwordHint);
+      return;
+    }
     if (mode === "signup" && password !== repeat) {
       setError("Las contraseñas no coinciden.");
       return;
@@ -218,16 +227,15 @@ export function Login() {
                       autoComplete={
                         mode === "signup" ? "new-password" : "current-password"
                       }
-                      minLength={mode === "signup" ? 12 : undefined}
+                      minLength={mode === "signup" ? 8 : undefined}
+                      pattern={mode === "signup" ? passwordPattern : undefined}
                       required
                       value={password}
                       disabled={busy}
                       onChange={(e) => setPassword(e.target.value)}
                     />
                     {mode === "signup" && (
-                      <small id="password-hint">
-                        Usá al menos 12 caracteres. Podés usar una frase larga.
-                      </small>
+                      <small id="password-hint">{passwordHint}</small>
                     )}
                   </label>
                 )}
