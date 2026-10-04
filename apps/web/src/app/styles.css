@@ -968,24 +968,41 @@ caption {
   }
 }
 
-/* Pulso identity: original supplied artwork, with a CSS viewport for its margins. */
+/* The supplied symbol is the P in Pulso; the word continues with "ulso". */
 .brand-art {
-  display: block;
-  position: relative;
-  overflow: hidden;
-  width: 176px;
-  height: 58px;
+  --brand-height: 58px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  width: max-content;
+  height: var(--brand-height);
   flex-shrink: 0;
   background: var(--black);
-  border-radius: 4px;
+  color: #fff;
+  letter-spacing: normal;
 }
-.brand-art img {
+.brand-symbol {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  flex: none;
+  width: calc(var(--brand-height) * 0.9);
+  height: var(--brand-height);
+}
+.brand-symbol img {
   position: absolute;
   max-width: none;
-  width: 188.4%;
+  width: 227.56%;
   height: auto;
-  left: -44%;
-  top: -62%;
+  left: -62.63%;
+  top: -57.14%;
+}
+.brand-word {
+  font-size: calc(var(--brand-height) * 0.9);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.055em;
+  padding-right: 0.055em;
 }
 .sidebar {
   background: var(--black);
@@ -1006,8 +1023,7 @@ caption {
   background: var(--black);
 }
 .auth-story > .brand-art {
-  width: 224px;
-  height: 74px;
+  --brand-height: 74px;
 }
 .auth-story h2 {
   color: var(--ink);
@@ -1055,8 +1071,7 @@ caption {
     margin: -40px -24px 28px;
   }
   .auth-mobile-brand .brand-art {
-    width: 152px;
-    height: 50px;
+    --brand-height: 50px;
   }
   .auth-panel {
     padding-top: 40px;
@@ -1346,4 +1361,6 @@ th {
   color: var(--muted);
 }
 
-.training-back { margin-bottom: 20px; }
+.training-back {
+  margin-bottom: 20px;
+}
