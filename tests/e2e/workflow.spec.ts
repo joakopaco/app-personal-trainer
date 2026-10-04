@@ -16,8 +16,11 @@ test("trainer can build a block routine and train from the mobile UI", async ({
       page.getByRole("navigation", { name: "Principal" }),
     ).toBeVisible();
     await page.goto("/rutinas/" + a.studentId);
+    await page
+      .getByRole("button", { name: "Crear rutina", exact: true })
+      .click();
     await expect(
-      page.getByRole("heading", { name: "Constructor de rutina" }),
+      page.getByRole("heading", { name: "Editar rutina", exact: true }),
     ).toBeVisible();
     await page
       .getByRole("button", { name: "Agregar bloque", exact: true })

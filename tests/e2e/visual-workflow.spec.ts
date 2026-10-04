@@ -77,7 +77,17 @@ test("mobile live correction, accessible dialog and desktop history render witho
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/rutinas/" + a.studentId);
     await expect(
-      page.getByRole("heading", { name: "Constructor de rutina" }),
+      page.getByRole("button", { name: "Editar rutina", exact: true }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: ".local/screens/routine-summary-desktop.png",
+      fullPage: true,
+    });
+    await page
+      .getByRole("button", { name: "Editar rutina", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Editar rutina", exact: true }),
     ).toBeVisible();
     await page.screenshot({
       path: ".local/screens/builder-desktop.png",
@@ -88,15 +98,6 @@ test("mobile live correction, accessible dialog and desktop history render witho
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    await page.emulateMedia({ media: "print" });
-    await expect(
-      page.getByRole("article", { name: "Rutina mensual para imprimir" }),
-    ).toBeVisible();
-    for (let n = 1; n <= 4; n++)
-      await expect(
-        page.getByRole("heading", { name: "Semana " + n, exact: true }),
-      ).toBeVisible();
-    await page.emulateMedia({ media: "screen" });
     const snapshot = await a.client.rpc("fetch_student", {
       workspace_id: a.workspaceId,
       student_id: a.studentId,

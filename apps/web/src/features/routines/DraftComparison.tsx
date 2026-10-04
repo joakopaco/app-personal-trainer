@@ -5,6 +5,7 @@ import {
   conflictValue,
 } from "@pulso/domain/routine-diff";
 import type { RoutineDocument } from "@pulso/domain/routines";
+import { formatRestMinutes } from "../../components/rest-minutes";
 export function DraftComparison({
   base,
   local,
@@ -23,6 +24,11 @@ export function DraftComparison({
   );
   const original = mergeRoutine(base, local, remote, {}),
     result = mergeRoutine(base, local, remote, choices);
+  function displayedValue(path: string, value: unknown) {
+    return /(?:microRest|macroRest)$/.test(path) && typeof value === "number"
+      ? formatRestMinutes(value) + " min"
+      : conflictValue(value);
+  }
   return (
     <div className="modal-backdrop">
       <section
@@ -41,9 +47,9 @@ export function DraftComparison({
             <strong>{conflictLabel(c.path, local)}</strong>
             <details>
               <summary>Ver valores</summary>
-              <p>Base: {conflictValue(c.base)}</p>
-              <p>Borrador: {conflictValue(c.local)}</p>
-              <p>Vigente: {conflictValue(c.remote)}</p>
+              <p>Base: {displayedValue(c.path, c.base)}</p>
+              <p>Borrador: {displayedValue(c.path, c.local)}</p>
+              <p>Vigente: {displayedValue(c.path, c.remote)}</p>
             </details>
             <div className="row">
               <button

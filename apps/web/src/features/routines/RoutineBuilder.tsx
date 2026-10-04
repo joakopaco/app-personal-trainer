@@ -1,7 +1,15 @@
-import { RoutinePrint } from "./RoutinePrint";
+import "./routine-editor.css";
+import { RoutineSummary } from "./RoutineSummary";
 import { useEffect, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Plus, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
+import {
+  Plus,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import {
   blankRoutine,
   cloneRoutineDocument,
@@ -14,7 +22,13 @@ import {
   searchExercises,
   type ExerciseDefinition,
 } from "@pulso/domain/catalog";
-import { NumericField } from "../../components/NumericField";
+import { RoutineNumberField as NumericField } from "../../components/RoutineNumberField";
+import {
+  isRestField,
+  parseDisplayedNumber,
+  restoreRestRaw,
+  storeRestRaw,
+} from "../../components/rest-minutes";
 import { useData } from "../../app/DataProvider";
 import { cloud } from "../../adapters/supabase";
 import { TemplateTools } from "./TemplateTools";
@@ -89,11 +103,14 @@ export function RoutineBuilder() {
     [busy, setBusy] = useState(false),
     [searchBlock, setSearchBlock] = useState<string | null>(null),
     [query, setQuery] = useState("");
+  const [mode, setMode] = useState<"start" | "edit" | "view">("start");
   const rawValues = useRef<Record<string, string>>({});
   const rawInvalid = useRef(new Set<string>());
   const [comparison, setComparison] = useState<{
     base: RoutineDocument;
     remote: StudentSnapshot;
+    document: RoutineDocument;
+    revisionBase: string | null;
   } | null>(null);
   const [ownExercises, setOwnExercises] = useState<ExerciseDefinition[]>([]);
   useEffect(() => {
@@ -124,13 +141,22 @@ export function RoutineBuilder() {
           rawValues?: Record<string, string>;
         };
         if (active) {
-          rawValues.current = l.rawValues ?? {};
+          rawValues.current = Object.fromEntries(
+            Object.entries(l.rawValues ?? {}).map(([key, value]) => [
+              key,
+              isRestField(
+                key.split(":").at(-1) as Parameters<typeof parseNumber>[0],
+              )
+                ? restoreRestRaw(value)
+                : value,
+            ]),
+          );
           rawInvalid.current = new Set(
             Object.entries(rawValues.current)
               .filter(
                 ([key, value]) =>
-                  value.trim() !== "" &&
-                  !parseNumber(
+                  value !== "" &&
+                  !parseDisplayedNumber(
                     key.split(":").at(-1) as Parameters<typeof parseNumber>[0],
                     value,
                   ).ok,
@@ -143,6 +169,7 @@ export function RoutineBuilder() {
           setBase(l.base);
           setStudentRevision(l.studentRevision);
           setDirty(true);
+          setMode("edit");
           setLoaded(true);
         }
         return;
@@ -165,9 +192,13 @@ export function RoutineBuilder() {
         setDraftId(data[0].id);
         setDraftRevision(data[0].revision);
         setBase(data[0].base_revision_id);
+        setMode("edit");
       } else {
         setDoc(row.projection.routine?.document ?? blankRoutine());
         setBase(row.projection.routine?.id ?? null);
+        setDraftId(crypto.randomUUID());
+        setDraftRevision(0);
+        setMode(row.projection.routine ? "view" : "start");
       }
       setStudentRevision(row.confirmed.revision);
       setLoaded(true);
@@ -206,7 +237,16 @@ export function RoutineBuilder() {
           draftRevision,
           base,
           studentRevision,
-          rawValues: rawValues.current,
+          rawValues: Object.fromEntries(
+            Object.entries(rawValues.current).map(([key, value]) => [
+              key,
+              isRestField(
+                key.split(":").at(-1) as Parameters<typeof parseNumber>[0],
+              )
+                ? storeRestRaw(value)
+                : value,
+            ]),
+          ),
         },
       })
       .catch(() =>
@@ -217,6 +257,54 @@ export function RoutineBuilder() {
     const next = structuredClone(doc);
     fn(next);
     change(next);
+  }
+  async function handleCommandError(cause: unknown) {
+    const message = (cause as Error).message;
+    setError(message);
+    if (!/cambiaron|versión|conflict|changed|stale draft/i.test(message))
+      return;
+    try {
+      const remote = await gateway(db.scope).fetchStudent(db.scope, id!);
+      const remoteDraft = await cloud()
+        .from("routine_drafts")
+        .select("document,revision,base_revision_id")
+        .eq("id", draftId)
+        .maybeSingle();
+      if (remoteDraft.error) throw remoteDraft.error;
+      const activeChanged = remote.routine && remote.routine.id !== base;
+      const draftChanged =
+        remoteDraft.data && remoteDraft.data.revision !== draftRevision;
+      if (activeChanged || draftChanged) {
+        const original = base
+          ? await cloud()
+              .from("routine_revisions")
+              .select("document")
+              .eq("id", base)
+              .single()
+          : null;
+        if (original?.error) throw original.error;
+        setComparison({
+          base: original?.data?.document ?? blankRoutine(),
+          remote,
+          document: activeChanged
+            ? remote.routine!.document
+            : remoteDraft.data!.document,
+          revisionBase: activeChanged
+            ? remote.routine!.id
+            : remoteDraft.data!.base_revision_id,
+        });
+      } else {
+        setStudentRevision(remote.revision);
+        setError(
+          message + " El borrador se conserva. Volvé a intentar guardar.",
+        );
+      }
+    } catch {
+      setError(
+        message +
+          " No se pudo recuperar la versión vigente. El borrador se conserva.",
+      );
+    }
   }
   async function save() {
     setBusy(true);
@@ -243,8 +331,9 @@ export function RoutineBuilder() {
       rawValues.current = {};
       await db.meta.delete("draft:" + id);
       setMessage("Borrador guardado. Todavía no cambia la rutina activa.");
+      setMode("view");
     } catch (e) {
-      setError((e as Error).message);
+      await handleCommandError(e);
     } finally {
       setBusy(false);
     }
@@ -281,8 +370,9 @@ export function RoutineBuilder() {
       setDraftId(crypto.randomUUID());
       setDraftRevision(0);
       setMessage("Rutina activa. La versión anterior se conserva.");
+      setMode("view");
     } catch (e) {
-      setError((e as Error).message);
+      await handleCommandError(e);
     } finally {
       setBusy(false);
     }
@@ -313,24 +403,71 @@ export function RoutineBuilder() {
   if (!row || !loaded) return <p role="status">Cargando borrador… {error}</p>;
   const selected = doc.weeks[week][day];
   return (
-    <>
-      <Link to={"/alumnos/" + id}>← {row.projection.student.name}</Link>
+    <div className="routine-workspace">
+      <Link className="routine-back" to={"/alumnos/" + id}>
+        <ArrowLeft size={18} aria-hidden="true" /> Volver a{" "}
+        {row.projection.student.name}
+      </Link>
       <header className="page-heading">
         <div>
           <p className="eyebrow">PROGRAMACIÓN MENSUAL</p>
-          <h1>Constructor de rutina</h1>
+          <h1>
+            {mode === "edit"
+              ? "Editar rutina"
+              : mode === "start"
+                ? "Crear rutina"
+                : doc.name}
+          </h1>
           <p className="muted">
             {row.projection.student.name} ·{" "}
-            {dirty ? "Cambios sin publicar" : "Borrador de trabajo"}
+            {dirty
+              ? "Borrador guardado en este dispositivo"
+              : draftRevision
+                ? "Borrador listo para activar"
+                : row.projection.routine
+                  ? "Rutina activa"
+                  : "Programación de 4 semanas"}
           </p>
         </div>
-        <div className="row no-print">
-          <button className="button secondary" disabled={busy} onClick={save}>
-            Guardar borrador
-          </button>
-          <button className="button" disabled={busy} onClick={publish}>
-            Activar rutina
-          </button>
+        <div className="routine-heading-actions">
+          {mode === "edit" && (
+            <button
+              className={
+                "button" + (draftRevision && !dirty ? " secondary" : "")
+              }
+              disabled={busy}
+              onClick={save}
+            >
+              Guardar borrador
+            </button>
+          )}
+          {mode === "view" && (
+            <button
+              className={"button" + (draftRevision ? " secondary" : "")}
+              disabled={busy}
+              onClick={() => setMode("edit")}
+            >
+              <Pencil size={17} aria-hidden="true" /> Editar rutina
+            </button>
+          )}
+          {mode !== "start" && draftRevision > 0 && (
+            <button
+              className="button"
+              disabled={busy || dirty}
+              onClick={publish}
+            >
+              Activar rutina
+            </button>
+          )}
+          {mode === "view" && !draftRevision && !dirty && (
+            <button
+              className="button secondary"
+              disabled={busy}
+              onClick={() => setMode("start")}
+            >
+              <Plus size={17} aria-hidden="true" /> Nueva rutina
+            </button>
+          )}
         </div>
       </header>
       {error && (
@@ -343,71 +480,15 @@ export function RoutineBuilder() {
           {message}
         </p>
       )}
-      <div className="row no-print">
-        <button
-          className="button secondary"
-          onClick={async () => {
-            try {
-              const remote = await gateway(db.scope).fetchStudent(
-                db.scope,
-                id!,
-              );
-              if (!remote.routine)
-                throw Error("No hay rutina vigente para comparar.");
-              const original = base
-                ? await cloud()
-                    .from("routine_revisions")
-                    .select("document")
-                    .eq("id", base)
-                    .single()
-                : null;
-              if (original?.error) throw original.error;
-              setComparison({
-                base: original?.data?.document ?? blankRoutine(),
-                remote,
-              });
-            } catch (e) {
-              setError((e as Error).message);
-            }
-          }}
-        >
-          Comparar con rutina vigente
-        </button>
-        <button
-          className="link-button"
-          onClick={async () => {
-            if (
-              !confirm(
-                "Descartar este borrador local y partir de la rutina vigente. ¿Continuar?",
-              )
-            )
-              return;
-            const current = await gateway(db.scope).fetchStudent(db.scope, id!);
-            setWeek(0);
-            setDay(0);
-            rawValues.current = {};
-            setDoc(current.routine?.document ?? blankRoutine());
-            setBase(current.routine?.id ?? null);
-            setDraftId(crypto.randomUUID());
-            setDraftRevision(0);
-            setStudentRevision(current.revision);
-            setDirty(false);
-            rawInvalid.current.clear();
-            await db.meta.delete("draft:" + id);
-          }}
-        >
-          Descartar borrador local
-        </button>
-      </div>
       {comparison && (
         <DraftComparison
           base={comparison.base}
           local={doc}
-          remote={comparison.remote.routine!.document}
+          remote={comparison.document}
           onCancel={() => setComparison(null)}
           onApply={(next) => {
             const nextId = crypto.randomUUID(),
-              nextBase = comparison.remote.routine!.id,
+              nextBase = comparison.revisionBase,
               nextRevision = comparison.remote.revision;
             setWeek(0);
             setDay(0);
@@ -430,457 +511,479 @@ export function RoutineBuilder() {
               },
             });
             setComparison(null);
+            setMode("edit");
             setMessage("Borrador revisado. Guardalo antes de activar.");
           }}
         />
       )}
-      <fieldset disabled={busy} className="editor-fields">
-        <TemplateTools document={doc} onApply={change} />
-        <div className="card stack">
-          <label className="field">
-            Nombre de la rutina
-            <input
-              value={doc.name}
-              maxLength={120}
-              onChange={(e) =>
-                mutate((d) => {
-                  d.name = e.target.value;
-                })
-              }
-            />
-          </label>
-          <div className="row spread">
-            <div className="row">
-              {doc.weeks.map((_, i) => (
+      {mode === "start" && (
+        <TemplateTools
+          onApply={(next) => {
+            setWeek(0);
+            setDay(0);
+            change(next);
+            setMode("edit");
+          }}
+          onCancel={row.projection.routine ? () => setMode("view") : undefined}
+        />
+      )}
+      {mode === "view" && <RoutineSummary document={doc} />}
+      {mode === "edit" && (
+        <fieldset disabled={busy} className="editor-fields">
+          <div className="card stack">
+            <label className="field">
+              Nombre de la rutina
+              <input
+                value={doc.name}
+                maxLength={120}
+                onChange={(e) =>
+                  mutate((d) => {
+                    d.name = e.target.value;
+                  })
+                }
+              />
+            </label>
+            <div className="routine-week-tools">
+              <div className="routine-tabs" aria-label="Semanas">
+                {doc.weeks.map((_, i) => (
+                  <button
+                    className={"button " + (week === i ? "" : "secondary")}
+                    key={i}
+                    onClick={() => {
+                      setWeek(i);
+                      setDay(0);
+                    }}
+                  >
+                    Semana {i + 1}
+                  </button>
+                ))}
+              </div>
+              <button
+                className="link-button"
+                onClick={() => {
+                  mutate((d) => {
+                    for (let i = week + 1; i < 4; i++) {
+                      const copied = cloneRoutineDocument({
+                        ...d,
+                        weeks: [
+                          d.weeks[week],
+                          d.weeks[week],
+                          d.weeks[week],
+                          d.weeks[week],
+                        ],
+                      });
+                      d.weeks[i] = copied.weeks[0];
+                      for (let j = 0; j < d.weeks[i].length; j++)
+                        for (let k = 0; k < d.weeks[i][j].blocks.length; k++)
+                          for (
+                            let n = 0;
+                            n < d.weeks[i][j].blocks[k].exercises.length;
+                            n++
+                          )
+                            d.weeks[i][j].blocks[k].exercises[n].lineageId =
+                              d.weeks[week][j].blocks[k].exercises[n].lineageId;
+                    }
+                  });
+                }}
+              >
+                Copiar semana a las siguientes
+              </button>
+            </div>
+            <div className="routine-tabs" aria-label="Días">
+              {doc.weeks[week].map((d, i) => (
                 <button
-                  className={"button " + (week === i ? "" : "secondary")}
-                  key={i}
-                  onClick={() => {
-                    setWeek(i);
-                    setDay(0);
-                  }}
+                  className={"button " + (day === i ? "" : "secondary")}
+                  key={d.id}
+                  onClick={() => setDay(i)}
                 >
-                  Semana {i + 1}
+                  {d.name}
                 </button>
               ))}
-            </div>
-            <button
-              className="link-button"
-              onClick={() => {
-                mutate((d) => {
-                  for (let i = week + 1; i < 4; i++) {
-                    const copied = cloneRoutineDocument({
-                      ...d,
-                      weeks: [
-                        d.weeks[week],
-                        d.weeks[week],
-                        d.weeks[week],
-                        d.weeks[week],
-                      ],
-                    });
-                    d.weeks[i] = copied.weeks[0];
-                    for (let j = 0; j < d.weeks[i].length; j++)
-                      for (let k = 0; k < d.weeks[i][j].blocks.length; k++)
-                        for (
-                          let n = 0;
-                          n < d.weeks[i][j].blocks[k].exercises.length;
-                          n++
-                        )
-                          d.weeks[i][j].blocks[k].exercises[n].lineageId =
-                            d.weeks[week][j].blocks[k].exercises[n].lineageId;
-                  }
-                });
-              }}
-            >
-              Copiar semana a las siguientes
-            </button>
-          </div>
-          <div className="row">
-            {doc.weeks[week].map((d, i) => (
               <button
-                className={"button " + (day === i ? "" : "secondary")}
-                key={d.id}
-                onClick={() => setDay(i)}
-              >
-                {d.name}
-              </button>
-            ))}
-            <button
-              className="link-button"
-              onClick={() =>
-                mutate((d) => {
-                  d.weeks[week].push({
-                    id: crypto.randomUUID(),
-                    name: "Día " + (d.weeks[week].length + 1),
-                    blocks: [],
-                  });
-                })
-              }
-            >
-              + Día
-            </button>
-          </div>
-          <div className="row no-print">
-            <button
-              className="link-button"
-              onClick={() =>
-                mutate((d) => {
-                  if (d.weeks[week].length >= 14) return;
-                  const copy = cloneRoutineDocument({
-                    ...d,
-                    weeks: [[selected], [selected], [selected], [selected]],
-                  }).weeks[0][0];
-                  copy.name = selected.name + " (copia)";
-                  d.weeks[week].splice(day + 1, 0, copy);
-                })
-              }
-            >
-              Duplicar día
-            </button>
-            <button
-              className="link-button"
-              disabled={day === 0}
-              onClick={() => {
-                mutate((d) => {
-                  [d.weeks[week][day - 1], d.weeks[week][day]] = [
-                    d.weeks[week][day],
-                    d.weeks[week][day - 1],
-                  ];
-                });
-                setDay(day - 1);
-              }}
-            >
-              Mover día antes
-            </button>
-            <button
-              className="link-button"
-              disabled={doc.weeks[week].length === 1}
-              onClick={() => {
-                if (confirm("¿Eliminar este día del borrador?")) {
+                className="link-button"
+                onClick={() =>
                   mutate((d) => {
-                    d.weeks[week].splice(day, 1);
-                  });
-                  setDay(Math.max(0, day - 1));
+                    d.weeks[week].push({
+                      id: crypto.randomUUID(),
+                      name: "Día " + (d.weeks[week].length + 1),
+                      blocks: [],
+                    });
+                  })
                 }
-              }}
-            >
-              Eliminar día
-            </button>
-          </div>
-          <label className="field">
-            Nombre del día
-            <input
-              value={selected.name}
-              onChange={(e) =>
-                mutate((d) => {
-                  d.weeks[week][day].name = e.target.value;
-                })
-              }
-            />
-          </label>
-        </div>
-        <div className="stack blocks">
-          {selected.blocks.map((block, bi) => (
-            <section className="card" key={block.id}>
-              <div className="row spread">
-                <label className="field">
-                  Bloque {bi + 1}
-                  <input
-                    value={block.name}
-                    onChange={(e) =>
+              >
+                + Día
+              </button>
+            </div>
+            <details className="routine-day-tools">
+              <summary>Organizar día</summary>
+              <div className="row">
+                <button
+                  className="link-button"
+                  onClick={() =>
+                    mutate((d) => {
+                      if (d.weeks[week].length >= 14) return;
+                      const copy = cloneRoutineDocument({
+                        ...d,
+                        weeks: [[selected], [selected], [selected], [selected]],
+                      }).weeks[0][0];
+                      copy.name = selected.name + " (copia)";
+                      d.weeks[week].splice(day + 1, 0, copy);
+                    })
+                  }
+                >
+                  Duplicar día
+                </button>
+                <button
+                  className="link-button"
+                  disabled={day === 0}
+                  onClick={() => {
+                    mutate((d) => {
+                      [d.weeks[week][day - 1], d.weeks[week][day]] = [
+                        d.weeks[week][day],
+                        d.weeks[week][day - 1],
+                      ];
+                    });
+                    setDay(day - 1);
+                  }}
+                >
+                  Mover día antes
+                </button>
+                <button
+                  className="link-button"
+                  disabled={doc.weeks[week].length === 1}
+                  onClick={() => {
+                    if (confirm("¿Eliminar este día del borrador?")) {
                       mutate((d) => {
-                        d.weeks[week][day].blocks[bi].name = e.target.value;
+                        d.weeks[week].splice(day, 1);
+                      });
+                      setDay(Math.max(0, day - 1));
+                    }
+                  }}
+                >
+                  Eliminar día
+                </button>
+              </div>
+            </details>
+            <label className="field">
+              Nombre del día
+              <input
+                value={selected.name}
+                onChange={(e) =>
+                  mutate((d) => {
+                    d.weeks[week][day].name = e.target.value;
+                  })
+                }
+              />
+            </label>
+          </div>
+          <div className="stack blocks">
+            {selected.blocks.map((block, bi) => (
+              <section className="card" key={block.id}>
+                <div className="row spread">
+                  <label className="field">
+                    Bloque {bi + 1}
+                    <input
+                      value={block.name}
+                      onChange={(e) =>
+                        mutate((d) => {
+                          d.weeks[week][day].blocks[bi].name = e.target.value;
+                        })
+                      }
+                    />
+                  </label>
+                  <div className="row no-print">
+                    <button
+                      className="link-button"
+                      onClick={() =>
+                        mutate((d) => {
+                          const copy = cloneRoutineDocument({
+                            ...d,
+                            weeks: [
+                              [selected],
+                              [selected],
+                              [selected],
+                              [selected],
+                            ],
+                          }).weeks[0][0].blocks[bi];
+                          d.weeks[week][day].blocks.splice(bi + 1, 0, copy);
+                        })
+                      }
+                    >
+                      Duplicar bloque
+                    </button>
+                    <button
+                      className="button secondary"
+                      aria-label="Subir bloque"
+                      disabled={bi === 0}
+                      onClick={() =>
+                        mutate((d) => {
+                          const a = d.weeks[week][day].blocks;
+                          [a[bi - 1], a[bi]] = [a[bi], a[bi - 1]];
+                        })
+                      }
+                    >
+                      <ArrowUp size={16} />
+                    </button>
+                    <button
+                      className="button secondary"
+                      aria-label="Bajar bloque"
+                      disabled={bi === selected.blocks.length - 1}
+                      onClick={() =>
+                        mutate((d) => {
+                          const a = d.weeks[week][day].blocks;
+                          [a[bi + 1], a[bi]] = [a[bi], a[bi + 1]];
+                        })
+                      }
+                    >
+                      <ArrowDown size={16} />
+                    </button>
+                    <button
+                      className="button secondary"
+                      aria-label="Eliminar bloque"
+                      onClick={() =>
+                        mutate((d) => {
+                          d.weeks[week][day].blocks.splice(bi, 1);
+                        })
+                      }
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+                <div className="fields block-config">
+                  <label className="field">
+                    Tipo
+                    <select
+                      value={block.type}
+                      onChange={(e) =>
+                        mutate((d) => {
+                          const b = d.weeks[week][day].blocks[bi];
+                          b.type = e.target.value as Block["type"];
+                          for (const x of b.exercises)
+                            x.warmup = b.type !== "main";
+                        })
+                      }
+                    >
+                      <option value="main">Principal</option>
+                      <option value="approximation">Aproximación</option>
+                      <option value="mobility">Movilidad</option>
+                    </select>
+                  </label>
+                  <NumericField
+                    label="Descanso macro (min)"
+                    field="macroRest"
+                    value={block.macroRest}
+                    rawValue={rawValues.current[block.id + ":macroRest"]}
+                    onRaw={(raw) => {
+                      const key = block.id + ":macroRest";
+                      rawValues.current[key] = raw;
+                      if (
+                        raw !== "" &&
+                        !parseDisplayedNumber("macroRest", raw).ok
+                      )
+                        rawInvalid.current.add(key);
+                      else rawInvalid.current.delete(key);
+                      change(doc);
+                    }}
+                    onChange={(v) =>
+                      mutate((d) => {
+                        d.weeks[week][day].blocks[bi].macroRest = v;
                       })
                     }
                   />
-                </label>
-                <div className="row no-print">
-                  <button
-                    className="link-button"
-                    onClick={() =>
-                      mutate((d) => {
-                        const copy = cloneRoutineDocument({
-                          ...d,
-                          weeks: [
-                            [selected],
-                            [selected],
-                            [selected],
-                            [selected],
-                          ],
-                        }).weeks[0][0].blocks[bi];
-                        d.weeks[week][day].blocks.splice(bi + 1, 0, copy);
-                      })
-                    }
-                  >
-                    Duplicar bloque
-                  </button>
-                  <button
-                    className="button secondary"
-                    aria-label="Subir bloque"
-                    disabled={bi === 0}
-                    onClick={() =>
-                      mutate((d) => {
-                        const a = d.weeks[week][day].blocks;
-                        [a[bi - 1], a[bi]] = [a[bi], a[bi - 1]];
-                      })
-                    }
-                  >
-                    <ArrowUp size={16} />
-                  </button>
-                  <button
-                    className="button secondary"
-                    aria-label="Bajar bloque"
-                    disabled={bi === selected.blocks.length - 1}
-                    onClick={() =>
-                      mutate((d) => {
-                        const a = d.weeks[week][day].blocks;
-                        [a[bi + 1], a[bi]] = [a[bi], a[bi + 1]];
-                      })
-                    }
-                  >
-                    <ArrowDown size={16} />
-                  </button>
-                  <button
-                    className="button secondary"
-                    aria-label="Eliminar bloque"
-                    onClick={() =>
-                      mutate((d) => {
-                        d.weeks[week][day].blocks.splice(bi, 1);
-                      })
-                    }
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <label className="field">
+                    Aplicar macro
+                    <select
+                      value={block.macroTarget}
+                      onChange={(e) =>
+                        mutate((d) => {
+                          d.weeks[week][day].blocks[bi].macroTarget = e.target
+                            .value as Block["macroTarget"];
+                        })
+                      }
+                    >
+                      <option value="series">Entre series</option>
+                      <option value="blocks">Entre bloques</option>
+                    </select>
+                  </label>
                 </div>
-              </div>
-              <div className="fields block-config">
-                <label className="field">
-                  Tipo
-                  <select
-                    value={block.type}
-                    onChange={(e) =>
-                      mutate((d) => {
-                        const b = d.weeks[week][day].blocks[bi];
-                        b.type = e.target.value as Block["type"];
-                        for (const x of b.exercises)
-                          x.warmup = b.type !== "main";
-                      })
-                    }
-                  >
-                    <option value="main">Principal</option>
-                    <option value="approximation">Aproximación</option>
-                    <option value="mobility">Movilidad</option>
-                  </select>
-                </label>
-                <NumericField
-                  label="Descanso macro (s)"
-                  field="macroRest"
-                  value={block.macroRest}
-                  rawValue={rawValues.current[block.id + ":macroRest"]}
-                  onRaw={(raw) => {
-                    const key = block.id + ":macroRest";
-                    rawValues.current[key] = raw;
-                    if (raw.trim() !== "" && !parseNumber("macroRest", raw).ok)
-                      rawInvalid.current.add(key);
-                    else rawInvalid.current.delete(key);
-                    change(doc);
-                  }}
-                  onChange={(v) =>
-                    mutate((d) => {
-                      d.weeks[week][day].blocks[bi].macroRest = v;
-                    })
-                  }
-                />
-                <label className="field">
-                  Aplicar macro
-                  <select
-                    value={block.macroTarget}
-                    onChange={(e) =>
-                      mutate((d) => {
-                        d.weeks[week][day].blocks[bi].macroTarget = e.target
-                          .value as Block["macroTarget"];
-                      })
-                    }
-                  >
-                    <option value="series">Entre series</option>
-                    <option value="blocks">Entre bloques</option>
-                  </select>
-                </label>
-              </div>
-              {block.exercises.map((exercise, ei) => (
-                <div className="exercise-editor" key={exercise.id}>
-                  <div className="row spread">
-                    <div>
-                      <h3>{exercise.name}</h3>
-                      <small>{exercise.group}</small>
-                    </div>
-                    <div className="row">
-                      <button
-                        className="link-button"
-                        disabled={ei === 0}
-                        aria-label={"Subir " + exercise.name}
-                        onClick={() =>
-                          mutate((d) => {
-                            const a = d.weeks[week][day].blocks[bi].exercises;
-                            [a[ei - 1], a[ei]] = [a[ei], a[ei - 1]];
-                          })
-                        }
-                      >
-                        ↑
-                      </button>
-                      <button
-                        className="link-button"
-                        disabled={ei === block.exercises.length - 1}
-                        aria-label={"Bajar " + exercise.name}
-                        onClick={() =>
-                          mutate((d) => {
-                            const a = d.weeks[week][day].blocks[bi].exercises;
-                            [a[ei + 1], a[ei]] = [a[ei], a[ei + 1]];
-                          })
-                        }
-                      >
-                        ↓
-                      </button>
-                      <button
-                        className="link-button"
-                        aria-label={"Quitar " + exercise.name}
-                        onClick={() =>
-                          mutate((d) => {
-                            d.weeks[week][day].blocks[bi].exercises.splice(
-                              ei,
-                              1,
-                            );
-                          })
-                        }
-                      >
-                        Quitar
-                      </button>
-                    </div>
-                  </div>
-                  <div className="fields">
-                    {(
-                      [
-                        "sets",
-                        ...(exercise.type === "time"
-                          ? ["durationSec"]
-                          : exercise.type === "load_reps"
-                            ? ["weight", "reps"]
-                            : ["reps"]),
-                        "microRest",
-                      ] as const
-                    ).map((field) => {
-                      const f = field as keyof Position["prescription"];
-                      const labels = {
-                        weight: "Peso kg",
-                        sets: "Series",
-                        reps: "Repeticiones",
-                        durationSec: "Duración (s)",
-                        microRest: "Descanso micro (s)",
-                      };
-                      return (
-                        <NumericField
-                          key={f}
-                          field={f}
-                          label={labels[f]}
-                          value={exercise.prescription[f]}
-                          rawValue={rawValues.current[exercise.id + ":" + f]}
-                          onRaw={(raw) => {
-                            const key = exercise.id + ":" + f;
-                            rawValues.current[key] = raw;
-                            if (raw.trim() !== "" && !parseNumber(f, raw).ok)
-                              rawInvalid.current.add(key);
-                            else rawInvalid.current.delete(key);
-                            change(doc);
-                          }}
-                          onChange={(v) =>
+                {block.exercises.map((exercise, ei) => (
+                  <div className="exercise-editor" key={exercise.id}>
+                    <div className="row spread">
+                      <div>
+                        <h3>{exercise.name}</h3>
+                        <small>{exercise.group}</small>
+                      </div>
+                      <div className="row">
+                        <button
+                          className="link-button"
+                          disabled={ei === 0}
+                          aria-label={"Subir " + exercise.name}
+                          onClick={() =>
                             mutate((d) => {
-                              d.weeks[week][day].blocks[bi].exercises[
-                                ei
-                              ].prescription[f] = v;
+                              const a = d.weeks[week][day].blocks[bi].exercises;
+                              [a[ei - 1], a[ei]] = [a[ei], a[ei - 1]];
                             })
                           }
-                        />
-                      );
-                    })}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          className="link-button"
+                          disabled={ei === block.exercises.length - 1}
+                          aria-label={"Bajar " + exercise.name}
+                          onClick={() =>
+                            mutate((d) => {
+                              const a = d.weeks[week][day].blocks[bi].exercises;
+                              [a[ei + 1], a[ei]] = [a[ei], a[ei + 1]];
+                            })
+                          }
+                        >
+                          ↓
+                        </button>
+                        <button
+                          className="link-button"
+                          aria-label={"Quitar " + exercise.name}
+                          onClick={() =>
+                            mutate((d) => {
+                              d.weeks[week][day].blocks[bi].exercises.splice(
+                                ei,
+                                1,
+                              );
+                            })
+                          }
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </div>
+                    <div className="fields">
+                      {(
+                        [
+                          "sets",
+                          ...(exercise.type === "time"
+                            ? ["durationSec"]
+                            : exercise.type === "load_reps"
+                              ? ["weight", "reps"]
+                              : ["reps"]),
+                          "microRest",
+                        ] as const
+                      ).map((field) => {
+                        const f = field as keyof Position["prescription"];
+                        const labels = {
+                          weight: "Peso kg",
+                          sets: "Series",
+                          reps: "Repeticiones",
+                          durationSec: "Duración (s)",
+                          microRest: "Descanso micro (min)",
+                        };
+                        return (
+                          <NumericField
+                            key={f}
+                            field={f}
+                            label={labels[f]}
+                            value={exercise.prescription[f]}
+                            rawValue={rawValues.current[exercise.id + ":" + f]}
+                            onRaw={(raw) => {
+                              const key = exercise.id + ":" + f;
+                              rawValues.current[key] = raw;
+                              if (
+                                raw !== "" &&
+                                !parseDisplayedNumber(f, raw).ok
+                              )
+                                rawInvalid.current.add(key);
+                              else rawInvalid.current.delete(key);
+                              change(doc);
+                            }}
+                            onChange={(v) =>
+                              mutate((d) => {
+                                d.weeks[week][day].blocks[bi].exercises[
+                                  ei
+                                ].prescription[f] = v;
+                              })
+                            }
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
-              <button
-                className="button secondary"
-                onClick={() => setSearchBlock(block.id)}
-              >
-                <Plus size={17} />
-                Agregar ejercicio
-              </button>
-            </section>
-          ))}
-        </div>
-        <button
-          className="button secondary"
-          onClick={() =>
-            mutate((d) =>
-              d.weeks[week][day].blocks.push({
-                id: crypto.randomUUID(),
-                name: "Bloque " + (selected.blocks.length + 1),
-                type: "main",
-                macroRest: null,
-                macroTarget: "series",
-                exercises: [],
-              }),
-            )
-          }
-        >
-          <Plus size={18} />
-          Agregar bloque
-        </button>
-        {searchBlock && (
-          <div className="modal-backdrop">
-            <section
-              className="modal card"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Biblioteca de ejercicios"
-            >
-              <div className="row spread">
-                <h2>Elegí un ejercicio</h2>
+                ))}
                 <button
-                  className="link-button"
-                  onClick={() => setSearchBlock(null)}
+                  className="button secondary"
+                  onClick={() => setSearchBlock(block.id)}
                 >
-                  Cerrar
+                  <Plus size={17} />
+                  Agregar ejercicio
                 </button>
-              </div>
-              <label className="field">
-                Buscar ejercicio
-                <input
-                  autoFocus
-                  placeholder="Nombre, músculo o equipo"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-              </label>
-              <div className="catalog-results">
-                {searchExercises(query, [...ownExercises, ...catalog]).map(
-                  (e) => (
-                    <button
-                      className="catalog-option"
-                      aria-label={e.name}
-                      key={e.id}
-                      onClick={() => addExercise(e)}
-                    >
-                      <span>{e.name}</span>
-                      <small>
-                        {e.group} · {e.equipment}
-                      </small>
-                    </button>
-                  ),
-                )}
-              </div>
-            </section>
+              </section>
+            ))}
           </div>
-        )}
-      </fieldset>
-      <RoutinePrint document={doc} student={row.projection.student.name} />
-    </>
+          <button
+            className="button secondary"
+            onClick={() =>
+              mutate((d) =>
+                d.weeks[week][day].blocks.push({
+                  id: crypto.randomUUID(),
+                  name: "Bloque " + (selected.blocks.length + 1),
+                  type: "main",
+                  macroRest: null,
+                  macroTarget: "series",
+                  exercises: [],
+                }),
+              )
+            }
+          >
+            <Plus size={18} />
+            Agregar bloque
+          </button>
+          {searchBlock && (
+            <div className="modal-backdrop">
+              <section
+                className="modal card"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Biblioteca de ejercicios"
+              >
+                <div className="row spread">
+                  <h2>Elegí un ejercicio</h2>
+                  <button
+                    className="link-button"
+                    onClick={() => setSearchBlock(null)}
+                  >
+                    Cerrar
+                  </button>
+                </div>
+                <label className="field">
+                  Buscar ejercicio
+                  <input
+                    autoFocus
+                    placeholder="Nombre, músculo o equipo"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </label>
+                <div className="catalog-results">
+                  {searchExercises(query, [...ownExercises, ...catalog]).map(
+                    (e) => (
+                      <button
+                        className="catalog-option"
+                        aria-label={e.name}
+                        key={e.id}
+                        onClick={() => addExercise(e)}
+                      >
+                        <span>{e.name}</span>
+                        <small>
+                          {e.group} · {e.equipment}
+                        </small>
+                      </button>
+                    ),
+                  )}
+                </div>
+              </section>
+            </div>
+          )}
+        </fieldset>
+      )}
+    </div>
   );
 }

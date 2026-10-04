@@ -14,6 +14,11 @@ export const studentSchema = z.object({
   id: z.uuid(),
   workspace_id: z.uuid(),
   name: z.string(),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  gender: z
+    .enum(["masculino", "femenino", "otro", "no_especificado"])
+    .optional(),
   alias: z.string(),
   notes: z.string(),
   archived: z.boolean(),
@@ -85,6 +90,14 @@ export const sessionSchema = z.object({
 });
 export const snapshotSchema = z.object({
   student: studentSchema,
+  schedule: z
+    .object({
+      weekdays: z.array(z.number().int()),
+      time: z.string(),
+      day_times: z.record(z.string(), z.string()),
+    })
+    .nullable()
+    .optional(),
   revision: z.number().int(),
   period: periodSchema.nullable(),
   routine: z.object({ id: z.uuid(), document: routineSchema }).nullable(),

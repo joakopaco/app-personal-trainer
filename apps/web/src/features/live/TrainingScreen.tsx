@@ -1,3 +1,10 @@
+import {
+  displayNumber,
+  isRestField,
+  parseDisplayedNumber,
+  restoreRestRaw,
+  storeRestRaw,
+} from "../../components/rest-minutes";
 import { useSessionPosition } from "./useSessionPosition";
 import { CorrectSet } from "./CorrectSet";
 import { cloud } from "../../adapters/supabase";
@@ -415,8 +422,8 @@ function ExerciseRow({
                 sets: "Series",
                 reps: "Repeticiones",
                 durationSec: "Duración (s)",
-                microRest: "Descanso micro (s)",
-                macroRest: "Descanso macro (s)",
+                microRest: "Descanso micro (min)",
+                macroRest: "Descanso macro (min)",
               }[field]
             }
             value={
@@ -740,7 +747,7 @@ function LiveInput({
   onError: (s: string) => void;
 }) {
   const data = useData(),
-    [raw, setRaw] = useState(value === null ? "" : String(value)),
+    [raw, setRaw] = useState(displayNumber(field, value)),
     [state, setState] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null),
     focused = useRef(false),
@@ -752,8 +759,9 @@ function LiveInput({
     active.current = true;
     void data.db.rawInputs.get(rawId).then((saved) => {
       if (saved && active.current) {
-        setRaw(saved.raw);
-        latest.current = saved.raw;
+        const text = isRestField(field) ? restoreRestRaw(saved.raw) : saved.raw;
+        setRaw(text);
+        latest.current = text;
         setState("Pendiente de confirmar");
       }
     });
@@ -764,14 +772,14 @@ function LiveInput({
   }, [rawId, data.db]);
   useEffect(() => {
     if (!focused.current && !state) {
-      const text = value === null ? "" : String(value);
+      const text = displayNumber(field, value);
       setRaw(text);
       latest.current = text;
     }
   }, [value]);
   async function commit(text: string) {
     await write.current;
-    const result = parseNumber(field, text);
+    const result = parseDisplayedNumber(field, text);
     if (!result.ok) {
       setState("Revisá el valor");
       return;
@@ -779,7 +787,11 @@ function LiveInput({
     try {
       const row = await data.db.read(studentId);
       const saved = await data.db.rawInputs.get(rawId);
-      if (!saved || saved.raw !== text) return;
+      if (
+        !saved ||
+        (isRestField(field) ? restoreRestRaw(saved.raw) : saved.raw) !== text
+      )
+        return;
       await data.db.stage(
         data.makeCommand(
           studentId,
@@ -817,7 +829,7 @@ function LiveInput({
           sessionId: session.id,
           itemId: item.id,
           field,
-          raw: text,
+          raw: isRestField(field) ? storeRestRaw(text) : text,
           scope,
         });
         onFieldState(rawId, null);
@@ -838,7 +850,9 @@ function LiveInput({
       {label}
       <input
         aria-label={label}
-        inputMode={field === "weight" ? "decimal" : "numeric"}
+        inputMode={
+          field === "weight" || isRestField(field) ? "decimal" : "numeric"
+        }
         value={raw}
         disabled={disabled}
         onFocus={(e) => {
@@ -937,8 +951,7 @@ function RestTimer({ session }: { session: TrainingSession }) {
       <div className="row">
         <Timer size={18} />
         <strong>
-          Descanso · {Math.floor(remaining / 60)}:
-          {String(remaining % 60).padStart(2, "0")}
+          Descanso · {(remaining / 60).toFixed(2).replace(".", ",")} min
         </strong>
       </div>
       <div className="row">
@@ -946,13 +959,13 @@ function RestTimer({ session }: { session: TrainingSession }) {
           className="link-button"
           onClick={() => save(Date.now() + 60_000, null)}
         >
-          60 s
+          1 min
         </button>
         <button
           className="link-button"
           onClick={() => save(Date.now() + (remaining + 15) * 1000, null)}
         >
-          +15 s
+          +0,25 min
         </button>
         <button
           className="link-button"

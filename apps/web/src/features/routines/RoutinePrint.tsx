@@ -1,4 +1,5 @@
 import type { RoutineDocument } from "@pulso/domain/routines";
+import { formatRestMinutes } from "../../components/rest-minutes";
 export function RoutinePrint({
   document,
   student,
@@ -27,8 +28,11 @@ export function RoutinePrint({
                         : "Aproximación"}
                   </h4>
                   <p>
-                    Descanso macro: {block.macroRest ?? "sin definir"}
-                    {block.macroRest !== null ? " s" : ""} entre{" "}
+                    Descanso macro:{" "}
+                    {block.macroRest === null
+                      ? "sin definir"
+                      : formatRestMinutes(block.macroRest) + " min"}{" "}
+                    entre{" "}
                     {block.macroTarget === "series" ? "series" : "bloques"}.
                   </p>
                   <table>
@@ -59,7 +63,8 @@ export function RoutinePrint({
                           <td>
                             {e.prescription.microRest === null
                               ? "—"
-                              : e.prescription.microRest + " s"}
+                              : formatRestMinutes(e.prescription.microRest) +
+                                " min"}
                           </td>
                         </tr>
                       ))}

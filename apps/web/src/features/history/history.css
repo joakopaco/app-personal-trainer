@@ -1,0 +1,428 @@
+.history-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 14px;
+  margin-bottom: 24px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+.history-back:hover {
+  background: var(--surface-raised);
+}
+.history-progress {
+  margin-top: 28px;
+}
+.history-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.history-intro h2 {
+  font-size: clamp(22px, 3vw, 32px);
+  letter-spacing: -0.7px;
+  margin: 8px 0;
+}
+.history-intro .field {
+  min-width: 200px;
+}
+.history-progress-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.35fr);
+  gap: 22px;
+  margin-top: 22px;
+  align-items: stretch;
+}
+.history-anatomy,
+.history-focus {
+  min-width: 0;
+  padding: 24px;
+}
+.history-anatomy h2 {
+  font-size: 20px;
+  margin: 8px 0 18px;
+}
+.history-body {
+  display: block;
+  width: 100%;
+  height: 440px;
+  margin: 12px auto;
+  background: radial-gradient(ellipse, #f5f8ee, white 70%);
+}
+.history-body .anatomy-outline {
+  fill: #f0efe8;
+  stroke: #8f9c8c;
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.history-body .body-neutral {
+  fill: #d6dbce;
+  stroke: #fff;
+  stroke-width: 1;
+}
+.history-body .anatomy-detail {
+  fill: none;
+  stroke: #8b9886;
+  stroke-width: 0.8;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.history-body .anatomy-fibers {
+  fill: none;
+  stroke: #40553a;
+  stroke-width: 0.5;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.history-body .anatomy-shading {
+  pointer-events: none;
+}
+.history-body .muscle-region {
+  fill: #dbe2d1;
+  stroke: #fff;
+  stroke-width: 1.2;
+  cursor: pointer;
+  transition: fill 0.15s;
+}
+.history-body .muscle-region.trained {
+  fill: #a4be78;
+}
+.history-body .muscle-region.selected {
+  fill: #d3f66c;
+  stroke: #243c23;
+  stroke-width: 1.8;
+}
+.history-body .muscle-region:hover {
+  fill: #bddb72;
+}
+.history-body .muscle-region:focus-visible {
+  outline: none;
+  stroke: #101b10;
+  stroke-width: 3;
+}
+.history-map-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.history-map-legend span,
+.history-map-legend i {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #a4be78;
+}
+.history-map-legend i {
+  background: #d3f66c;
+  border: 1px solid #243c23;
+  margin-left: 10px;
+}
+.history-anatomy > .muted {
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.6;
+}
+.history-segments {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 5px;
+  background: #f2f4ec;
+  border-radius: 12px;
+  width: fit-content;
+  max-width: 100%;
+}
+.history-segments button {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  padding: 9px 14px;
+  min-height: 40px;
+  cursor: pointer;
+  color: #384333;
+  font: inherit;
+  font-size: 13px;
+}
+.history-segments button[aria-pressed="true"] {
+  background: #d3f66c;
+  color: #182210;
+  border-color: #a6c24e;
+  font-weight: 700;
+}
+.history-segments button:focus-visible,
+.history-group-cards button:focus-visible {
+  outline: 2px solid #243c23;
+  outline-offset: 3px;
+}
+.history-focus > .field {
+  margin-bottom: 20px;
+}
+.history-focus > .eyebrow {
+  margin: 24px 0 7px;
+}
+.history-focus h2 {
+  font-size: 26px;
+  line-height: 1.2;
+  margin: 8px 0 20px;
+  overflow-wrap: anywhere;
+}
+.history-comparison {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+.history-comparison > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 6px;
+}
+.history-comparison small {
+  font-size: 11px;
+  color: #64705e;
+}
+.history-comparison strong {
+  font-size: clamp(22px, 2.5vw, 34px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+.history-comparison strong span {
+  font-size: 13px;
+  letter-spacing: 0;
+}
+.history-comparison .history-delta {
+  background: #f2f8df;
+  border-radius: 12px;
+  padding: 12px;
+}
+.history-chart {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.history-chart text {
+  font-family: inherit;
+  font-size: 12px;
+  fill: #5f6b58;
+}
+.history-chart circle {
+  cursor: pointer;
+}
+.history-chart circle:focus {
+  outline: none;
+  stroke-width: 4;
+}
+.history-chart-reading {
+  padding: 12px;
+  border-radius: 9px;
+  background: #f4f6ef;
+  font-size: 13px;
+}
+.history-focus > .muted {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.history-focus details {
+  font-size: 13px;
+  margin-top: 20px;
+}
+.history-empty {
+  padding: 30px 0;
+  line-height: 1.7;
+  color: #69745f;
+}
+.history-empty strong {
+  color: #273321;
+  display: block;
+  font-size: 19px;
+}
+.history-group-section {
+  margin: 28px 0;
+}
+.history-group-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.history-group-cards button {
+  display: grid;
+  gap: 10px;
+  text-align: left;
+  border: 1px solid #e0e5d6;
+  background: white;
+  border-radius: 14px;
+  padding: 18px;
+  cursor: pointer;
+  color: #263322;
+  font: inherit;
+}
+.history-group-cards button.selected {
+  border-color: #90ac47;
+  background: #f4f9e8;
+}
+.history-group-cards strong {
+  font-size: 17px;
+}
+.history-group-cards span,
+.history-group-cards small {
+  font-size: 12px;
+  color: #68765d;
+}
+.history-group-cards .history-group-evolution {
+  font-size: 22px;
+  color: #273321;
+  font-weight: 650;
+  letter-spacing: -0.5px;
+}
+.history-routine-archive {
+  margin-top: 34px !important;
+}
+.history-routine-archive h2 {
+  margin: 8px 0;
+}
+.history-current-routine {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #f1f8e0;
+  font-size: 14px;
+}
+.history-archive-selectors {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.7fr) minmax(0, 1.3fr);
+  gap: 16px;
+  margin: 22px 0;
+}
+.history-archive-selectors select {
+  width: 100%;
+  max-width: 100%;
+}
+.history-readonly {
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: #626d59;
+  border-bottom: 1px solid #e2e6db;
+  padding-bottom: 14px;
+}
+.history-routine-document h3 {
+  margin: 22px 0;
+}
+.history-day-selector {
+  margin: 10px 0 20px;
+}
+.history-archive-block {
+  border: 1px solid #e4e8dc;
+  border-radius: 12px;
+  padding: 18px;
+  margin: 16px 0;
+}
+.history-archive-block h4 {
+  margin: 0;
+  font-size: 16px;
+}
+.history-archive-block h4 span {
+  font-size: 11px;
+  font-weight: 400;
+  margin-left: 10px;
+  color: #6c7662;
+}
+.history-archive-block .muted {
+  font-size: 12px;
+}
+.history-exercise-group {
+  display: block;
+  color: #6a7561;
+  margin-top: 6px;
+}
+.history-routine-archive table {
+  font-size: 13px;
+  min-width: 480px;
+}
+.history-records {
+  margin-top: 42px;
+  padding-top: 25px;
+  border-top: 1px solid #dce3d1;
+}
+.history-records > h2 {
+  font-size: 23px;
+}
+.history-records > .muted {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.history-dates {
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.history-dates .field {
+  flex: 1;
+  min-width: 145px;
+}
+@media (max-width: 850px) {
+  .history-progress-grid {
+    grid-template-columns: 1fr;
+  }
+  .history-body {
+    height: 375px;
+  }
+  .history-anatomy > .row {
+    justify-content: center;
+  }
+  .history-anatomy > .history-segments {
+    margin: auto;
+  }
+  .history-intro {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .history-intro .field {
+    min-width: 0;
+  }
+  .history-archive-selectors {
+    grid-template-columns: 1fr;
+  }
+  .history-group-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .history-anatomy,
+  .history-focus {
+    padding: 20px;
+  }
+  .history-archive-block {
+    padding: 12px;
+  }
+}
+@media (max-width: 420px) {
+  .history-comparison {
+    gap: 5px;
+  }
+  .history-comparison strong {
+    font-size: 24px;
+  }
+  .history-comparison small {
+    font-size: 10px;
+  }
+  .history-comparison .history-delta {
+    padding: 12px 8px;
+  }
+  .history-group-cards button {
+    padding: 13px;
+  }
+  .history-segments button {
+    padding: 9px 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .history-body .muscle-region {
+    transition: none;
+  }
+}

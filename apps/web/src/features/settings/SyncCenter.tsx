@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { useData } from "../../app/DataProvider";
 import { cloud } from "../../adapters/supabase";
 import { gateway } from "../../adapters/supabase-gateway";
+import { restoreRestRaw } from "../../components/rest-minutes";
 export function download(name: string, value: unknown) {
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),
@@ -404,8 +405,8 @@ function RawPending() {
     reps: "Repeticiones",
     sets: "Series",
     durationSec: "Duración (s)",
-    microRest: "Descanso micro (s)",
-    macroRest: "Descanso macro (s)",
+    microRest: "Descanso micro (min)",
+    macroRest: "Descanso macro (min)",
     setDraft: "Detalle de serie",
   };
   function value(input: RawInput) {
@@ -426,7 +427,11 @@ function RawPending() {
         return input.raw;
       }
     }
-    return input.raw || "Campo vacío";
+    return (
+      (input.field === "microRest" || input.field === "macroRest"
+        ? restoreRestRaw(input.raw)
+        : input.raw) || "Campo vacío"
+    );
   }
   return (
     <>

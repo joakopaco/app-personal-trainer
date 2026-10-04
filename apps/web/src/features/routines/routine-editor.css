@@ -1,0 +1,229 @@
+.routine-workspace {
+  max-width: 1120px;
+  margin-inline: auto;
+  min-width: 0;
+}
+.routine-workspace .routine-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-height: 44px;
+  font-size: 14px;
+  margin-bottom: 18px;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.routine-workspace .page-heading {
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.routine-workspace .page-heading h1 {
+  overflow-wrap: anywhere;
+}
+.routine-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.routine-workspace .editor-fields {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.routine-workspace .editor-fields > .button {
+  justify-self: start;
+}
+.routine-workspace .card {
+  min-width: 0;
+  padding: 26px;
+}
+.routine-workspace .stack {
+  gap: 22px;
+}
+.routine-workspace .routine-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 6px;
+}
+.routine-workspace .routine-tabs .button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  min-height: 44px;
+}
+.routine-week-tools {
+  display: grid;
+  gap: 8px;
+}
+.routine-week-tools > .link-button {
+  justify-self: start;
+  padding-left: 0;
+  text-align: left;
+}
+.routine-day-tools {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.routine-day-tools summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.routine-day-tools > .row {
+  padding-top: 14px;
+  gap: 12px;
+}
+.routine-workspace .blocks {
+  margin-top: 0;
+}
+.routine-workspace .blocks > .card > .row {
+  gap: 20px;
+  align-items: flex-end;
+}
+.routine-workspace .blocks > .card > .row > .field {
+  flex: 1;
+  min-width: 180px;
+}
+.routine-workspace .block-config {
+  padding: 20px 0;
+  margin: 8px 0 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.routine-workspace .field {
+  min-width: 0;
+  gap: 8px;
+  font-weight: 600;
+}
+.routine-workspace .field input,
+.routine-workspace .field select {
+  min-width: 0;
+  width: 100%;
+  min-height: 48px;
+}
+.routine-workspace .field-hint:empty {
+  display: none;
+}
+.routine-workspace .exercise-editor {
+  padding: 24px 0;
+}
+.routine-workspace .exercise-editor > .row {
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.routine-workspace .exercise-editor h3 {
+  font-size: 18px;
+  line-height: 1.4;
+}
+.routine-workspace .exercise-editor .fields {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.routine-workspace .link-button {
+  min-height: 40px;
+}
+.routine-start {
+  max-width: 640px;
+}
+.routine-start p {
+  margin-bottom: 0;
+}
+.routine-summary-day header h2 {
+  margin: 4px 0 8px;
+}
+.routine-summary-day header p {
+  margin-bottom: 0;
+}
+.routine-summary-block {
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 22px;
+}
+.routine-summary-block h3 {
+  margin-bottom: 6px;
+}
+.routine-summary-block > p {
+  margin-bottom: 18px;
+  font-size: 14px;
+}
+.routine-summary-exercises {
+  display: grid;
+  gap: 8px;
+}
+.routine-summary-exercises article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 20px;
+  padding: 18px;
+  background: var(--canvas);
+  border-radius: 10px;
+}
+.routine-summary-exercises small {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.routine-summary-exercises dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.routine-summary-exercises dt {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.routine-summary-exercises dd {
+  margin: 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .routine-workspace .page-heading {
+    gap: 18px;
+  }
+  .routine-heading-actions {
+    width: 100%;
+  }
+  .routine-heading-actions .button {
+    flex: 1;
+  }
+  .routine-workspace .card {
+    padding: 18px;
+  }
+  .routine-workspace .block-config {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .routine-workspace .block-config > .field:last-child {
+    grid-column: 1 / -1;
+  }
+  .routine-workspace .exercise-editor .fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .routine-workspace .blocks > .card > .row,
+  .routine-workspace .exercise-editor > .row {
+    align-items: flex-start;
+  }
+  .routine-workspace .blocks > .card > .row > .field {
+    flex-basis: 100%;
+  }
+  .routine-workspace .blocks > .card > .row > .row {
+    gap: 8px;
+  }
+  .routine-summary-exercises article {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding: 16px;
+  }
+  .routine-summary-exercises dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 16px;
+  }
+}

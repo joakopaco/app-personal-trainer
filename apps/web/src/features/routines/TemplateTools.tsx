@@ -1,89 +1,96 @@
-import { saveLibrary } from "../../adapters/library";
 import { useEffect, useState } from "react";
 import { cloud } from "../../adapters/supabase";
-import { useData } from "../../app/DataProvider";
 import {
+  blankRoutine,
   cloneRoutineDocument,
   type RoutineDocument,
 } from "@pulso/domain/routines";
+
 export function TemplateTools({
-  document,
   onApply,
+  onCancel,
 }: {
-  document: RoutineDocument;
   onApply: (doc: RoutineDocument) => void;
+  onCancel?: () => void;
 }) {
-  const { db } = useData();
   const [templates, setTemplates] = useState<
-      { id: string; name: string; document: RoutineDocument }[]
-    >([]),
-    [message, setMessage] = useState("");
-  async function refresh() {
-    const { data, error } = await cloud()
+    { id: string; name: string; document: RoutineDocument }[]
+  >([]);
+  const [selected, setSelected] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    void cloud()
       .from("routine_templates")
       .select("id,name,document")
-      .order("name");
-    if (error) setMessage("No se pudieron cargar las plantillas.");
-    else setTemplates(data);
-  }
-  useEffect(() => {
-    void refresh();
+      .order("name")
+      .then(({ data, error }) => {
+        if (!active) return;
+        setLoading(false);
+        if (error)
+          setError(
+            "No se pudieron cargar las plantillas. Podés empezar desde cero.",
+          );
+        else setTemplates(data ?? []);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
   return (
-    <details className="card no-print blocks">
-      <summary>Plantillas reutilizables e impresión</summary>
-      <p className="muted">Cada alumno recibe una copia independiente.</p>
-      <div className="row">
-        <button
-          className="button secondary"
-          onClick={async () => {
-            try {
-              await saveLibrary(db, {
-                workspaceId: db.scope.workspaceId,
-                operationId: crypto.randomUUID(),
-                id: crypto.randomUUID(),
-                kind: "template",
-                expectedRevision: 0,
-                payload: { document },
-              });
-              setMessage("Plantilla guardada.");
-              void refresh();
-            } catch (e) {
-              setMessage((e as Error).message);
-            }
-          }}
-        >
-          Guardar como nueva plantilla
-        </button>
-        <button className="button secondary" onClick={() => window.print()}>
-          Imprimir rutina
-        </button>
+    <section className="card routine-start stack" aria-label="Crear rutina">
+      <div>
+        <p className="eyebrow">NUEVA RUTINA</p>
+        <h2>Elegí cómo empezar</h2>
+        <p className="muted">
+          Armá un plan desde cero o usá una plantilla como base.
+        </p>
       </div>
-      <label className="field blocks">
-        Aplicar una copia de plantilla
+      <label className="field">
+        Punto de partida
         <select
-          aria-label="Aplicar plantilla"
-          value=""
-          onChange={(e) => {
-            const found = templates.find((t) => t.id === e.target.value);
-            if (
-              found &&
-              confirm(
-                "Reemplazar el borrador actual con una copia de esta plantilla. La rutina activa no cambia.",
-              )
-            )
-              onApply(cloneRoutineDocument(found.document));
-          }}
+          aria-label="Punto de partida"
+          value={selected}
+          onChange={(event) => setSelected(event.target.value)}
         >
-          <option value="">Elegí una plantilla</option>
-          {templates.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
+          <option value="">Rutina en blanco</option>
+          {templates.map((template) => (
+            <option key={template.id} value={template.id}>
+              {template.name}
             </option>
           ))}
         </select>
       </label>
-      {message && <p>{message}</p>}
-    </details>
+      {loading && <small role="status">Cargando plantillas…</small>}
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
+      {!loading && !error && !templates.length && (
+        <small className="muted">Todavía no hay plantillas disponibles.</small>
+      )}
+      <div className="row">
+        <button
+          className="button"
+          onClick={() => {
+            const template = templates.find((entry) => entry.id === selected);
+            onApply(
+              template
+                ? cloneRoutineDocument(template.document)
+                : blankRoutine(),
+            );
+          }}
+        >
+          Crear rutina
+        </button>
+        {onCancel && (
+          <button className="button secondary" onClick={onCancel}>
+            Volver a la rutina
+          </button>
+        )}
+      </div>
+    </section>
   );
 }

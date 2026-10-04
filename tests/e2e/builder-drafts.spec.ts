@@ -29,24 +29,42 @@ test("cleared and invalid draft fields survive reload; published routine remains
     await page.getByRole("button", { name: "Ingresar", exact: true }).click();
     await expect(page.getByRole("navigation")).toBeVisible();
     await page.goto("/rutinas/" + a.studentId);
+    await page
+      .getByRole("button", { name: "Editar rutina", exact: true })
+      .click();
     await expect(page.getByLabel("Peso kg", { exact: true })).toHaveValue("20");
     await page.getByLabel("Peso kg", { exact: true }).fill("");
     await page.getByLabel("Repeticiones", { exact: true }).fill("abc");
+    await page.getByLabel("Descanso micro (min)", { exact: true }).fill("0,5");
+    await page.getByLabel("Descanso macro (min)", { exact: true }).fill("1,");
     await page.getByLabel("Nombre de la rutina").click();
     await page.reload();
     await expect(page.getByLabel("Peso kg", { exact: true })).toHaveValue("");
     await expect(page.getByLabel("Repeticiones", { exact: true })).toHaveValue(
       "abc",
     );
+    await expect(page.getByLabel("Descanso micro (min)")).toHaveValue("0,5");
+    await expect(page.getByLabel("Descanso macro (min)")).toHaveValue("1,");
     await page
       .getByRole("button", { name: "Guardar borrador", exact: true })
       .click();
     await expect(page.getByRole("alert")).toContainText("campos");
     await page.getByLabel("Repeticiones", { exact: true }).fill("12");
+    await page.getByLabel("Descanso macro (min)").fill("1.5");
     await page
       .getByRole("button", { name: "Guardar borrador", exact: true })
       .click();
     await expect(page.getByRole("status")).toContainText("Borrador guardado");
+    const saved = await a.client
+      .from("routine_drafts")
+      .select("document")
+      .eq("student_id", a.studentId)
+      .single();
+    expect(saved.data?.document.weeks[0][0].blocks[0].macroRest).toBe(90);
+    expect(
+      saved.data?.document.weeks[0][0].blocks[0].exercises[0].prescription
+        .microRest,
+    ).toBe(30);
     const published = await a.client
       .from("routine_revisions")
       .select("document")

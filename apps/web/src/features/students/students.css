@@ -1,0 +1,213 @@
+.student-page {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.student-page .page-heading {
+  margin-bottom: 0;
+}
+.student-page .page-heading h1 {
+  margin-bottom: 12px;
+}
+.student-page .page-heading p:last-child {
+  margin-bottom: 0;
+}
+.student-back {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-self: start;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+.student-back:hover {
+  background: var(--surface-raised);
+}
+.student-form {
+  display: grid;
+  gap: 24px;
+}
+.student-form p:last-child {
+  margin-bottom: 0;
+}
+.student-form-fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.student-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.student-weekdays {
+  border: 0;
+  border-top: 1px solid var(--line);
+  padding: 20px 0 0;
+  margin: 0;
+  min-width: 0;
+}
+.student-weekdays legend {
+  font-size: 17px;
+  font-weight: 700;
+  padding: 0 12px 0 0;
+}
+.student-day-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.student-day-choice {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-width: 0;
+}
+.student-day-choice.selected {
+  border-color: #74a621;
+  background: var(--accent-soft);
+}
+.student-day-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.student-day-toggle input {
+  width: 19px;
+  height: 19px;
+  min-height: 0;
+  accent-color: #385900;
+}
+.student-day-choice .field {
+  margin-top: 10px;
+}
+.student-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.student-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: end;
+}
+.student-search > .field {
+  flex: 1 1 260px;
+}
+.student-search > .row {
+  min-height: 44px;
+  font-size: 14px;
+}
+.student-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.student-profile .card > .row {
+  margin-bottom: 20px;
+}
+.student-profile .card > .row h2 {
+  margin: 0;
+}
+.student-profile .card > .row > svg {
+  flex-shrink: 0;
+}
+.student-side-stack {
+  display: grid;
+  gap: 24px;
+}
+.student-routine-summary h3 {
+  font-size: 24px;
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+.student-routine-days {
+  display: grid;
+  gap: 12px;
+  margin: 24px 0;
+}
+.student-routine-days > div {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  background: var(--surface-raised);
+  border-radius: 10px;
+  align-items: center;
+}
+.student-day-number {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  font-weight: 700;
+}
+.student-routine-days small {
+  display: block;
+  margin-top: 5px;
+}
+.student-schedule-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+}
+.student-schedule-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.student-schedule-list strong {
+  font-variant-numeric: tabular-nums;
+}
+.student-notes {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-bottom: 0;
+}
+.student-profile-footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+@media (max-width: 760px) {
+  .student-profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .student-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .student-day-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .student-form-actions > .button {
+    flex: 1;
+  }
+  .student-profile .card > .button {
+    width: 100%;
+  }
+}
+@media (max-width: 360px) {
+  .student-day-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -96,7 +96,7 @@ test("password callback waits for the link identity even while another trainer i
   }
 });
 
-test("applying a one-day template while viewing day two keeps the builder usable", async ({
+test("a template is selected at creation and later draft edits survive reload", async ({
   page,
 }) => {
   const a = await prepared(),
@@ -116,15 +116,21 @@ test("applying a one-day template while viewing day two keeps the builder usable
     expect(template.error).toBeNull();
     await login(page);
     await page.goto("/rutinas/" + a.studentId);
+    await page
+      .getByRole("button", { name: "Nueva rutina", exact: true })
+      .click();
+    await page.getByLabel("Punto de partida").selectOption(id);
+    await page
+      .getByRole("button", { name: "Crear rutina", exact: true })
+      .click();
+    await expect(page.getByLabel("Nombre del día")).toHaveValue("Día 1");
     await page.getByRole("button", { name: "+ Día", exact: true }).click();
     await page.getByRole("button", { name: "Día 2", exact: true }).click();
     await expect(page.getByLabel("Nombre del día")).toHaveValue("Día 2");
-    await page
-      .getByText("Plantillas reutilizables e impresión", { exact: true })
-      .click();
-    page.on("dialog", (d) => d.accept());
-    await page.getByLabel("Aplicar plantilla").selectOption(id);
-    await expect(page.getByLabel("Nombre del día")).toHaveValue("Día 1");
+    await expect(page.getByLabel("Punto de partida")).toHaveCount(0);
+    await page.reload();
+    await page.getByRole("button", { name: "Día 2", exact: true }).click();
+    await expect(page.getByLabel("Nombre del día")).toHaveValue("Día 2");
   } finally {
     await dropFixture(a.studentId);
     await adminClient().from("routine_templates").delete().eq("id", id);
