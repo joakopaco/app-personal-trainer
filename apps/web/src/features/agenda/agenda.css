@@ -1,0 +1,74 @@
+.reschedule-dialog h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.reschedule-dialog .reschedule-student {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+.reschedule-original {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  background: var(--surface-soft, #f3f4f1);
+  border-radius: 12px;
+}
+.reschedule-original > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.reschedule-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.reschedule-help {
+  margin: 0;
+  padding: 14px 16px;
+  border-left: 3px solid var(--accent, #a9ff32);
+  background: #f2fce6;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.reschedule-actions {
+  justify-content: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.agenda-person > a {
+  text-decoration: none;
+  font-weight: 700;
+}
+.agenda-person .agenda-move-link {
+  font-size: 12px;
+  text-align: left;
+  text-decoration: underline;
+  padding: 0;
+  min-height: 32px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--text);
+}
+.agenda-date-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.agenda-confirmation {
+  margin-bottom: 18px;
+}
+@media (max-width: 600px) {
+  .reschedule-fields {
+    grid-template-columns: 1fr;
+  }
+  .reschedule-dialog h2 {
+    font-size: 20px;
+  }
+  .reschedule-actions > .button {
+    flex: 1;
+  }
+}

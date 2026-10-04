@@ -1,8 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, ArrowRight, CalendarDays } from "lucide-react";
+import { Plus, ArrowRight, CalendarDays, CalendarClock } from "lucide-react";
 import { useData } from "../../app/DataProvider";
 import { todayKey, currentTime } from "@pulso/domain/dates";
+import {
+  RescheduleVisit,
+  visitDateLabel,
+  type AgendaVisit,
+} from "./RescheduleVisit";
+import { useAgendaVisits } from "./useAgendaVisits";
+import { PendingReschedules } from "./PendingReschedules";
 export function Today() {
   const { rows, pending, error, db, onlineCommand, makeCommand, sync } =
     useData();
@@ -24,13 +31,8 @@ export function Today() {
     })),
   );
   const selected = rows.find((r) => r.studentId === studentId)?.projection;
-  const visits = rows
-    .flatMap((r) =>
-      r.projection.visits
-        .filter((v) => v.date === date)
-        .map((v) => ({ ...v, student: r.projection.student })),
-    )
-    .sort((a, b) => a.time.localeCompare(b.time));
+  const agenda = useAgendaVisits(date);
+  const { visits, allVisits } = agenda;
   async function start() {
     setBusy(true);
     setFailure("");
@@ -89,12 +91,10 @@ export function Today() {
       setFailure((e as Error).message);
     }
   }
-  const [reschedule, setReschedule] = useState<{
-      studentId: string;
-      visitId: string;
-    } | null>(null),
-    [newDate, setNewDate] = useState(todayKey()),
-    [newTime, setNewTime] = useState("18:00");
+  const [reschedule, setReschedule] = useState<
+    (AgendaVisit & { name: string }) | null
+  >(null);
+  const [confirmation, setConfirmation] = useState("");
   return (
     <>
       <header className="page-heading">
@@ -179,17 +179,44 @@ export function Today() {
         )}
       </section>
       <section className="agenda-section">
+        <PendingReschedules onResume={setReschedule} />
+        {confirmation && (
+          <p className="notice agenda-confirmation" role="status">
+            {confirmation}
+          </p>
+        )}
         <div className="row spread section-heading">
           <h2>Agenda del día</h2>
-          <label className="field">
-            <span className="sr-only">Fecha de agenda</span>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </label>
+          <div className="agenda-date-controls">
+            {date !== todayKey() && (
+              <button
+                className="button secondary small"
+                onClick={() => setDate(todayKey())}
+              >
+                Volver a hoy
+              </button>
+            )}
+            <label className="field">
+              <span className="sr-only">Fecha de agenda</span>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => {
+                  if (e.target.value) setDate(e.target.value);
+                }}
+              />
+            </label>
+          </div>
         </div>
+        {agenda.loading && <p role="status">Cargando agenda…</p>}
+        {agenda.error && (
+          <div className="error" role="alert">
+            {agenda.error}{" "}
+            <button className="button secondary small" onClick={agenda.retry}>
+              Reintentar
+            </button>
+          </div>
+        )}
         <div className="card agenda-list">
           {visits.map((v) => (
             <div className="agenda-row" key={v.id}>
@@ -198,7 +225,7 @@ export function Today() {
                 {v.student.name.slice(0, 2).toUpperCase()}
               </div>
               <div className="agenda-person">
-                <strong>{v.student.name}</strong>
+                <Link to={"/alumnos/" + v.student.id}>{v.student.name}</Link>
                 <small>
                   {
                     {
@@ -211,6 +238,34 @@ export function Today() {
                     }[v.status]
                   }
                 </small>
+                {v.rescheduled_from && (
+                  <small>
+                    Visita reprogramada
+                    {(() => {
+                      const original = allVisits.find(
+                        (original) => original.id === v.rescheduled_from,
+                      );
+                      return original
+                        ? ` desde el ${visitDateLabel(original.date)} a las ${original.time.slice(0, 5)}`
+                        : "";
+                    })()}
+                  </small>
+                )}
+                {v.status === "rescheduled" &&
+                  (() => {
+                    const destination = allVisits.find(
+                      (destination) => destination.rescheduled_from === v.id,
+                    );
+                    return destination ? (
+                      <button
+                        className="agenda-move-link"
+                        onClick={() => setDate(destination.date)}
+                      >
+                        Ver nuevo turno: {visitDateLabel(destination.date)} ·{" "}
+                        {destination.time.slice(0, 5)}
+                      </button>
+                    ) : null;
+                  })()}
               </div>
               {v.status === "pending" && (
                 <div className="row">
@@ -232,12 +287,13 @@ export function Today() {
                     No asistió
                   </button>
                   <button
-                    className="link-button"
+                    className="button secondary small"
+                    aria-label={"Reprogramar a " + v.student.name}
                     onClick={() =>
-                      setReschedule({ studentId: v.student.id, visitId: v.id })
+                      setReschedule({ ...v, name: v.student.name })
                     }
                   >
-                    Reprogramar
+                    <CalendarClock size={16} /> Reprogramar
                   </button>
                   <button
                     className="link-button"
@@ -263,7 +319,7 @@ export function Today() {
               )}
             </div>
           ))}
-          {!visits.length && (
+          {!visits.length && !agenda.loading && !agenda.error && (
             <div className="empty">
               No hay visitas programadas para este día.
               <br />
@@ -376,56 +432,18 @@ export function Today() {
         </div>
       )}
       {reschedule && (
-        <div className="modal-backdrop">
-          <section className="card modal stack">
-            <h2>Reprogramar visita</h2>
-            <label className="field">
-              Nueva fecha
-              <input
-                type="date"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              Nueva hora
-              <input
-                type="time"
-                value={newTime}
-                onChange={(e) => setNewTime(e.target.value)}
-              />
-            </label>
-            <button
-              className="button"
-              onClick={async () => {
-                try {
-                  const row = rows.find(
-                    (r) => r.studentId === reschedule.studentId,
-                  )!;
-                  await onlineCommand(
-                    row.studentId,
-                    "reschedule_visit",
-                    {
-                      visitId: reschedule.visitId,
-                      newVisitId: crypto.randomUUID(),
-                      date: newDate,
-                      time: newTime,
-                    },
-                    row.confirmed.revision,
-                  );
-                  setReschedule(null);
-                } catch (e) {
-                  setFailure((e as Error).message);
-                }
-              }}
-            >
-              Guardar nueva visita
-            </button>
-            <button className="link-button" onClick={() => setReschedule(null)}>
-              Cancelar
-            </button>
-          </section>
-        </div>
+        <RescheduleVisit
+          visit={reschedule}
+          name={reschedule.name}
+          onClose={() => setReschedule(null)}
+          onSaved={(newDate, newTime) => {
+            setConfirmation(
+              `${reschedule.name}: visita reprogramada para el ${visitDateLabel(newDate)} a las ${newTime}. Su horario habitual se mantiene.`,
+            );
+            setDate(newDate);
+            setReschedule(null);
+          }}
+        />
       )}
     </>
   );
