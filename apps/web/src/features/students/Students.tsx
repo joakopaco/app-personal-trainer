@@ -296,12 +296,6 @@ export function StudentProfile() {
                 definirlos al editar la ficha.
               </p>
             )}
-            <button
-              className="button secondary"
-              onClick={() => setEditing(true)}
-            >
-              Editar días y horarios
-            </button>
           </section>
         </div>
       </div>
