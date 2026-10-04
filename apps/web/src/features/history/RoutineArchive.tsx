@@ -278,7 +278,7 @@ export function RoutineArchive({
       className="card history-routine-archive blocks"
       aria-label="Archivo mensual de rutinas"
     >
-      <p className="eyebrow">TU RECORRIDO</p>
+      <p className="eyebrow">HISTORIAL DEL ALUMNO</p>
       <h2>Rutinas anteriores</h2>
       <p>
         Revisá cada mes y sus versiones publicadas. Este archivo es de solo

@@ -45,7 +45,7 @@ export function MuscleMap({
     >
       <div className="row">
         <div>
-          <p className="eyebrow">EXPLORÁ TU CUERPO</p>
+          <p className="eyebrow">EXPLORÁ EL PROGRESO</p>
           <h2>Elegí un músculo</h2>
         </div>
       </div>
@@ -346,7 +346,7 @@ export function Progress({
       <div className="history-intro">
         <div>
           <p className="eyebrow">CADA REGISTRO CUENTA</p>
-          <h2>Tu evolución por grupo muscular</h2>
+          <h2>Evolución por grupo muscular</h2>
           <p>
             Explorá tus ejercicios, compará registros y mirá cómo cambian con el
             tiempo.

@@ -153,11 +153,15 @@ export function StudentProfile() {
           <p className="eyebrow">FICHA DEL ALUMNO</p>
           <h1>{s.name}</h1>
           <div className="row muted">
-            <span>{genders[s.gender || "no_especificado"]}</span>
+            <span>
+              {!s.gender || s.gender === "no_especificado"
+                ? "Género sin indicar"
+                : genders[s.gender]}
+            </span>
             <span>·</span>
             <span>
               {schedule?.weekdays.length
-                ? `${schedule.weekdays.length} días por semana`
+                ? `${schedule.weekdays.length} ${schedule.weekdays.length === 1 ? "día" : "días"} por semana`
                 : "Sin horario fijo"}
             </span>
             {s.archived && <span className="badge">Archivado</span>}
@@ -207,7 +211,9 @@ export function StudentProfile() {
             <>
               <h3>{routine.name}</h3>
               <p className="muted">
-                4 semanas · {routine.weeks[0].length} días en la primera semana
+                4 semanas · {routine.weeks[0].length}{" "}
+                {routine.weeks[0].length === 1 ? "día" : "días"} en la primera
+                semana
               </p>
               <div className="student-routine-days">
                 {routine.weeks[0].map((day, index) => (
@@ -216,7 +222,8 @@ export function StudentProfile() {
                     <div>
                       <strong>{day.name}</strong>
                       <small>
-                        {day.blocks.length} bloques ·{" "}
+                        {day.blocks.length}{" "}
+                        {day.blocks.length === 1 ? "bloque" : "bloques"} ·{" "}
                         {day.blocks.reduce((n, b) => n + b.exercises.length, 0)}{" "}
                         ejercicios
                       </small>

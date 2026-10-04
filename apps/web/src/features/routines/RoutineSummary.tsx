@@ -24,12 +24,18 @@ export function RoutineSummary({ document }: { document: RoutineDocument }) {
             <p className="eyebrow">DÍA {index + 1}</p>
             <h2>{day.name}</h2>
             <p className="muted">
-              {day.blocks.length} bloques ·{" "}
+              {day.blocks.length}{" "}
+              {day.blocks.length === 1 ? "bloque" : "bloques"} ·{" "}
               {day.blocks.reduce(
                 (count, block) => count + block.exercises.length,
                 0,
               )}{" "}
-              ejercicios
+              {day.blocks.reduce(
+                (count, block) => count + block.exercises.length,
+                0,
+              ) === 1
+                ? "ejercicio"
+                : "ejercicios"}
             </p>
           </header>
           {day.blocks.map((block) => (
