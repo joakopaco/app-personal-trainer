@@ -58,7 +58,7 @@ test("history and CSV retain the original series ordinal after an omitted series
     await expect(page.getByRole("navigation")).toBeVisible();
     await page.goto("/historial/" + a.studentId);
     await expect(
-      page.getByRole("heading", { name: "Historial y progreso" }),
+      page.getByRole("heading", { name: "Historial", exact: true }),
     ).toBeVisible();
     const downloaded = page.waitForEvent("download");
     await page

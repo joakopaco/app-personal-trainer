@@ -1,5 +1,9 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { cloud } from "../../adapters/supabase";
+import { Download } from "lucide-react";
+import { DocumentPreview } from "../../components/DocumentPreview";
+import { Brand } from "../../components/Brand";
+import { csvCell } from "@pulso/domain/metrics";
 import { anatomicalFigure } from "./anatomicalFigure";
 import {
   buildProgress,
@@ -274,13 +278,21 @@ function Trend({ exercise }: { exercise: ExerciseProgress }) {
 
 export function Progress({
   studentId,
+  studentName = "Alumno",
   gender,
   refresh = 0,
 }: {
   studentId: string;
+  studentName?: string;
   gender?: string;
   refresh?: number;
 }) {
+  const [exportData, setExportData] = useState<{
+    exercises: ExerciseProgress[];
+    period: string;
+    count: number;
+  } | null>(null);
+  const [loadedRange, setLoadedRange] = useState("");
   const [from, setFrom] = useState(""),
     [to, setTo] = useState(""),
     [period, setPeriod] = useState("all");
@@ -320,6 +332,7 @@ export function Progress({
         if (!active) return;
         setSessions(result.rows);
         setTruncated(result.truncated);
+        setLoadedRange(JSON.stringify([studentId, from, to]));
       })
       .catch(() => {
         if (active)
@@ -342,6 +355,17 @@ export function Progress({
     selected =
       options.find((exercise) => exercise.key === exerciseKey) || options[0];
   const trained = new Set(data.map((exercise) => exercise.group));
+  const rangeLabel =
+    from || to
+      ? `${from ? date(from) : "Primer registro"} — ${to ? date(to) : "Último registro"}`
+      : "Todo el historial registrado";
+  const canExport =
+    !loading &&
+    !error &&
+    !truncated &&
+    data.length > 0 &&
+    !(from && to && from > to) &&
+    loadedRange === JSON.stringify([studentId, from, to]);
   function selectPeriod(value: string) {
     setPeriod(value);
     if (value === "custom") return;
@@ -366,7 +390,7 @@ export function Progress({
           <p className="eyebrow">CADA REGISTRO CUENTA</p>
           <h2>Evolución por grupo muscular</h2>
           <p>
-            Explorá tus ejercicios, compará registros y mirá cómo cambian con el
+            Explorá los ejercicios, compará registros y mirá cómo cambian con el
             tiempo.
           </p>
         </div>
@@ -409,9 +433,28 @@ export function Progress({
           ? `${from ? date(from) : "Primer registro"} — ${to ? date(to) : "Último registro"}`
           : "Todo el historial registrado"}
         {!loading && !error && !truncated && !(from && to && from > to)
-          ? ` · ${sessions.length} sesiones finalizadas`
+          ? ` · ${sessions.length} ${sessions.length === 1 ? "sesión finalizada" : "sesiones finalizadas"}`
           : ""}
       </p>
+      <div className="progress-export-actions">
+        <button
+          className="button secondary"
+          disabled={!canExport}
+          onClick={() =>
+            setExportData({
+              exercises: structuredClone(data),
+              period: rangeLabel,
+              count: sessions.length,
+            })
+          }
+        >
+          <Download size={18} />
+          Exportar progreso
+        </button>
+        <small>
+          Todos los ejercicios del período elegido, con gráficos y registros.
+        </small>
+      </div>
       {from && to && from > to && (
         <p role="alert" className="error">
           La fecha inicial debe ser anterior o igual a la final.
@@ -558,6 +601,117 @@ export function Progress({
             })}
           </div>
         </section>
+      )}
+      {exportData && (
+        <DocumentPreview
+          title={"Progreso · " + studentName}
+          onClose={() => setExportData(null)}
+          actions={
+            <button
+              className="button secondary"
+              onClick={() => {
+                const records = [
+                  [
+                    "Alumno",
+                    "Período",
+                    "Grupo muscular",
+                    "Ejercicio",
+                    "Fecha",
+                    "Valor",
+                    "Unidad",
+                    "Repeticiones",
+                    "Series confirmadas",
+                    "Volumen kg × reps",
+                    "Origen",
+                  ],
+                  ...exportData.exercises.flatMap((exercise) =>
+                    exercise.points.map((point) => [
+                      studentName,
+                      exportData.period,
+                      exercise.group,
+                      exercise.name,
+                      point.date,
+                      String(point.value),
+                      exercise.unit,
+                      point.reps === null ? "" : String(point.reps),
+                      String(point.sets),
+                      point.volume === null ? "" : String(point.volume),
+                      point.source === "observed"
+                        ? "Individual"
+                        : "Confirmación rápida",
+                    ]),
+                  ),
+                ];
+                const url = URL.createObjectURL(
+                  new Blob(
+                    [
+                      "\uFEFF" +
+                        records
+                          .map((record) => record.map(csvCell).join(";"))
+                          .join("\r\n"),
+                    ],
+                    { type: "text/csv;charset=utf-8" },
+                  ),
+                );
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = "pulso-progreso.csv";
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+              }}
+            >
+              Descargar CSV
+            </button>
+          }
+        >
+          <div className="document-brand">
+            <Brand />
+          </div>
+          <h1>Progreso de {studentName}</h1>
+          <p>
+            {exportData.period} · {exportData.count} sesiones finalizadas ·{" "}
+            {exportData.exercises.length} ejercicios
+          </p>
+          <p className="document-context">
+            Cada punto muestra la mayor carga, cantidad de repeticiones o
+            duración confirmada del ejercicio en esa sesión. Excluye
+            calentamiento y ejercicios omitidos. Las repeticiones y las
+            condiciones pueden variar; los valores no miden fuerza absoluta.
+          </p>
+          {exportData.exercises.map((exercise) => (
+            <section key={exercise.key} className="document-exercise">
+              <p className="eyebrow">{exercise.group}</p>
+              <h2>{exercise.name}</h2>
+              <Trend exercise={exercise} />
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Valor ({exercise.unit})</th>
+                    <th>Reps</th>
+                    <th>Series</th>
+                    <th>Origen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {exercise.points.map((point) => (
+                    <tr key={point.sessionId}>
+                      <td>{date(point.date)}</td>
+                      <td>{number(point.value)}</td>
+                      <td>{point.reps ?? "—"}</td>
+                      <td>{point.sets}</td>
+                      <td>
+                        {point.source === "observed"
+                          ? "Individual"
+                          : "Confirmación rápida"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ))}
+        </DocumentPreview>
       )}
     </section>
   );

@@ -4,6 +4,7 @@ import { cloud } from "../../adapters/supabase";
 import { formatRestMinutes } from "../../components/rest-minutes";
 import { loadAllPages } from "./history-progress-model";
 import "./history.css";
+import { ExportRoutine } from "../routines/ExportRoutine";
 
 type Period = {
   id: string;
@@ -183,11 +184,16 @@ export function RoutineArchive({
   studentId,
   currentRevisionId,
   currentPeriodId,
+  compact = false,
+  studentName,
 }: {
   studentId: string;
   currentRevisionId?: string;
   currentPeriodId?: string;
+  compact?: boolean;
+  studentName?: string;
 }) {
+  const [expanded, setExpanded] = useState(!compact);
   const [periods, setPeriods] = useState<Period[]>([]),
     [periodId, setPeriodId] = useState("");
   const [revisions, setRevisions] = useState<Revision[]>([]),
@@ -312,7 +318,32 @@ export function RoutineArchive({
         Revisá cada mes y sus versiones publicadas. Este archivo es de solo
         lectura.
       </p>
-      {activePeriod && (
+      {compact && !loading && !error && periods.length > 0 && (
+        <div className="student-archive-list">
+          {periods.map((period) => (
+            <div key={period.id}>
+              <div>
+                <strong>{monthLabel(period.month)}</strong>
+                <small>
+                  {period.id === currentPeriodId
+                    ? "Mes actual · Versiones publicadas"
+                    : "Rutina anterior"}
+                </small>
+              </div>
+              <button
+                className="button secondary"
+                onClick={() => {
+                  setPeriodId(period.id);
+                  setExpanded(true);
+                }}
+              >
+                Ver versiones de {monthLabel(period.month)}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {activePeriod && expanded && (
         <p className="history-current-routine">
           <strong>Rutina activa:</strong> {monthLabel(activePeriod.month)} · Se
           identifica como vigente en el selector de versiones.
@@ -334,7 +365,7 @@ export function RoutineArchive({
         <p className="history-empty">
           Todavía no hay rutinas publicadas para consultar.
         </p>
-      ) : (
+      ) : expanded ? (
         <>
           <div className="history-archive-selectors">
             <label className="field">
@@ -397,6 +428,17 @@ export function RoutineArchive({
                 {new Date(selected!.created_at).toLocaleString("es-AR")}
               </p>
               <ArchivedRoutine key={selected!.id} document={parsed.data} />
+              {studentName && (
+                <ExportRoutine
+                  document={parsed.data}
+                  student={studentName}
+                  month={
+                    selectedPeriod
+                      ? monthLabel(selectedPeriod.month)
+                      : undefined
+                  }
+                />
+              )}
             </>
           ) : selected ? (
             <p role="alert" className="error">
@@ -406,8 +448,16 @@ export function RoutineArchive({
           ) : (
             <p>Este mes todavía no tiene versiones publicadas.</p>
           )}
+          {compact && (
+            <button
+              className="button secondary"
+              onClick={() => setExpanded(false)}
+            >
+              Cerrar versiones
+            </button>
+          )}
         </>
-      )}
+      ) : null}
     </section>
   );
 }

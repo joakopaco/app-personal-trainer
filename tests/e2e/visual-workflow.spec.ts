@@ -60,7 +60,7 @@ test("mobile live correction, accessible dialog and desktop history render witho
     ).toBeVisible();
     await page.getByRole("link", { name: "Ver resultados" }).click();
     await expect(
-      page.getByRole("heading", { name: "Historial y progreso" }),
+      page.getByRole("heading", { name: "Historial", exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText("Resultado corregido", { exact: false }),

@@ -43,6 +43,11 @@ const TrainingScreen = lazy(() =>
 const History = lazy(() =>
   import("../features/history/History").then((m) => ({ default: m.History })),
 );
+const StudentProgress = lazy(() =>
+  import("../features/history/StudentProgress").then((m) => ({
+    default: m.StudentProgress,
+  })),
+);
 const Settings = lazy(() =>
   import("../features/settings/Settings").then((m) => ({
     default: m.Settings,
@@ -112,6 +117,10 @@ function Protected() {
             <Route
               path="/historial/:id"
               element={<StudentRoute component={History} />}
+            />
+            <Route
+              path="/progreso/:id"
+              element={<StudentRoute component={StudentProgress} />}
             />
             <Route
               path="/sincronizacion"

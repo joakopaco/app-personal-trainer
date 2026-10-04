@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { cloud } from "../../adapters/supabase";
 import { useData } from "../../app/DataProvider";
-import { Progress } from "./Progress";
+import { StudentNavigation } from "../students/StudentNavigation";
 import { RoutineArchive } from "./RoutineArchive";
 import { ArrowLeft } from "lucide-react";
 import "./history.css";
@@ -122,18 +122,17 @@ export function History() {
         Volver a {row?.projection.student.name || "la ficha"}
       </Link>
       <p className="eyebrow">LO QUE VA QUEDANDO</p>
-      <h1>Historial y progreso</h1>
-      <Progress
-        studentId={id!}
-        gender={
-          (row?.projection.student as { gender?: string } | undefined)?.gender
-        }
-        refresh={reload}
-      />
+      <h1>Historial</h1>
+      <p className="muted">
+        {row?.projection.student.name} · Rutinas anteriores, entrenamientos y
+        cambios registrados.
+      </p>
+      <StudentNavigation studentId={id!} />
       <RoutineArchive
         studentId={id!}
         currentRevisionId={row?.projection.routine?.id}
         currentPeriodId={row?.projection.period?.id}
+        studentName={row?.projection.student.name}
       />
       <section className="history-records" aria-label="Detalle de registros">
         <h2>Sesiones y registros</h2>

@@ -1,4 +1,6 @@
 import "./routine-editor.css";
+import { StudentNavigation } from "../students/StudentNavigation";
+import { ExportRoutine } from "./ExportRoutine";
 import { RoutineSummary } from "./RoutineSummary";
 import { useEffect, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -356,6 +358,19 @@ export function RoutineBuilder() {
           )}
         </div>
       </header>
+      <StudentNavigation studentId={id!} />
+      {mode === "view" &&
+        !dirty &&
+        !draftRevision &&
+        row.projection.routine && (
+          <div className="row">
+            <ExportRoutine
+              document={row.projection.routine.document}
+              student={row.projection.student.name}
+              month={row.projection.period?.month}
+            />
+          </div>
+        )}
       {error && (
         <p className="error" role="alert">
           {error}

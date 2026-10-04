@@ -36,7 +36,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         <p className="brand-caption">TU ESPACIO DE ENTRENAMIENTO</p>
         <nav aria-label="Principal">
           {links.map(([to, label, Icon]) => (
-            <NavLink key={to} to={to}>
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                isActive ||
+                (to === "/alumnos" &&
+                  /^\/(progreso|historial)\//.test(pathname))
+                  ? "active"
+                  : undefined
+              }
+            >
               <Icon size={20} aria-hidden="true" />
               <span>{label}</span>
             </NavLink>

@@ -14,7 +14,7 @@ export function DialogFocus() {
         : [];
     const update = () => {
       const next = document.querySelector<HTMLElement>(
-        ".modal-backdrop .modal",
+        ".document-preview, .modal-backdrop .modal",
       );
       if (next === dialog) return;
       if (!next) {
@@ -46,7 +46,7 @@ export function DialogFocus() {
         const close = Array.from(
           dialog.querySelectorAll<HTMLButtonElement>("button"),
         ).find((b) =>
-          /^(Cerrar|Cancelar|Seguir entrenando)$/.test(
+          /^(Cerrar|Cancelar|Seguir entrenando|Volver)$/.test(
             b.textContent?.trim() ?? "",
           ),
         );

@@ -1,3 +1,6 @@
+import { StudentNavigation } from "./StudentNavigation";
+import { RoutineArchive } from "../history/RoutineArchive";
+import { ExportRoutine } from "../routines/ExportRoutine";
 import { SaveStudentTemplate } from "../routines/SaveStudentTemplate";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -198,113 +201,150 @@ export function StudentProfile() {
           }}
         />
       )}
+      <StudentNavigation studentId={s.id} />
       <div className="student-profile-grid">
-        <section className="card student-routine-summary">
-          <div className="row spread">
-            <div className="row">
-              <ClipboardList size={21} />
-              <h2>Rutina mensual</h2>
+        <aside
+          className="card student-information"
+          aria-label="Información del alumno"
+        >
+          <h2>Información del alumno</h2>
+          <dl className="student-facts">
+            <div>
+              <dt>Nombre</dt>
+              <dd>{s.first_name || s.name}</dd>
             </div>
-            {data.period && (
-              <span className="badge">{monthLabel(data.period.month)}</span>
+            {s.last_name && (
+              <div>
+                <dt>Apellido</dt>
+                <dd>{s.last_name}</dd>
+              </div>
             )}
-          </div>
-          {routine ? (
-            <>
-              <h3>{routine.name}</h3>
-              <p className="muted">
-                4 semanas · {routine.weeks[0].length}{" "}
-                {routine.weeks[0].length === 1 ? "día" : "días"} en la primera
-                semana
-              </p>
-              <div className="student-routine-days">
-                {routine.weeks[0].map((day, index) => (
-                  <div key={day.id}>
-                    <span className="student-day-number">{index + 1}</span>
-                    <div>
-                      <strong>{day.name}</strong>
-                      <small>
-                        {day.blocks.length}{" "}
-                        {day.blocks.length === 1 ? "bloque" : "bloques"} ·{" "}
-                        {day.blocks.reduce((n, b) => n + b.exercises.length, 0)}{" "}
-                        ejercicios
-                      </small>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="student-routine-actions">
-                <Link className="button" to={"/alumnos/" + s.id + "/rutina"}>
-                  Ver rutina
-                  <ArrowUpRight size={18} />
-                </Link>
-                {row?.confirmed.routine && (
-                  <SaveStudentTemplate
-                    document={row.confirmed.routine.document}
-                  />
-                )}
-              </div>
-            </>
+            <div>
+              <dt>Género</dt>
+              <dd>{genders[s.gender || ""] || "Sin indicar"}</dd>
+            </div>
+            <div>
+              <dt>Frecuencia</dt>
+              <dd>
+                {schedule?.weekdays.length
+                  ? `${schedule.weekdays.length} días por semana`
+                  : "Sin horario fijo"}
+              </dd>
+            </div>
+          </dl>
+          <h3 className="student-schedule-title">
+            <CalendarDays size={18} />
+            Días y horarios
+          </h3>
+          {schedule?.weekdays.length ? (
+            <ul className="student-schedule-list">
+              {[...schedule.weekdays].sort().map((day) => (
+                <li key={day}>
+                  <span>{weekdays[day - 1]}</span>
+                  <strong>
+                    {schedule.day_times[String(day)] ||
+                      schedule.time.slice(0, 5)}
+                  </strong>
+                </li>
+              ))}
+            </ul>
           ) : (
-            <>
-              <p className="muted">
-                Todavía no tiene una rutina. Prepará los días y bloques de
-                entrenamiento para este mes.
-              </p>
-              <Link className="button" to={"/alumnos/" + s.id + "/rutina"}>
-                <Plus size={18} />
-                Preparar rutina
-              </Link>
-            </>
-          )}
-        </section>
-        <div className="student-side-stack">
-          <section className="card">
-            <div className="row">
-              <TrendingUp size={21} />
-              <h2>Progreso e historial</h2>
-            </div>
             <p className="muted">
-              Explorá los músculos trabajados, la evolución de cada ejercicio y
-              las rutinas anteriores.
+              Podés definirlos desde Editar ficha o agregar visitas desde Hoy.
             </p>
-            <Link className="button secondary" to={"/historial/" + s.id}>
-              Ver historial y progreso
-              <ArrowUpRight size={18} />
-            </Link>
-          </section>
-          <section className="card">
-            <div className="row">
-              <CalendarDays size={21} />
-              <h2>Horario semanal</h2>
+          )}
+          <Link className="button secondary" to={"/progreso/" + s.id}>
+            <TrendingUp size={18} />
+            Ver progreso
+          </Link>
+          {s.notes && (
+            <div className="student-private-notes">
+              <h3>Notas privadas</h3>
+              <p className="student-notes">{s.notes}</p>
             </div>
-            {schedule?.weekdays.length ? (
-              <ul className="student-schedule-list">
-                {[...schedule.weekdays].sort().map((day) => (
-                  <li key={day}>
-                    <span>{weekdays[day - 1]}</span>
-                    <strong>
-                      {schedule.day_times[String(day)] ||
-                        schedule.time.slice(0, 5)}
-                    </strong>
-                  </li>
-                ))}
-              </ul>
+          )}
+        </aside>
+        <div className="student-side-stack">
+          <section className="card student-routine-summary">
+            <div className="row spread">
+              <div className="row">
+                <ClipboardList size={21} />
+                <h2>Rutina actual</h2>
+              </div>
+              {data.period && (
+                <span className="badge">{monthLabel(data.period.month)}</span>
+              )}
+            </div>
+            {routine ? (
+              <>
+                <h3>{routine.name}</h3>
+                <p className="muted">
+                  4 semanas · {routine.weeks[0].length}{" "}
+                  {routine.weeks[0].length === 1 ? "día" : "días"} en la primera
+                  semana
+                </p>
+                <div className="student-routine-days">
+                  {routine.weeks[0].map((day, index) => (
+                    <div key={day.id}>
+                      <span className="student-day-number">{index + 1}</span>
+                      <div>
+                        <strong>{day.name}</strong>
+                        <small>
+                          {day.blocks.length}{" "}
+                          {day.blocks.length === 1 ? "bloque" : "bloques"} ·{" "}
+                          {day.blocks.reduce(
+                            (n, b) => n + b.exercises.length,
+                            0,
+                          )}{" "}
+                          ejercicios
+                        </small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="student-routine-actions">
+                  <Link className="button" to={"/alumnos/" + s.id + "/rutina"}>
+                    Ver rutina
+                    <ArrowUpRight size={18} />
+                  </Link>
+                  {routine && (
+                    <ExportRoutine
+                      document={routine}
+                      student={s.name}
+                      month={
+                        data.period ? monthLabel(data.period.month) : undefined
+                      }
+                    />
+                  )}
+                  {row?.confirmed.routine && (
+                    <SaveStudentTemplate
+                      document={row.confirmed.routine.document}
+                    />
+                  )}
+                </div>
+              </>
             ) : (
-              <p className="muted">
-                Sin días fijos. Podés agregar entrenamientos desde Hoy o
-                definirlos al editar la ficha.
-              </p>
+              <>
+                <p className="muted">
+                  Todavía no tiene una rutina. Prepará los días y bloques de
+                  entrenamiento para este mes.
+                </p>
+                <Link className="button" to={"/alumnos/" + s.id + "/rutina"}>
+                  <Plus size={18} />
+                  Preparar rutina
+                </Link>
+              </>
             )}
           </section>
+          <RoutineArchive
+            studentId={s.id}
+            currentRevisionId={data.routine?.id}
+            currentPeriodId={data.period?.id}
+            studentName={s.name}
+            compact
+          />
         </div>
       </div>
-      {s.notes && (
-        <section className="card">
-          <h2>Notas privadas</h2>
-          <p className="student-notes">{s.notes}</p>
-        </section>
-      )}
       <footer className="student-profile-footer">
         <button
           className="button secondary"

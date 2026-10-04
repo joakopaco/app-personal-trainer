@@ -18,7 +18,7 @@ test("empty progress keeps an accessible front/back muscle map and a read-only f
   const fixture = await prepared();
   try {
     await login(page);
-    await page.goto("/historial/" + fixture.studentId);
+    await page.goto("/progreso/" + fixture.studentId);
     await expect(
       page.getByText("Sin registros de cuádriceps en este período."),
     ).toBeVisible();
@@ -38,6 +38,10 @@ test("empty progress keeps an accessible front/back muscle map and a read-only f
     await expect(
       page.getByText("Sin registros de espalda en este período."),
     ).toBeVisible();
+    await page
+      .getByRole("navigation", { name: "Secciones del alumno" })
+      .getByRole("link", { name: "Historial", exact: true })
+      .click();
     const archive = page.getByRole("region", {
       name: "Archivo mensual de rutinas",
     });
@@ -115,7 +119,7 @@ test("progress fetches subsequent pages independently of the twenty-session deta
       });
     });
     await login(page);
-    await page.goto("/historial/" + fixture.studentId);
+    await page.goto("/progreso/" + fixture.studentId);
     await expect(
       page.getByText("Todo el historial registrado · 205 sesiones finalizadas"),
     ).toBeVisible();

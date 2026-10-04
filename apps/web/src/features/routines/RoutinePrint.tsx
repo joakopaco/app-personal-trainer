@@ -1,22 +1,39 @@
 import type { RoutineDocument } from "@pulso/domain/routines";
 import { formatRestMinutes } from "../../components/rest-minutes";
+import { Brand } from "../../components/Brand";
 export function RoutinePrint({
   document,
   student,
+  month,
+  preview = false,
 }: {
   document: RoutineDocument;
   student: string;
+  month?: string;
+  preview?: boolean;
 }) {
   return (
-    <article className="print-only" aria-label="Rutina mensual para imprimir">
+    <article
+      className={preview ? "routine-document" : "print-only"}
+      aria-label="Rutina mensual para imprimir"
+    >
+      <div className="document-brand">
+        <Brand />
+      </div>
       <h1>{document.name}</h1>
       <p>{student}</p>
+      <p className="document-context">
+        {month ? month + " · " : ""}Rutina completa · {document.weeks.length}{" "}
+        semanas
+      </p>
       {document.weeks.map((week, n) => (
         <section className="print-week" key={n}>
           <h2>Semana {n + 1}</h2>
+          {!week.length && <p>Sin días programados.</p>}
           {week.map((day) => (
             <section key={day.id}>
               <h3>{day.name}</h3>
+              {!day.blocks.length && <p>Sin bloques programados.</p>}
               {day.blocks.map((block) => (
                 <section key={block.id}>
                   <h4>
@@ -48,7 +65,10 @@ export function RoutinePrint({
                     <tbody>
                       {block.exercises.map((e) => (
                         <tr key={e.id}>
-                          <td>{e.name}</td>
+                          <td>
+                            {e.name}
+                            {e.warmup && <small> · Calentamiento</small>}
+                          </td>
                           <td>{e.prescription.sets ?? "—"}</td>
                           <td>
                             {e.type === "load_reps"
