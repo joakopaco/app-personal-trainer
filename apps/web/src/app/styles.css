@@ -39,6 +39,13 @@
 body {
   margin: 0;
 }
+html {
+  scrollbar-gutter: stable;
+  scroll-padding-block: 24px 100px;
+}
+html:has(.modal-backdrop) {
+  overflow: hidden;
+}
 a {
   color: var(--ink);
 }
@@ -59,7 +66,7 @@ button {
   cursor: pointer;
 }
 button:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   opacity: 0.55;
 }
 button,
@@ -77,6 +84,25 @@ textarea {
   padding: 10px 12px;
   background: var(--control);
   color: var(--ink);
+}
+input[type="checkbox"],
+input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  flex: none;
+  accent-color: var(--ink);
+}
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]) {
+  min-height: 44px;
+  cursor: pointer;
+}
+label.row:has(> input[type="checkbox"]),
+label.row:has(> input[type="radio"]) {
+  flex-wrap: nowrap;
 }
 input:focus,
 select:focus,
@@ -161,12 +187,12 @@ small {
   margin-top: 9px;
   color: var(--muted);
 }
-nav {
+.sidebar nav {
   display: grid;
   gap: 8px;
   margin-top: 50px;
 }
-nav a {
+.sidebar nav a {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -177,7 +203,7 @@ nav a {
   font-size: 14px;
   font-weight: 600;
 }
-nav a.active {
+.sidebar nav a.active {
   background: var(--accent-soft);
   color: var(--ink);
 }
@@ -214,6 +240,9 @@ main {
 .page-heading p {
   margin-bottom: 0;
 }
+.page-heading .eyebrow {
+  margin-bottom: 10px;
+}
 .button {
   display: inline-flex;
   align-items: center;
@@ -233,6 +262,21 @@ main {
   color: var(--ink);
   border-color: var(--line);
 }
+.button > svg,
+.link-button > svg {
+  flex-shrink: 0;
+}
+.button.icon-button {
+  width: 44px;
+  min-width: 44px;
+  padding: 10px;
+}
+.button:disabled {
+  background: var(--surface-raised);
+  border-color: var(--line);
+  color: var(--muted);
+  opacity: 1;
+}
 .button.danger {
   background: var(--danger-soft);
   color: var(--danger);
@@ -250,6 +294,7 @@ main {
   font-weight: 600;
 }
 .card {
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--surface);
@@ -319,6 +364,12 @@ main {
 }
 .field small {
   font-weight: 400;
+}
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-width: 0;
 }
 .fields {
   display: grid;
@@ -435,6 +486,21 @@ main {
 .auth-panel .button {
   width: 100%;
 }
+.auth-callback {
+  min-height: 100dvh;
+}
+.auth-callback > div {
+  max-width: 460px;
+}
+.auth-callback-brand {
+  background: var(--black);
+  padding: 20px 24px;
+  border-radius: 14px;
+  margin-bottom: 28px;
+}
+.auth-callback form {
+  margin-bottom: 20px;
+}
 .auth-note {
   font-size: 12px;
   margin-top: 24px;
@@ -462,13 +528,13 @@ main {
   .sidebar-foot {
     display: none;
   }
-  nav {
+  .sidebar nav {
     display: flex;
     justify-content: space-around;
     margin: 0;
     gap: 0;
   }
-  nav a {
+  .sidebar nav a {
     flex: 1;
     flex-direction: column;
     gap: 4px;
@@ -620,6 +686,18 @@ main {
   max-height: 90dvh;
   overflow: auto;
   box-shadow: 0 24px 100px var(--shadow);
+  overscroll-behavior: contain;
+}
+.modal h2 {
+  margin-bottom: 0;
+  overflow-wrap: anywhere;
+}
+.modal > .row.spread {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+.modal > .row.spread > button {
+  flex-shrink: 0;
 }
 .catalog-results {
   margin-top: 20px;
@@ -727,7 +805,7 @@ main {
 }
 .live-fields {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   margin-top: 24px;
 }
@@ -758,6 +836,36 @@ main {
 }
 .set-row strong {
   min-width: 65px;
+}
+.set-row .set-value {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.set-row.set-editor {
+  align-items: end;
+}
+.set-editor > strong {
+  align-self: center;
+}
+.set-row > [role="alert"] {
+  width: 100%;
+  color: var(--danger);
+}
+.training-exercise .set-list > .muted {
+  font-size: 13px;
+  margin-block: 12px 20px;
+}
+.rest-timer strong {
+  font-variant-numeric: tabular-nums;
+}
+.rest-timer .row:last-child {
+  gap: 6px;
+}
+.rest-timer .button {
+  font-size: 13px;
+  padding: 8px 12px;
 }
 .finish-bar {
   margin-top: 32px;
@@ -820,7 +928,7 @@ caption {
   overflow: auto;
   font-size: 11px;
 }
-@media (max-width: 760px) {
+@media (max-width: 1040px) {
   .page-heading {
     flex-wrap: wrap;
   }
@@ -930,6 +1038,44 @@ caption {
   }
   .set-row input {
     width: 65px;
+  }
+  .set-editor {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) 44px;
+    column-gap: 8px;
+    row-gap: 10px;
+  }
+  .set-editor input {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 6px;
+    text-align: center;
+  }
+  .set-editor > strong {
+    min-width: 0;
+  }
+  .set-editor > .link-button,
+  .set-editor > small,
+  .set-editor > [role="alert"] {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .set-editor .set-confirm {
+    grid-column: 4;
+  }
+  .active-card {
+    gap: 14px;
+  }
+  .agenda-person {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .agenda-row > .row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .agenda-row > .row > * {
+    width: 100%;
   }
   .fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1329,6 +1475,17 @@ th {
 }
 .profile-settings {
   max-width: 720px;
+}
+.sync-workspace {
+  max-width: 960px;
+}
+.sync-workspace .card > :last-child {
+  margin-bottom: 0;
+}
+@media (max-width: 760px) {
+  .sync-workspace .row > .button {
+    width: 100%;
+  }
 }
 .profile-settings h2 {
   margin: 0;

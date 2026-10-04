@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { DialogFocus } from "../components/DialogFocus";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { Brand } from "../components/Brand";
 import {
   Dumbbell,
@@ -17,6 +17,12 @@ const links = [
   ["/ajustes", "Ajustes", Settings],
 ] as const;
 export function AppShell({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    // Run after the outgoing session saves its position. Live training restores
+    // its own saved position on the next animation frame.
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [pathname]);
   return (
     <div className="app-shell">
       <DialogFocus />

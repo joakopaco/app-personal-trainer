@@ -147,7 +147,7 @@ export function History() {
             {error}
           </p>
         )}
-        <div className="row blocks">
+        <div className="row blocks history-dates">
           <label className="field">
             Desde
             <input

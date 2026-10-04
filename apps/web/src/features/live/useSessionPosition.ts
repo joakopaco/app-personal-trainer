@@ -1,10 +1,12 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import type { LocalStore } from "@pulso/sync/local-db";
 export function useSessionPosition(
   db: LocalStore,
   sessionId: string | undefined,
 ) {
-  useEffect(() => {
+  // Capture the outgoing scroll position before React removes the long session
+  // DOM. A passive cleanup sees the position clamped by the next, shorter page.
+  useLayoutEffect(() => {
     if (!sessionId) return;
     let active = true,
       restored = false;

@@ -315,6 +315,7 @@ export function Today() {
               Semana
               <select
                 value={week}
+                disabled={!selected?.routine}
                 onChange={(e) => {
                   setWeek(Number(e.target.value));
                   setDayId("");
@@ -328,6 +329,7 @@ export function Today() {
             <label className="field">
               Día de rutina
               <select
+                disabled={!selected?.routine}
                 value={
                   dayId ||
                   selected?.routine?.document.weeks[week - 1][0]?.id ||
@@ -335,6 +337,9 @@ export function Today() {
                 }
                 onChange={(e) => setDayId(e.target.value)}
               >
+                {!selected?.routine && (
+                  <option value="">Primero elegí un alumno con rutina</option>
+                )}
                 {selected?.routine?.document.weeks[week - 1].map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
@@ -345,7 +350,10 @@ export function Today() {
             {studentId && !selected?.routine && (
               <p className="notice">
                 Este alumno necesita una{" "}
-                <Link to={"/alumnos/" + studentId + "/rutina"}>rutina activa</Link>.
+                <Link to={"/alumnos/" + studentId + "/rutina"}>
+                  rutina activa
+                </Link>
+                .
               </p>
             )}
             {failure && (

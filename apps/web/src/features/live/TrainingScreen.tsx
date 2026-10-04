@@ -1,5 +1,6 @@
 import {
   displayNumber,
+  formatRestMinutes,
   isRestField,
   parseDisplayedNumber,
   restoreRestRaw,
@@ -253,8 +254,12 @@ export function TrainingScreen() {
               <summary>
                 <span>{items[0].block_name}</span>
                 <small>
-                  {items.length} ejercicios · Macro:{" "}
-                  {items[0].macro_rest ?? "—"} s entre{" "}
+                  {items.length}{" "}
+                  {items.length === 1 ? "ejercicio" : "ejercicios"} · Macro:{" "}
+                  {items[0].macro_rest === null
+                    ? "—"
+                    : formatRestMinutes(items[0].macro_rest)}{" "}
+                  min entre{" "}
                   {items[0].macro_target === "series" ? "series" : "bloques"}
                 </small>
                 <ChevronDown size={18} />
@@ -447,7 +452,11 @@ function ExerciseRow({
         <summary>Referencia del ejercicio</summary>
         <ExerciseArt exerciseId={item.exercise_id} />
       </details>
-      <button className="link-button" onClick={() => setDetail(!detail)}>
+      <button
+        className="button secondary small"
+        aria-expanded={detail}
+        onClick={() => setDetail(!detail)}
+      >
         {detail ? "Ocultar" : "Detalle de series"} ·{" "}
         {item.sets.filter((s) => s.state === "done").length}/{item.sets.length}
       </button>
@@ -674,30 +683,36 @@ function SetEditor({
       </div>
     );
   return (
-    <div className="set-row">
+    <div className="set-row set-editor">
       <strong>Serie {set.ordinal}</strong>
       {type === "load_reps" && (
-        <input
-          aria-label={"Peso serie " + set.ordinal}
-          inputMode="decimal"
-          disabled={disabled || !loaded || busy}
-          value={values.weight}
-          onChange={(e) => change("weight", e.target.value)}
-        />
+        <label className="set-value">
+          Peso (kg)
+          <input
+            aria-label={"Peso serie " + set.ordinal}
+            inputMode="decimal"
+            disabled={disabled || !loaded || busy}
+            value={values.weight}
+            onChange={(e) => change("weight", e.target.value)}
+          />
+        </label>
       )}
-      <input
-        aria-label={
-          (type === "time" ? "Segundos" : "Reps") + " serie " + set.ordinal
-        }
-        inputMode="numeric"
-        disabled={disabled || !loaded || busy}
-        value={type === "time" ? values.duration : values.reps}
-        onChange={(e) =>
-          change(type === "time" ? "duration" : "reps", e.target.value)
-        }
-      />
+      <label className="set-value">
+        {type === "time" ? "Tiempo (s)" : "Reps"}
+        <input
+          aria-label={
+            (type === "time" ? "Segundos" : "Reps") + " serie " + set.ordinal
+          }
+          inputMode="numeric"
+          disabled={disabled || !loaded || busy}
+          value={type === "time" ? values.duration : values.reps}
+          onChange={(e) =>
+            change(type === "time" ? "duration" : "reps", e.target.value)
+          }
+        />
+      </label>
       <button
-        className="button small"
+        className="button icon-button set-confirm"
         aria-label={"Registrar serie " + set.ordinal}
         disabled={disabled || !loaded || busy}
         onClick={() => void save("done")}
@@ -955,24 +970,27 @@ function RestTimer({ session }: { session: TrainingSession }) {
       <div className="row">
         <Timer size={18} />
         <strong>
-          Descanso · {(remaining / 60).toFixed(2).replace(".", ",")} min
+          Descanso · {Math.floor(remaining / 60)}:
+          {String(remaining % 60).padStart(2, "0")}
         </strong>
+        <small>min:seg</small>
       </div>
       <div className="row">
         <button
-          className="link-button"
+          className="button secondary small"
           onClick={() => save(Date.now() + 60_000, null)}
         >
           1 min
         </button>
         <button
-          className="link-button"
+          className="button secondary small"
           onClick={() => save(Date.now() + (remaining + 15) * 1000, null)}
         >
           +0,25 min
         </button>
         <button
-          className="link-button"
+          className="button secondary small"
+          disabled={remaining === 0}
           onClick={() =>
             paused !== null
               ? save(Date.now() + paused * 1000, null)

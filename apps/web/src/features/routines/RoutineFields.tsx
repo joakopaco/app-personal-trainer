@@ -1,5 +1,5 @@
 import { useEffect, useState, type RefObject } from "react";
-import { Plus, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
+import { Plus, ArrowUp, ArrowDown, Trash2, Copy } from "lucide-react";
 import {
   cloneRoutineDocument,
   type RoutineDocument,
@@ -238,9 +238,10 @@ export function RoutineFields({
                   }
                 />
               </label>
-              <div className="row no-print">
+              <div className="row no-print block-actions">
                 <button
-                  className="link-button"
+                  className="button secondary small"
+                  aria-label="Duplicar bloque"
                   onClick={() =>
                     mutate((d) => {
                       const copy = cloneRoutineDocument({
@@ -251,10 +252,10 @@ export function RoutineFields({
                     })
                   }
                 >
-                  Duplicar bloque
+                  <Copy size={16} aria-hidden="true" /> Duplicar
                 </button>
                 <button
-                  className="button secondary"
+                  className="button secondary icon-button"
                   aria-label="Subir bloque"
                   disabled={bi === 0}
                   onClick={() =>
@@ -267,7 +268,7 @@ export function RoutineFields({
                   <ArrowUp size={16} />
                 </button>
                 <button
-                  className="button secondary"
+                  className="button secondary icon-button"
                   aria-label="Bajar bloque"
                   disabled={bi === selected.blocks.length - 1}
                   onClick={() =>
@@ -280,7 +281,7 @@ export function RoutineFields({
                   <ArrowDown size={16} />
                 </button>
                 <button
-                  className="button secondary"
+                  className="button secondary icon-button"
                   aria-label="Eliminar bloque"
                   onClick={() =>
                     mutate((d) => {
@@ -354,7 +355,7 @@ export function RoutineFields({
                   </div>
                   <div className="row">
                     <button
-                      className="link-button"
+                      className="button secondary icon-button"
                       disabled={ei === 0}
                       aria-label={"Subir " + exercise.name}
                       onClick={() =>
@@ -364,10 +365,10 @@ export function RoutineFields({
                         })
                       }
                     >
-                      ↑
+                      <ArrowUp size={16} aria-hidden="true" />
                     </button>
                     <button
-                      className="link-button"
+                      className="button secondary icon-button"
                       disabled={ei === block.exercises.length - 1}
                       aria-label={"Bajar " + exercise.name}
                       onClick={() =>
@@ -377,10 +378,10 @@ export function RoutineFields({
                         })
                       }
                     >
-                      ↓
+                      <ArrowDown size={16} aria-hidden="true" />
                     </button>
                     <button
-                      className="link-button"
+                      className="button secondary small"
                       aria-label={"Quitar " + exercise.name}
                       onClick={() =>
                         mutate((d) => {

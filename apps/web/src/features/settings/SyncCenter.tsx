@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import type { RawInput } from "@pulso/sync/local-db";
 import { queueHealth } from "../../adapters/telemetry";
 import { eventNames } from "@pulso/domain/audit-display";
@@ -26,7 +27,10 @@ export function SyncCenter() {
   const health = queueHealth(data.pending);
   const [message, setMessage] = useState("");
   return (
-    <>
+    <div className="sync-workspace">
+      <Link className="button secondary training-back" to="/hoy">
+        <ArrowLeft size={18} /> Volver a Hoy
+      </Link>
       <p className="eyebrow">TU ESPACIO</p>
       <h1>Centro de sincronización</h1>
       {message && (
@@ -244,7 +248,7 @@ export function SyncCenter() {
         <ExportSection />
         <ImportPreview />
       </div>
-    </>
+    </div>
   );
 }
 function ExportSection() {

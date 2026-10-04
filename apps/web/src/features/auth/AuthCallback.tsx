@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { Brand } from "../../components/Brand";
 import { cloud, updateVerifiedPassword } from "../../adapters/supabase";
 import { useAuth } from "./AuthProvider";
 import {
@@ -129,8 +130,11 @@ export function AuthCallback() {
     }
   }
   return (
-    <div className="auth-panel">
+    <div className="auth-panel auth-callback">
       <div>
+        <div className="auth-callback-brand">
+          <Brand />
+        </div>
         <h1>
           {confirmingSignup ? "Confirmá tu email" : "Elegí tu contraseña"}
         </h1>
@@ -181,7 +185,9 @@ export function AuthCallback() {
                 : "Si el enlace no se pudo validar, volvé al ingreso y pedí uno nuevo."}
             </p>
           ))}
-        <a href="/login">Volver al ingreso</a>
+        <a className="button secondary" href="/login">
+          Volver al ingreso
+        </a>
       </div>
     </div>
   );

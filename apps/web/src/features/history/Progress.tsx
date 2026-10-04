@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { cloud } from "../../adapters/supabase";
 import { anatomicalFigure } from "./anatomicalFigure";
 import {
@@ -103,6 +103,21 @@ export function MuscleMap({
 
 function Trend({ exercise }: { exercise: ExerciseProgress }) {
   const [focused, setFocused] = useState<number | null>(null);
+  const chartRef = useRef<SVGSVGElement>(null);
+  const [chartWidth, setChartWidth] = useState(650);
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width > 0)
+        setChartWidth(Math.max(240, Math.round(entry.contentRect.width)));
+    });
+    observer.observe(chart);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => setFocused(null), [exercise.exerciseId]);
+  const left = 48,
+    right = chartWidth - 18;
   const points = exercise.points,
     first = points[0],
     last = points.at(-1)!;
@@ -114,11 +129,13 @@ function Trend({ exercise }: { exercise: ExerciseProgress }) {
     timeSpan = Date.parse(last.date) - timeStart;
   const xy = points.map((point) => ({
     x: timeSpan
-      ? 54 + ((Date.parse(point.date) - timeStart) / timeSpan) * 560
-      : 334,
+      ? left +
+        ((Date.parse(point.date) - timeStart) / timeSpan) * (right - left)
+      : (left + right) / 2,
     y: 190 - ((point.value - min) / span) * 140,
   }));
-  const active = points[focused ?? points.length - 1];
+  const active =
+    points[Math.min(focused ?? points.length - 1, points.length - 1)];
   return (
     <>
       <div className="history-comparison">
@@ -154,21 +171,22 @@ function Trend({ exercise }: { exercise: ExerciseProgress }) {
         </div>
       </div>
       <svg
+        ref={chartRef}
         className="history-chart"
-        viewBox="0 0 650 240"
+        viewBox={`0 0 ${chartWidth} 240`}
         role="img"
         aria-label={`Evolución de ${exercise.name} en ${exercise.unit}`}
       >
         {[0, 1, 2].map((n) => (
           <g key={n}>
             <line
-              x1="54"
-              x2="614"
+              x1={left}
+              x2={right}
               y1={190 - n * 70}
               y2={190 - n * 70}
-              stroke="#e2e5de"
+              stroke="var(--line)"
             />
-            <text x="44" y={195 - n * 70} textAnchor="end">
+            <text x={left - 10} y={195 - n * 70} textAnchor="end">
               {number(min + (n * span) / 2)}
             </text>
           </g>
@@ -176,7 +194,7 @@ function Trend({ exercise }: { exercise: ExerciseProgress }) {
         <polyline
           points={xy.map((p) => `${p.x},${p.y}`).join(" ")}
           fill="none"
-          stroke="#243c23"
+          stroke="var(--ink)"
           strokeWidth="3"
         />
         {xy.map((point, i) => (
@@ -185,8 +203,8 @@ function Trend({ exercise }: { exercise: ExerciseProgress }) {
             cx={point.x}
             cy={point.y}
             r="6"
-            fill="#cef568"
-            stroke="#243c23"
+            fill="var(--accent)"
+            stroke="var(--ink)"
             tabIndex={0}
             onFocus={() => setFocused(i)}
             onMouseEnter={() => setFocused(i)}
@@ -198,10 +216,10 @@ function Trend({ exercise }: { exercise: ExerciseProgress }) {
             </title>
           </circle>
         ))}
-        <text x="54" y="225">
+        <text x={left} y="225">
           {date(first.date)}
         </text>
-        <text x="614" y="225" textAnchor="end">
+        <text x={right} y="225" textAnchor="end">
           {date(last.date)}
         </text>
       </svg>

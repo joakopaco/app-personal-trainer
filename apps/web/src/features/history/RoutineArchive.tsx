@@ -89,7 +89,7 @@ export function ArchivedRoutine({ document }: { document: RoutineDocument }) {
                 </p>
                 {block.exercises.length ? (
                   <div className="table-scroll">
-                    <table>
+                    <table className="history-archive-table" role="table">
                       <thead>
                         <tr>
                           <th>Ejercicio</th>
@@ -101,22 +101,44 @@ export function ArchivedRoutine({ document }: { document: RoutineDocument }) {
                       </thead>
                       <tbody>
                         {block.exercises.map((exercise) => (
-                          <tr key={exercise.id}>
-                            <td>
+                          <tr key={exercise.id} role="row">
+                            <td role="cell">
                               <strong>{exercise.name}</strong>
                               <small className="history-exercise-group">
                                 {exercise.group}
                                 {exercise.warmup ? " · Calentamiento" : ""}
                               </small>
                             </td>
-                            <td>{exercise.prescription.sets ?? "—"}</td>
-                            <td>
+                            <td role="cell">
+                              <span
+                                className="archive-field-label"
+                                aria-hidden="true"
+                              >
+                                Series
+                              </span>
+                              {exercise.prescription.sets ?? "—"}
+                            </td>
+                            <td role="cell">
+                              <span
+                                className="archive-field-label"
+                                aria-hidden="true"
+                              >
+                                Peso
+                              </span>
                               {exercise.type === "load_reps" &&
                               exercise.prescription.weight !== null
                                 ? exercise.prescription.weight + " kg"
                                 : "—"}
                             </td>
-                            <td>
+                            <td role="cell">
+                              <span
+                                className="archive-field-label"
+                                aria-hidden="true"
+                              >
+                                {exercise.type === "time"
+                                  ? "Duración"
+                                  : "Repeticiones"}
+                              </span>
                               {exercise.type === "time"
                                 ? exercise.prescription.durationSec === null
                                   ? "—"
@@ -125,7 +147,13 @@ export function ArchivedRoutine({ document }: { document: RoutineDocument }) {
                                   ? "—"
                                   : exercise.prescription.reps + " reps"}
                             </td>
-                            <td>
+                            <td role="cell">
+                              <span
+                                className="archive-field-label"
+                                aria-hidden="true"
+                              >
+                                Descanso micro
+                              </span>
                               {exercise.prescription.microRest === null
                                 ? "—"
                                 : formatRestMinutes(
