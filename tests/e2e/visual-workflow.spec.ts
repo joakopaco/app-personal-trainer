@@ -30,7 +30,7 @@ test("mobile live correction, accessible dialog and desktop history render witho
     await expect(
       page.getByRole("button", { name: "Corregir serie 1", exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible();
+    await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
     await page
       .getByRole("button", { name: "Corregir serie 1", exact: true })
       .click();
@@ -164,7 +164,7 @@ test("unfinished individual series survives leaving the student and a reload", a
     await page
       .getByRole("button", { name: "Registrar serie 1", exact: true })
       .click();
-    await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible();
+    await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
     const result = await a.client
       .from("session_sets")
       .select("weight,reps,state")

@@ -1,130 +1,85 @@
 // @vitest-environment jsdom
 import "fake-indexeddb/auto";
 import { afterEach, expect, test, vi } from "vitest";
-import {
-  cleanup,
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, render, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { LocalStore } from "@pulso/sync/local-db";
 const context = vi.hoisted(() => ({ db: null as LocalStore | null }));
 vi.mock("../../apps/web/src/app/DataProvider", () => ({
   useData: () => ({ db: context.db }),
 }));
-import { UpdateAvailable } from "../../apps/web/src/components/UpdateAvailable";
+import {
+  AppUpdates,
+  canReloadApp,
+} from "../../apps/web/src/components/AppUpdates";
 afterEach(async () => {
   cleanup();
   await context.db?.delete();
+  document.body.innerHTML = "";
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
-test.each(["library-pending", "admin:student"])(
-  "update readiness follows pending %s as well as the training queue",
-  async (pendingKey) => {
-    vi.stubEnv("PROD", true);
-    const db = new LocalStore({
-      userId: crypto.randomUUID(),
-      workspaceId: crypto.randomUUID(),
-    });
-    context.db = db;
-    await db.open();
-    await db.meta.put({ key: pendingKey, value: {} });
-    const savedDrafts = [
-      { key: "draft:student", value: { name: "Rutina en preparación" } },
-      {
-        key: "template-draft:local",
-        value: { name: "Plantilla en preparación" },
-      },
-    ];
-    await db.meta.bulkPut(savedDrafts);
-    const postMessage = vi.fn();
-    const registration = Object.assign(new EventTarget(), {
-      waiting: { postMessage },
-      installing: null,
-    });
-    Object.defineProperty(navigator, "serviceWorker", {
-      configurable: true,
-      value: Object.assign(new EventTarget(), {
-        register: vi.fn(async () => registration),
-        getRegistration: vi.fn(async () => registration),
-        controller: {},
-      }),
-    });
-    render(<UpdateAvailable />);
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Actualizar ahora" }),
-    );
-    await screen.findByText(
-      "Hay cambios que todavía no llegaron al servidor. Reintentá su guardado antes de actualizar. Los borradores guardados se conservan.",
-    );
-    expect(postMessage).not.toHaveBeenCalled();
-    await db.meta.delete(pendingKey);
-    await screen.findByText("Hay una nueva versión disponible.");
-    expect(
-      screen.queryByText(
-        "Hay cambios que todavía no llegaron al servidor. Reintentá su guardado antes de actualizar. Los borradores guardados se conservan.",
-      ),
-    ).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Actualizar ahora" }));
-    await waitFor(() =>
-      expect(postMessage).toHaveBeenCalledWith("ACTIVATE_REVIEWED_UPDATE"),
-    );
-    expect(screen.getByText("Actualizando la aplicación…")).toBeTruthy();
-    expect(
-      await db.meta.bulkGet(savedDrafts.map((draft) => draft.key)),
-    ).toEqual(savedDrafts);
-  },
-);
-
-test("activation uses the current waiting worker and permits retry if the browser does not respond", async () => {
-  vi.stubEnv("PROD", true);
+async function store() {
   const db = new LocalStore({
     userId: crypto.randomUUID(),
     workspaceId: crypto.randomUUID(),
   });
   context.db = db;
   await db.open();
-  const oldPost = vi.fn(),
-    currentPost = vi.fn();
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  return db;
+}
+test("saved drafts allow idle updates and remain stored; pending writes defer only the reload", async () => {
+  const db = await store();
+  const drafts = [
+    { key: "draft:student", value: { name: "Borrador" } },
+    { key: "template-draft:local", value: { name: "Plantilla" } },
+  ];
+  await db.meta.bulkPut(drafts);
+  expect(await canReloadApp(db, "/hoy")).toBe(true);
+  for (const key of ["admin:student", "library-pending"]) {
+    await db.meta.put({ key, value: {} });
+    expect(await canReloadApp(db, "/hoy")).toBe(false);
+    await db.meta.delete(key);
+  }
+  expect(await db.meta.bulkGet(drafts.map((draft) => draft.key))).toEqual(
+    drafts,
+  );
+  expect(await canReloadApp(db, "/alumnos/new/rutina")).toBe(false);
+  const field = document.createElement("input");
+  document.body.append(field);
+  field.focus();
+  expect(await canReloadApp(db, "/hoy")).toBe(false);
+  field.remove();
+  const dialog = document.createElement("div");
+  dialog.setAttribute("role", "dialog");
+  document.body.append(dialog);
+  expect(await canReloadApp(db, "/hoy")).toBe(false);
+});
+test("new shell activates without rendering synchronization notices or buttons", async () => {
+  vi.stubEnv("PROD", true);
+  const db = await store();
+  await db.meta.put({ key: "admin:student", value: {} });
+  const postMessage = vi.fn();
   const registration = Object.assign(new EventTarget(), {
-    waiting: { postMessage: oldPost },
+    waiting: { postMessage },
     installing: null,
   });
   Object.defineProperty(navigator, "serviceWorker", {
     configurable: true,
     value: Object.assign(new EventTarget(), {
       register: vi.fn(async () => registration),
-      getRegistration: vi.fn(async () => ({
-        waiting: { postMessage: currentPost },
-      })),
       controller: {},
     }),
   });
-  render(<UpdateAvailable />);
-  const button = await screen.findByRole("button", {
-    name: "Actualizar ahora",
-  });
-  const timeout = vi.spyOn(window, "setTimeout");
-  fireEvent.click(button);
-  await waitFor(() =>
-    expect(currentPost).toHaveBeenCalledWith("ACTIVATE_REVIEWED_UPDATE"),
+  const result = render(
+    <MemoryRouter initialEntries={["/hoy"]}>
+      <AppUpdates />
+    </MemoryRouter>,
   );
-  expect(oldPost).not.toHaveBeenCalled();
-  expect((button as HTMLButtonElement).disabled).toBe(true);
-  const onTimeout = timeout.mock.calls.find((call) => call[1] === 10000)?.[0];
-  expect(typeof onTimeout).toBe("function");
-  act(() => {
-    if (typeof onTimeout === "function") onTimeout();
-  });
-  expect((button as HTMLButtonElement).disabled).toBe(false);
-  expect(
-    screen.getByText(
-      "La actualización no respondió. Tus cambios se conservan. Volvé a intentar.",
-    ),
-  ).toBeTruthy();
-  fireEvent.click(button);
-  await waitFor(() => expect(currentPost).toHaveBeenCalledTimes(2));
+  await waitFor(() =>
+    expect(postMessage).toHaveBeenCalledWith("ACTIVATE_REVIEWED_UPDATE"),
+  );
+  expect(result.container.innerHTML).toBe("");
+  expect(await db.meta.get("admin:student")).toBeTruthy();
 });

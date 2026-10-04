@@ -58,7 +58,7 @@ test("trainer can build a block routine and train from the mobile UI", async ({
     ).toBeVisible();
     await page.getByLabel("Peso kg").fill("25");
     await page.getByLabel("Peso kg").blur();
-    await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible();
+    await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
     await page
       .getByRole("button", { name: "Finalizar entrenamiento", exact: true })
       .click();

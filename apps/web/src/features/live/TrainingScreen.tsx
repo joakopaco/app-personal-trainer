@@ -203,8 +203,8 @@ export function TrainingScreen() {
                   : closing
                     ? "Finalización pendiente"
                     : queue.length
-                      ? "Guardado en este dispositivo · pendiente de sincronizar"
-                      : "Sincronizado"}
+                      ? "Guardado en este dispositivo"
+                      : "Guardado"}
         </span>
       </header>
       {error && (

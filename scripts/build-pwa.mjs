@@ -15,7 +15,7 @@ const urls = files.map((f) => f.slice(root.length));
 writeFileSync(
   root + "/sw.js",
   `const CACHE='pulso-shell-${version}';const FILES=${JSON.stringify(urls)};
-self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES))));
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
 self.addEventListener('message',event=>{if(event.data==='ACTIVATE_REVIEWED_UPDATE')event.waitUntil(self.skipWaiting());});
 self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(url.origin!==self.location.origin||event.request.method!=='GET')return;

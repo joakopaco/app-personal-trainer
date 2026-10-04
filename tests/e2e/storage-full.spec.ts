@@ -28,7 +28,7 @@ test("a failed raw-input write never presents the edited screen as synchronized"
     await page.getByLabel("Peso kg", { exact: true }).fill("99");
     await page.getByLabel("Peso kg", { exact: true }).blur();
     await expect(page.getByRole("alert")).toContainText("No se pudo guardar");
-    await expect(page.getByText("Sincronizado", { exact: true })).toHaveCount(
+    await expect(page.getByText("Guardado", { exact: true })).toHaveCount(
       0,
     );
     await expect(

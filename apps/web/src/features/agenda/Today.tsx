@@ -11,8 +11,7 @@ import {
 import { useAgendaVisits } from "./useAgendaVisits";
 import { PendingReschedules } from "./PendingReschedules";
 export function Today() {
-  const { rows, pending, error, db, onlineCommand, makeCommand, sync } =
-    useData();
+  const { rows, error, db, onlineCommand, makeCommand, sync } = useData();
   const navigate = useNavigate();
   const [adding, setAdding] = useState(false),
     [studentId, setStudentId] = useState(""),
@@ -133,11 +132,7 @@ export function Today() {
           <h2>
             Entrenando ahora <span className="count">{active.length}</span>
           </h2>
-          <small>
-            {pending.length
-              ? `${pending.length} cambios por confirmar`
-              : "Tu espacio de seguimiento"}
-          </small>
+          <small>Tu espacio de seguimiento</small>
         </div>
         {active.length ? (
           <div className="grid">

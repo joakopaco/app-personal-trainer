@@ -24,12 +24,12 @@ test("installed production shell starts fully offline and preserves training edi
     await page.getByLabel("Peso kg").fill("37,5");
     await page.getByLabel("Peso kg").blur();
     await expect(page.getByRole("status")).toContainText(
-      "pendiente de sincronizar",
+      "Guardado en este dispositivo",
     );
     await page.reload();
     await expect(page.getByLabel("Peso kg")).toHaveValue("37.5");
     await expect(page.getByRole("status")).toContainText(
-      "pendiente de sincronizar",
+      "Guardado en este dispositivo",
     );
     const cached = await page.evaluate(async () => {
       const keys = await caches.keys();
@@ -47,7 +47,7 @@ test("installed production shell starts fully offline and preserves training edi
     await context.setOffline(false);
     await page.getByRole("button", { name: "Reintentar guardado" }).click();
     await page.goto("/entrenar/" + a.studentId);
-    await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible({
+    await expect(page.getByText("Guardado", { exact: true })).toBeVisible({
       timeout: 45000,
     });
   } finally {

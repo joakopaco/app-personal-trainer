@@ -36,7 +36,7 @@ test("unregistered annotations remain editable in the training screen", async ({
     await page
       .getByRole("button", { name: "Registrar serie 2", exact: true })
       .click();
-    await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible();
+    await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
     const result = await a.client
       .from("session_sets")
       .select("weight,state")

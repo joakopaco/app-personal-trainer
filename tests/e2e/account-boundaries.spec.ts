@@ -22,7 +22,7 @@ test("logout blocks pending edits, then another trainer never sees the prior cac
     await page.getByLabel("Peso kg").fill("32");
     await page.getByLabel("Peso kg").blur();
     await expect(page.getByRole("status")).toContainText(
-      "pendiente de sincronizar",
+      "Guardado en este dispositivo",
     );
     await page.getByRole("link", { name: "Ajustes", exact: true }).click();
     await page
@@ -36,7 +36,7 @@ test("logout blocks pending edits, then another trainer never sees the prior cac
     await page.unroute("http://127.0.0.1:54341/**");
     await page.goto("/entrenar/" + a.studentId);
     await page.getByRole("button", { name: "Reintentar guardado" }).click();
-    await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible();
+    await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
     await page.getByRole("link", { name: "Ajustes", exact: true }).click();
     await page
       .getByRole("button", { name: "Cerrar sesión", exact: true })

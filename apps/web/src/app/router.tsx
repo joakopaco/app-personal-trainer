@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ComponentType } from "react";
 import { useParams, Routes, Route, Navigate } from "react-router-dom";
-import { UpdateAvailable } from "../components/UpdateAvailable";
+import { AppUpdates } from "../components/AppUpdates";
 import { SaveNotice } from "../components/SaveNotice";
 import { AppShell } from "./AppShell";
 import { AuthProvider, useAuth } from "../features/auth/AuthProvider";
@@ -89,7 +89,7 @@ function Protected() {
   return (
     <DataProvider key={auth.scope.userId}>
       <AppShell>
-        <UpdateAvailable />
+        <AppUpdates />
         <SaveNotice />
         <Suspense fallback={<p role="status">Cargando…</p>}>
           <Routes>
@@ -121,10 +121,6 @@ function Protected() {
             <Route
               path="/progreso/:id"
               element={<StudentRoute component={StudentProgress} />}
-            />
-            <Route
-              path="/sincronizacion"
-              element={<Navigate to="/hoy" replace />}
             />
             <Route path="/ajustes" element={<Settings />} />
             <Route path="*" element={<Navigate to="/hoy" replace />} />

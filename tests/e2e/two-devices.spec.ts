@@ -19,7 +19,7 @@ test("remote and local values are compared and only an explicit resolution overw
     await page.getByLabel("Peso kg").fill("44");
     await page.getByLabel("Peso kg").blur();
     await expect(page.getByRole("status")).toContainText(
-      "pendiente de sincronizar",
+      "Guardado en este dispositivo",
     );
     const se = a.snapshot.sessions[0];
     const remote = await execute(
@@ -51,7 +51,7 @@ test("remote and local values are compared and only an explicit resolution overw
     await page
       .getByRole("button", { name: "Aplicar mi cambio revisado" })
       .click();
-    await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible();
+    await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
     const after = await a.client
       .from("session_sets")
       .select("weight")
