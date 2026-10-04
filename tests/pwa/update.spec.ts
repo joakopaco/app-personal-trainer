@@ -36,15 +36,10 @@ test("service worker update waits for pending edits and leaves private cache int
     ).toBeVisible();
     await expect(page.getByLabel("Peso kg")).toHaveValue("48");
     await page.unroute("http://127.0.0.1:54341/**");
-    await page
-      .getByRole("link", { name: "Revisar cambios pendientes", exact: true })
-      .click();
-    await page
-      .getByRole("button", { name: "Reintentar sincronización" })
-      .click();
-    await expect(
-      page.getByText("No hay operaciones de entrenamiento pendientes."),
-    ).toBeVisible({ timeout: 45000 });
+    await page.getByRole("button", { name: "Reintentar guardado" }).click();
+    await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible({
+      timeout: 45000,
+    });
     await expect(
       page.getByText("Hay una nueva versión disponible.", { exact: true }),
     ).toBeVisible();
@@ -66,8 +61,8 @@ test("service worker update waits for pending edits and leaves private cache int
       throw error;
     });
     await expect(
-      page.getByRole("heading", {
-        name: "Centro de sincronización",
+      page.getByRole("button", {
+        name: "Finalizar entrenamiento",
         exact: true,
       }),
     ).toBeVisible();

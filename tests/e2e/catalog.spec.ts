@@ -37,8 +37,19 @@ test("grouped catalog and image-free custom exercises remain scoped to their tra
       .getByLabel("Grupo muscular", { exact: true })
       .selectOption("Espalda");
     await page.getByLabel("Material", { exact: true }).fill("Mancuerna");
+    await page.route("**/rest/v1/rpc/save_library_entry", (route) =>
+      route.abort(),
+    );
     await page
       .getByRole("button", { name: "Guardar ejercicio", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Reintentar guardado", exact: true }),
+    ).toBeVisible();
+    await page.reload();
+    await page.unroute("**/rest/v1/rpc/save_library_entry");
+    await page
+      .getByRole("button", { name: "Reintentar guardado", exact: true })
       .click();
     await page.getByLabel("Buscar ejercicio").fill(name);
     await expect(

@@ -1,5 +1,5 @@
-import { saveLibrary } from "../../adapters/library";
-import { Link } from "react-router-dom";
+import { saveLibrary, type LibraryCommand } from "../../adapters/library";
+import { liveQuery } from "dexie";
 import { Star, ImageOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -11,6 +11,7 @@ import { cloud } from "../../adapters/supabase";
 import { useData } from "../../app/DataProvider";
 export function ExerciseLibrary() {
   const { db } = useData();
+  const [pendingSave, setPendingSave] = useState<LibraryCommand>();
   const [query, setQuery] = useState(""),
     [filter, setFilter] = useState(""),
     [saving, setSaving] = useState(false),
@@ -32,6 +33,15 @@ export function ExerciseLibrary() {
   useEffect(() => {
     void refresh();
   }, []);
+  useEffect(() => {
+    const sub = liveQuery(() => db.meta.get("library-pending")).subscribe(
+      (entry) => {
+        const command = entry?.value as LibraryCommand | undefined;
+        setPendingSave(command?.kind !== "template" ? command : undefined);
+      },
+    );
+    return () => sub.unsubscribe();
+  }, [db]);
   const groups = [...new Set([...catalog, ...own].map((e) => e.group))];
   const results = searchExercises(query, [...own, ...catalog]).filter(
     (e) => !filter || e.group === filter,
@@ -73,8 +83,31 @@ export function ExerciseLibrary() {
       </div>
       {message && (
         <p className="notice" role="status">
-          {message} <Link to="/sincronizacion">Revisar cambios pendientes</Link>
+          {message}
         </p>
+      )}
+      {pendingSave && (
+        <div className="notice row">
+          <span>Hay un ejercicio o favorito pendiente de guardar.</span>
+          <button
+            className="button secondary"
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await saveLibrary(db, pendingSave);
+                await refresh();
+                setMessage("Cambio guardado.");
+              } catch (e) {
+                setMessage((e as Error).message);
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            Reintentar guardado
+          </button>
+        </div>
       )}
       {form && (
         <form

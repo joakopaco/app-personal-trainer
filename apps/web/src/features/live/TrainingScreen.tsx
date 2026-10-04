@@ -1,3 +1,5 @@
+import { TrainingRecovery } from "./TrainingRecovery";
+import { UnfinishedAnnotations } from "./UnfinishedAnnotations";
 import {
   displayNumber,
   formatRestMinutes,
@@ -94,6 +96,8 @@ export function TrainingScreen() {
     return (
       <>
         <h1>Entrenamiento finalizado</h1>
+        <TrainingRecovery studentId={id!} />
+        <UnfinishedAnnotations studentId={id!} />
         <p>
           Los resultados confirmados ya están en el historial de{" "}
           {row.projection.student.name}.
@@ -212,8 +216,16 @@ export function TrainingScreen() {
         <div className="error">
           <h2>Este alumno necesita una revisión</h2>
           <p>{conflict.error}</p>
-          <Link to="/sincronizacion">Abrir centro de sincronización</Link>
+          <TrainingRecovery studentId={id!} />
         </div>
+      )}
+      {queue.length > 0 && !conflict && (
+        <button
+          className="button secondary small"
+          onClick={() => void data.sync(true)}
+        >
+          Reintentar guardado
+        </button>
       )}
       {closing && (
         <div className="notice">

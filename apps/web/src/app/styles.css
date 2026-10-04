@@ -1476,17 +1476,6 @@ th {
 .profile-settings {
   max-width: 720px;
 }
-.sync-workspace {
-  max-width: 960px;
-}
-.sync-workspace .card > :last-child {
-  margin-bottom: 0;
-}
-@media (max-width: 760px) {
-  .sync-workspace .row > .button {
-    width: 100%;
-  }
-}
 .profile-settings h2 {
   margin: 0;
 }
@@ -1505,17 +1494,6 @@ th {
   .profile-settings .row.spread .button {
     flex-shrink: 0;
   }
-}
-
-.agenda-data-link {
-  margin-top: 36px;
-}
-.agenda-data-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-size: 13px;
-  color: var(--muted);
 }
 
 .training-back {

@@ -1,6 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prepared } from "../fixtures/prepared";
-import { readFileSync } from "node:fs";
 import {
   accounts,
   adminClient,
@@ -19,37 +18,32 @@ async function login(page: Page) {
   await expect(page.getByRole("navigation")).toBeVisible();
 }
 
-test("unregistered annotations remain reviewable and exportable from sync center", async ({
+test("unregistered annotations remain editable in the training screen", async ({
   page,
-}, info) => {
+}) => {
   const a = await prepared();
   try {
     await login(page);
     await page.goto("/entrenar/" + a.studentId);
     await page.getByRole("button", { name: /Detalle de series/ }).click();
     await page.getByLabel("Peso serie 2", { exact: true }).fill("27,5");
-    await page
-      .getByRole("link", { name: "Revisar cambios pendientes", exact: true })
-      .click();
-    await expect(
-      page.getByRole("heading", { name: "Anotaciones sin registrar" }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("Peso: 27,5 · Reps: 10", { exact: true }),
-    ).toBeVisible();
-    page.on("dialog", (dialog) => dialog.accept());
-    const pending = page.waitForEvent("download");
-    await page
-      .getByRole("button", { name: "Exportar y descartar anotación" })
-      .click();
-    const file = info.outputPath("annotation.json");
-    await (await pending).saveAs(file);
-    expect(JSON.parse(readFileSync(file, "utf8")).raw).toContain("27,5");
-    await expect(
-      page.getByRole("heading", { name: "Anotaciones sin registrar" }),
-    ).toHaveCount(0);
+    await page.getByRole("link", { name: "Hoy", exact: true }).click();
     await page.goto("/entrenar/" + a.studentId);
+    await page.getByRole("button", { name: /Detalle de series/ }).click();
+    await expect(page.getByLabel("Peso serie 2", { exact: true })).toHaveValue(
+      "27,5",
+    );
+    await page
+      .getByRole("button", { name: "Registrar serie 2", exact: true })
+      .click();
     await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible();
+    const result = await a.client
+      .from("session_sets")
+      .select("weight,state")
+      .eq("student_id", a.studentId)
+      .eq("ordinal", 2)
+      .single();
+    expect(result.data).toMatchObject({ weight: 27.5, state: "done" });
   } finally {
     await dropFixture(a.studentId);
   }

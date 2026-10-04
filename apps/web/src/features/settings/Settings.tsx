@@ -45,7 +45,7 @@ export function Settings() {
     try {
       if (await data.db.hasPending())
         throw Error(
-          "Hay cambios pendientes. Sincronizalos o exportalos y revisalos antes de salir.",
+          "Hay cambios sin confirmar. Volvé al entrenamiento y revisalos antes de salir.",
         );
       if (
         (await data.db.meta.toArray()).some(
@@ -57,7 +57,7 @@ export function Settings() {
         )
       )
         throw Error(
-          "Hay borradores u operaciones administrativas sin confirmar. Guardalos o exportalos antes de salir.",
+          "Tenés una rutina, plantilla o ficha sin terminar de guardar. Volvé a esa pantalla y guardala antes de salir.",
         );
       data.suspend();
       localStorage.removeItem("pulso-access:" + data.db.scope.userId);

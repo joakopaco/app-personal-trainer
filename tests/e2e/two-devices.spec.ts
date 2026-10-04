@@ -40,12 +40,7 @@ test("remote and local values are compared and only an explicit resolution overw
     );
     expect(remote.status).toBe("applied");
     await page.unroute("http://127.0.0.1:54341/**");
-    await page
-      .getByRole("link", { name: "Revisar cambios pendientes", exact: true })
-      .click();
-    await page
-      .getByRole("button", { name: "Reintentar sincronización" })
-      .click();
+    await page.getByRole("button", { name: "Reintentar guardado" }).click();
     await expect(page.getByText(/Valor confirmado: 42/)).toBeVisible();
     await expect(page.getByText(/Valor local: 44/)).toBeVisible();
     const before = await a.client
@@ -56,9 +51,7 @@ test("remote and local values are compared and only an explicit resolution overw
     await page
       .getByRole("button", { name: "Aplicar mi cambio revisado" })
       .click();
-    await expect(
-      page.getByText("No hay operaciones de entrenamiento pendientes."),
-    ).toBeVisible();
+    await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible();
     const after = await a.client
       .from("session_sets")
       .select("weight")

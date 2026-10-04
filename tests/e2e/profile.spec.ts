@@ -18,17 +18,7 @@ test("profile edits persist privately and settings contain only account controls
     await expect(
       page.getByRole("heading", { name: "Mi perfil" }),
     ).toBeVisible();
-    await page.getByRole("link", { name: "Hoy", exact: true }).click();
-    await page
-      .getByRole("link", { name: "Datos y sincronización", exact: true })
-      .click();
-    await expect(
-      page.getByRole("heading", {
-        name: "Centro de sincronización",
-        exact: true,
-      }),
-    ).toBeVisible();
-    await page.getByRole("link", { name: "Ajustes", exact: true }).click();
+    await expect(page.locator('a[href="/sincronizacion"]')).toHaveCount(0);
     await page.getByLabel("Nombre", { exact: true }).fill(name);
     await page.getByRole("button", { name: "Guardar datos" }).click();
     await expect(page.getByText("Perfil guardado.")).toBeVisible();

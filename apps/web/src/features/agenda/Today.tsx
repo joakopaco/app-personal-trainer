@@ -427,9 +427,6 @@ export function Today() {
           </section>
         </div>
       )}
-      <p className="agenda-data-link">
-        <Link to="/sincronizacion">Datos y sincronización</Link>
-      </p>
     </>
   );
 }

@@ -80,6 +80,15 @@ test("mobile navigation opens pages at the top and restores a live session's pos
       page.getByRole("button", { name: "Editar ficha", exact: true }),
     ).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    await page.goto("/sincronizacion");
+    await expect(page).toHaveURL(/\/hoy$/);
+    await expect(
+      page.getByRole("heading", { name: "Hoy, con vos." }),
+    ).toBeVisible();
+    await expect(page.locator('a[href="/sincronizacion"]')).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Centro de sincronización" }),
+    ).toHaveCount(0);
   } finally {
     await dropFixture(fixture.studentId);
   }

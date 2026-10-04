@@ -35,12 +35,7 @@ test("offline edits survive a reload and synchronize exactly once", async ({
       "pendiente de sincronizar",
     );
     await page.unroute("http://127.0.0.1:54341/**");
-    await page
-      .getByRole("link", { name: "Revisar cambios pendientes", exact: true })
-      .click();
-    await page
-      .getByRole("button", { name: "Reintentar sincronización" })
-      .click();
+    await page.getByRole("button", { name: "Reintentar guardado" }).click();
     await page.goto("/entrenar/" + a.studentId);
     // Navigation can interrupt an in-flight send. The durable lease expires
     // after 30s and the next 2.5s worker tick safely replays its receipt.

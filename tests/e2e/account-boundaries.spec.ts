@@ -30,17 +30,13 @@ test("logout blocks pending edits, then another trainer never sees the prior cac
       .click();
     await expect(
       page.getByText(
-        "Hay cambios pendientes. Sincronizalos o exportalos y revisalos antes de salir.",
+        "Hay cambios sin confirmar. Volvé al entrenamiento y revisalos antes de salir.",
       ),
     ).toBeVisible();
     await page.unroute("http://127.0.0.1:54341/**");
-    await page.goto("/sincronizacion");
-    await page
-      .getByRole("button", { name: "Reintentar sincronización" })
-      .click();
-    await expect(
-      page.getByText("No hay operaciones de entrenamiento pendientes."),
-    ).toBeVisible();
+    await page.goto("/entrenar/" + a.studentId);
+    await page.getByRole("button", { name: "Reintentar guardado" }).click();
+    await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible();
     await page.getByRole("link", { name: "Ajustes", exact: true }).click();
     await page
       .getByRole("button", { name: "Cerrar sesión", exact: true })

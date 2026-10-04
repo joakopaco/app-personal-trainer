@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ComponentType } from "react";
 import { useParams, Routes, Route, Navigate } from "react-router-dom";
 import { UpdateAvailable } from "../components/UpdateAvailable";
-import { PendingReview } from "../components/PendingReview";
+import { SaveNotice } from "../components/SaveNotice";
 import { AppShell } from "./AppShell";
 import { AuthProvider, useAuth } from "../features/auth/AuthProvider";
 import { Login } from "../features/auth/Login";
@@ -42,11 +42,6 @@ const TrainingScreen = lazy(() =>
 );
 const History = lazy(() =>
   import("../features/history/History").then((m) => ({ default: m.History })),
-);
-const SyncCenter = lazy(() =>
-  import("../features/settings/SyncCenter").then((m) => ({
-    default: m.SyncCenter,
-  })),
 );
 const Settings = lazy(() =>
   import("../features/settings/Settings").then((m) => ({
@@ -90,7 +85,7 @@ function Protected() {
     <DataProvider key={auth.scope.userId}>
       <AppShell>
         <UpdateAvailable />
-        <PendingReview />
+        <SaveNotice />
         <Suspense fallback={<p role="status">Cargando…</p>}>
           <Routes>
             <Route path="/hoy" element={<Today />} />
@@ -118,7 +113,10 @@ function Protected() {
               path="/historial/:id"
               element={<StudentRoute component={History} />}
             />
-            <Route path="/sincronizacion" element={<SyncCenter />} />
+            <Route
+              path="/sincronizacion"
+              element={<Navigate to="/hoy" replace />}
+            />
             <Route path="/ajustes" element={<Settings />} />
             <Route path="*" element={<Navigate to="/hoy" replace />} />
           </Routes>

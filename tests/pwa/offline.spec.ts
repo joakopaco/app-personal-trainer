@@ -45,12 +45,7 @@ test("installed production shell starts fully offline and preserves training edi
       cached.some((u) => u.includes("54341") || u.includes("/auth/")),
     ).toBe(false);
     await context.setOffline(false);
-    await page
-      .getByRole("link", { name: "Revisar cambios pendientes", exact: true })
-      .click();
-    await page
-      .getByRole("button", { name: "Reintentar sincronización" })
-      .click();
+    await page.getByRole("button", { name: "Reintentar guardado" }).click();
     await page.goto("/entrenar/" + a.studentId);
     await expect(page.getByText("Sincronizado", { exact: true })).toBeVisible({
       timeout: 45000,
