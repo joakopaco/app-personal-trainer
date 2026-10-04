@@ -4,6 +4,9 @@ import { liveQuery } from "dexie";
 import type { LocalStore } from "@pulso/sync/local-db";
 
 function pendingUpdateWork(db: LocalStore) {
+  // Routine and template drafts are already durable in IndexedDB. Updating
+  // the public app shell preserves that database and must not require
+  // publishing or discarding a trainer's unfinished routine.
   return db.transaction(
     "r",
     db.outbox,
@@ -12,11 +15,7 @@ function pendingUpdateWork(db: LocalStore) {
     async () =>
       (await db.hasPending()) ||
       (await db.meta.toArray()).some(
-        (m) =>
-          m.key.startsWith("draft:") ||
-          m.key.startsWith("template-draft:") ||
-          m.key.startsWith("admin:") ||
-          m.key === "library-pending",
+        (m) => m.key.startsWith("admin:") || m.key === "library-pending",
       ),
   );
 }
@@ -70,7 +69,7 @@ export function UpdateAvailable() {
           ? "Actualizando la aplicación…"
           : message ||
             (blocked && pending
-              ? "Guardá y sincronizá los pendientes antes de actualizar."
+              ? "Hay cambios que todavía no llegaron al servidor. Reintentá su guardado antes de actualizar. Los borradores guardados se conservan."
               : "Hay una nueva versión disponible.")}
       </span>
       {worker && (

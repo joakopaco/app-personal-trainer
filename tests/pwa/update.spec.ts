@@ -32,7 +32,9 @@ test("service worker update waits for pending edits and leaves private cache int
     });
     await page.getByRole("button", { name: "Actualizar ahora" }).click();
     await expect(
-      page.getByText("Guardá y sincronizá los pendientes antes de actualizar."),
+      page.getByText(
+        "Hay cambios que todavía no llegaron al servidor. Reintentá su guardado antes de actualizar. Los borradores guardados se conservan.",
+      ),
     ).toBeVisible();
     await expect(page.getByLabel("Peso kg")).toHaveValue("48");
     await page.unroute("http://127.0.0.1:54341/**");

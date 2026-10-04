@@ -21,7 +21,7 @@ afterEach(async () => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
-test.each(["library-pending", "template-draft:local"])(
+test.each(["library-pending", "admin:student"])(
   "update readiness follows pending %s as well as the training queue",
   async (pendingKey) => {
     vi.stubEnv("PROD", true);
@@ -32,6 +32,14 @@ test.each(["library-pending", "template-draft:local"])(
     context.db = db;
     await db.open();
     await db.meta.put({ key: pendingKey, value: {} });
+    const savedDrafts = [
+      { key: "draft:student", value: { name: "Rutina en preparación" } },
+      {
+        key: "template-draft:local",
+        value: { name: "Plantilla en preparación" },
+      },
+    ];
+    await db.meta.bulkPut(savedDrafts);
     const postMessage = vi.fn();
     const registration = Object.assign(new EventTarget(), {
       waiting: { postMessage },
@@ -50,14 +58,14 @@ test.each(["library-pending", "template-draft:local"])(
       await screen.findByRole("button", { name: "Actualizar ahora" }),
     );
     await screen.findByText(
-      "Guardá y sincronizá los pendientes antes de actualizar.",
+      "Hay cambios que todavía no llegaron al servidor. Reintentá su guardado antes de actualizar. Los borradores guardados se conservan.",
     );
     expect(postMessage).not.toHaveBeenCalled();
     await db.meta.delete(pendingKey);
     await screen.findByText("Hay una nueva versión disponible.");
     expect(
       screen.queryByText(
-        "Guardá y sincronizá los pendientes antes de actualizar.",
+        "Hay cambios que todavía no llegaron al servidor. Reintentá su guardado antes de actualizar. Los borradores guardados se conservan.",
       ),
     ).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Actualizar ahora" }));
@@ -65,6 +73,9 @@ test.each(["library-pending", "template-draft:local"])(
       expect(postMessage).toHaveBeenCalledWith("ACTIVATE_REVIEWED_UPDATE"),
     );
     expect(screen.getByText("Actualizando la aplicación…")).toBeTruthy();
+    expect(
+      await db.meta.bulkGet(savedDrafts.map((draft) => draft.key)),
+    ).toEqual(savedDrafts);
   },
 );
 
