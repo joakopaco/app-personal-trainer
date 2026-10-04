@@ -1,4 +1,4 @@
-import { StudentNavigation } from "./StudentNavigation";
+import { StudentHeader } from "./StudentHeader";
 import { RoutineArchive } from "../history/RoutineArchive";
 import { ExportRoutine } from "../routines/ExportRoutine";
 import { SaveStudentTemplate } from "../routines/SaveStudentTemplate";
@@ -7,7 +7,6 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Plus,
   ArrowUpRight,
-  ArrowLeft,
   CalendarDays,
   Pencil,
   TrendingUp,
@@ -112,7 +111,7 @@ export function StudentList() {
               {s.sessions.length
                 ? "Entrenando ahora"
                 : s.period
-                  ? monthLabel(s.period.month)
+                  ? "Rutina activa"
                   : "Listo para empezar"}
             </span>
           </Link>
@@ -149,29 +148,9 @@ export function StudentProfile() {
     schedule = data.schedule;
   return (
     <div className="student-page student-profile">
-      <Link className="student-back" to="/alumnos">
-        <ArrowLeft size={18} />
-        Volver a alumnos
-      </Link>
-      <header className="page-heading">
-        <div>
-          <p className="eyebrow">FICHA DEL ALUMNO</p>
-          <h1>{s.name}</h1>
-          <div className="row muted">
-            <span>
-              {!s.gender || s.gender === "no_especificado"
-                ? "Género sin indicar"
-                : genders[s.gender]}
-            </span>
-            <span>·</span>
-            <span>
-              {schedule?.weekdays.length
-                ? `${schedule.weekdays.length} ${schedule.weekdays.length === 1 ? "día" : "días"} por semana`
-                : "Sin horario fijo"}
-            </span>
-            {s.archived && <span className="badge">Archivado</span>}
-          </div>
-        </div>
+      <StudentHeader data={data} />
+      <div className="student-section-toolbar">
+        <h2>Información y rutinas</h2>
         <button
           className="button secondary"
           onClick={() => setEditing(!editing)}
@@ -179,7 +158,7 @@ export function StudentProfile() {
           <Pencil size={16} />
           Editar ficha
         </button>
-      </header>
+      </div>
       {error && (
         <p className="error" role="alert">
           {error}
@@ -201,7 +180,6 @@ export function StudentProfile() {
           }}
         />
       )}
-      <StudentNavigation studentId={s.id} />
       <div className="student-profile-grid">
         <aside
           className="card student-information"
@@ -271,9 +249,7 @@ export function StudentProfile() {
                 <ClipboardList size={21} />
                 <h2>Rutina actual</h2>
               </div>
-              {data.period && (
-                <span className="badge">{monthLabel(data.period.month)}</span>
-              )}
+              {data.period && <span className="badge">En curso</span>}
             </div>
             {routine ? (
               <>
@@ -339,9 +315,7 @@ export function StudentProfile() {
           <RoutineArchive
             studentId={s.id}
             currentRevisionId={data.routine?.id}
-            currentPeriodId={data.period?.id}
             studentName={s.name}
-            compact
           />
         </div>
       </div>

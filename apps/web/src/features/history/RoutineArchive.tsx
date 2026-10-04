@@ -1,28 +1,17 @@
 import { useEffect, useState } from "react";
-import { routineSchema, type RoutineDocument } from "@pulso/domain/routines";
+import { type RoutineDocument } from "@pulso/domain/routines";
 import { cloud } from "../../adapters/supabase";
 import { formatRestMinutes } from "../../components/rest-minutes";
 import { loadAllPages } from "./history-progress-model";
 import "./history.css";
 import { ExportRoutine } from "../routines/ExportRoutine";
 
-type Period = {
-  id: string;
-  month: string;
-  current_revision_id: string | null;
-  continued_from: string | null;
-};
-type Revision = {
-  id: string;
-  period_id: string;
-  created_at: string;
-  document: unknown;
-};
-const monthLabel = (month: string) =>
-  new Date(month + "-01T12:00:00").toLocaleDateString("es-AR", {
-    month: "long",
-    year: "numeric",
-  });
+import {
+  routineTimeline,
+  routineDate,
+  type RoutineEntry,
+  type RoutineRevision,
+} from "./routine-history-model";
 
 export function ArchivedRoutine({ document }: { document: RoutineDocument }) {
   const [week, setWeek] = useState(0),
@@ -183,64 +172,45 @@ export function ArchivedRoutine({ document }: { document: RoutineDocument }) {
 export function RoutineArchive({
   studentId,
   currentRevisionId,
-  currentPeriodId,
-  compact = false,
   studentName,
 }: {
   studentId: string;
   currentRevisionId?: string;
-  currentPeriodId?: string;
-  compact?: boolean;
   studentName?: string;
 }) {
-  const [expanded, setExpanded] = useState(!compact);
-  const [periods, setPeriods] = useState<Period[]>([]),
-    [periodId, setPeriodId] = useState("");
-  const [revisions, setRevisions] = useState<Revision[]>([]),
-    [revisionId, setRevisionId] = useState("");
+  const [entries, setEntries] = useState<RoutineEntry[]>([]);
+  const [selected, setSelected] = useState<RoutineEntry | null>(null);
   const [loading, setLoading] = useState(true),
-    [revisionsLoading, setRevisionsLoading] = useState(false),
     [error, setError] = useState(""),
-    [revisionError, setRevisionError] = useState(""),
     [retry, setRetry] = useState(0);
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError("");
-    setPeriods([]);
-    setRevisions([]);
-    setPeriodId("");
-    void loadAllPages<Period>(
+    setEntries([]);
+    setSelected(null);
+    void loadAllPages<RoutineRevision>(
       (start, end) =>
         cloud()
-          .from("routine_periods")
-          .select("id,month,current_revision_id,continued_from")
+          .from("routine_revisions")
+          .select("id,created_at,document")
           .eq("student_id", studentId)
-          .order("month", { ascending: false })
+          .order("created_at")
           .order("id")
           .range(start, end),
-      100,
-      1200,
+      200,
+      5000,
     )
       .then((result) => {
         if (!active) return;
-        if (result.truncated) {
-          setError(
-            "Hay más de 1.200 períodos. No se pudo cargar el archivo completo.",
-          );
-          return;
-        }
-        setPeriods(result.rows);
-        setPeriodId(
-          result.rows.find((period) => period.id === currentPeriodId)?.id ||
-            result.rows[0]?.id ||
-            "",
-        );
+        if (result.truncated)
+          throw Error("El archivo supera el límite de consulta.");
+        setEntries(routineTimeline(result.rows, currentRevisionId));
       })
       .catch(() => {
         if (active)
           setError(
-            "No se pudo cargar el archivo de rutinas. Verificá tu conexión.",
+            "No se pudieron cargar las rutinas anteriores. Reintentá para consultar el archivo completo.",
           );
       })
       .finally(() => {
@@ -249,215 +219,103 @@ export function RoutineArchive({
     return () => {
       active = false;
     };
-  }, [studentId, currentPeriodId, currentRevisionId, retry]);
-  useEffect(() => {
-    let active = true;
-    setRevisions([]);
-    setRevisionId("");
-    setRevisionError("");
-    if (!periodId) return;
-    setRevisionsLoading(true);
-    void loadAllPages<Revision>(
-      (start, end) =>
-        cloud()
-          .from("routine_revisions")
-          .select("id,period_id,created_at,document")
-          .eq("student_id", studentId)
-          .eq("period_id", periodId)
-          .order("created_at", { ascending: false })
-          .order("id")
-          .range(start, end),
-      100,
-      1000,
-    )
-      .then((result) => {
-        if (!active) return;
-        if (result.truncated) {
-          setRevisionError(
-            "Este mes supera las 1.000 versiones. No se pudo cargar el archivo completo.",
-          );
-          return;
-        }
-        setRevisions(result.rows);
-        const current = periods.find(
-          (period) => period.id === periodId,
-        )?.current_revision_id;
-        setRevisionId(
-          result.rows.find((revision) => revision.id === current)?.id ||
-            result.rows[0]?.id ||
-            "",
-        );
-      })
-      .catch(() => {
-        if (active)
-          setRevisionError("No se pudieron cargar las versiones de este mes.");
-      })
-      .finally(() => {
-        if (active) setRevisionsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [studentId, periodId, periods, retry]);
-  const selected = revisions.find((revision) => revision.id === revisionId),
-    parsed = selected ? routineSchema.safeParse(selected.document) : null;
-  const selectedPeriod = periods.find((period) => period.id === periodId);
-  const activePeriod = periods.find(
-    (period) =>
-      period.id === currentPeriodId ||
-      period.current_revision_id === currentRevisionId,
-  );
+  }, [studentId, currentRevisionId, retry]);
+  const previous = entries.filter((entry) => !entry.current).reverse();
+  const current = entries.find((entry) => entry.current);
   return (
     <section
-      className="card history-routine-archive blocks"
-      aria-label="Archivo mensual de rutinas"
+      className="card history-routine-archive"
+      aria-label="Rutinas anteriores"
     >
-      <p className="eyebrow">HISTORIAL DEL ALUMNO</p>
       <h2>Rutinas anteriores</h2>
-      <p>
-        Revisá cada mes y sus versiones publicadas. Este archivo es de solo
-        lectura.
+      <p className="muted">
+        Cada rutina con sus fechas de inicio y fin. Los ajustes durante el
+        entrenamiento se conservan en Historial.
       </p>
-      {compact && !loading && !error && periods.length > 0 && (
-        <div className="student-archive-list">
-          {periods.map((period) => (
-            <div key={period.id}>
-              <div>
-                <strong>{monthLabel(period.month)}</strong>
-                <small>
-                  {period.id === currentPeriodId
-                    ? "Mes actual · Versiones publicadas"
-                    : "Rutina anterior"}
-                </small>
-              </div>
-              <button
-                className="button secondary"
-                onClick={() => {
-                  setPeriodId(period.id);
-                  setExpanded(true);
-                }}
-              >
-                Ver versiones de {monthLabel(period.month)}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      {activePeriod && expanded && (
-        <p className="history-current-routine">
-          <strong>Rutina activa:</strong> {monthLabel(activePeriod.month)} · Se
-          identifica como vigente en el selector de versiones.
+      {current && (
+        <p className="routine-current-since">
+          Rutina actual en curso desde el {routineDate(current.start)}.
         </p>
       )}
       {loading ? (
-        <p role="status">Cargando meses…</p>
+        <p role="status">Cargando rutinas…</p>
       ) : error ? (
-        <p className="error" role="alert">
-          {error}{" "}
+        <div className="stack">
+          <p className="error" role="alert">
+            {error}
+          </p>
           <button
-            className="link-button"
+            className="button secondary"
             onClick={() => setRetry((value) => value + 1)}
           >
-            Reintentar archivo
+            Reintentar
           </button>
-        </p>
-      ) : !periods.length ? (
-        <p className="history-empty">
-          Todavía no hay rutinas publicadas para consultar.
-        </p>
-      ) : expanded ? (
-        <>
-          <div className="history-archive-selectors">
-            <label className="field">
-              Mes de la rutina
-              <select
-                value={periodId}
-                onChange={(event) => setPeriodId(event.target.value)}
-              >
-                {periods.map((period) => (
-                  <option key={period.id} value={period.id}>
-                    {monthLabel(period.month)}
-                    {period.id === activePeriod?.id
-                      ? " · Activa"
-                      : " · Archivo"}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {revisions.length > 0 && (
-              <label className="field">
-                Versión publicada
-                <select
-                  value={revisionId}
-                  onChange={(event) => setRevisionId(event.target.value)}
-                >
-                  {revisions.map((revision, index) => (
-                    <option key={revision.id} value={revision.id}>
-                      {new Date(revision.created_at).toLocaleString("es-AR")} ·{" "}
-                      {revision.id === currentRevisionId
-                        ? "Vigente"
-                        : revision.id === selectedPeriod?.current_revision_id
-                          ? "Última del mes"
-                          : "Versión anterior"}{" "}
-                      · v{revisions.length - index}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-          </div>
-          {revisionsLoading ? (
-            <p role="status">Cargando versiones…</p>
-          ) : revisionError ? (
-            <p className="error" role="alert">
-              {revisionError}{" "}
+        </div>
+      ) : previous.length ? (
+        <div className="student-archive-list">
+          {previous.map((entry) => (
+            <article key={entry.id}>
+              <div>
+                <h3>{entry.document.name}</h3>
+                <p className="muted">
+                  Inicio: {routineDate(entry.start)} · Fin:{" "}
+                  {entry.end ? routineDate(entry.end) : "Sin fecha registrada"}
+                </p>
+              </div>
               <button
-                className="link-button"
-                onClick={() => setRetry((value) => value + 1)}
+                className="button secondary"
+                onClick={() => setSelected(entry)}
+                aria-label={`Ver rutina ${entry.document.name}`}
               >
-                Reintentar versiones
+                Ver rutina
               </button>
-            </p>
-          ) : parsed?.success ? (
-            <>
-              <p className="history-readonly">
-                {selected?.id === currentRevisionId
-                  ? "VERSIÓN VIGENTE"
-                  : "VERSIÓN ARCHIVADA"}{" "}
-                · Solo lectura · Publicada el{" "}
-                {new Date(selected!.created_at).toLocaleString("es-AR")}
-              </p>
-              <ArchivedRoutine key={selected!.id} document={parsed.data} />
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="history-empty">
+          Todavía no hay rutinas anteriores. Aparecerán acá cuando actives una
+          rutina diferente.
+        </p>
+      )}
+      {selected && (
+        <div className="modal-backdrop">
+          <section
+            className="card modal routine-archive-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Rutina anterior: ${selected.document.name}`}
+          >
+            <div className="row spread">
+              <div>
+                <p className="eyebrow">RUTINA ANTERIOR · SOLO LECTURA</p>
+                <p>
+                  Inicio: {routineDate(selected.start)} · Fin:{" "}
+                  {selected.end
+                    ? routineDate(selected.end)
+                    : "Sin fecha registrada"}
+                </p>
+              </div>
+              <button
+                className="button secondary"
+                onClick={() => setSelected(null)}
+              >
+                Cerrar
+              </button>
+            </div>
+            <ArchivedRoutine key={selected.id} document={selected.document} />
+            <footer className="student-routine-actions">
               {studentName && (
                 <ExportRoutine
-                  document={parsed.data}
+                  document={selected.document}
                   student={studentName}
-                  month={
-                    selectedPeriod
-                      ? monthLabel(selectedPeriod.month)
-                      : undefined
-                  }
+                  month={`Inicio: ${routineDate(selected.start)} · Fin: ${selected.end ? routineDate(selected.end) : "Sin fecha registrada"}`}
                 />
               )}
-            </>
-          ) : selected ? (
-            <p role="alert" className="error">
-              Esta versión tiene un formato que no se puede mostrar. El
-              documento original permanece conservado.
-            </p>
-          ) : (
-            <p>Este mes todavía no tiene versiones publicadas.</p>
-          )}
-          {compact && (
-            <button
-              className="button secondary"
-              onClick={() => setExpanded(false)}
-            >
-              Cerrar versiones
-            </button>
-          )}
-        </>
-      ) : null}
+            </footer>
+          </section>
+        </div>
+      )}
     </section>
   );
 }

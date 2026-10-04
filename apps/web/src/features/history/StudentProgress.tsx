@@ -1,7 +1,6 @@
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { useParams } from "react-router-dom";
 import { useData } from "../../app/DataProvider";
-import { StudentNavigation } from "../students/StudentNavigation";
+import { StudentHeader } from "../students/StudentHeader";
 import { Progress } from "./Progress";
 import "./history.css";
 
@@ -13,20 +12,7 @@ export function StudentProgress() {
   const student = row.projection.student;
   return (
     <div className="student-page">
-      <Link className="student-back" to={"/alumnos/" + id}>
-        <ArrowLeft size={18} />
-        Volver a {student.name}
-      </Link>
-      <header className="page-heading">
-        <div>
-          <p className="eyebrow">CADA AVANCE CUENTA</p>
-          <h1>Progreso</h1>
-          <p className="muted">
-            {student.name} · Su evolución, ejercicio por ejercicio.
-          </p>
-        </div>
-      </header>
-      <StudentNavigation studentId={id!} />
+      <StudentHeader data={row.projection} />
       <Progress
         studentId={id!}
         studentName={student.name}

@@ -1,3 +1,4 @@
+import { mkdirSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
 import { accounts, command, execute, dropFixture } from "../fixtures/cloud";
 import { prepared } from "../fixtures/prepared";
@@ -12,7 +13,7 @@ async function login(page: Page) {
   await expect(page.getByRole("navigation")).toBeVisible();
 }
 
-test("empty progress keeps an accessible front/back muscle map and a read-only four-week archive", async ({
+test("empty progress keeps an accessible front/back muscle map without duplicating routines in history", async ({
   page,
 }) => {
   const fixture = await prepared();
@@ -42,30 +43,16 @@ test("empty progress keeps an accessible front/back muscle map and a read-only f
       .getByRole("navigation", { name: "Secciones del alumno" })
       .getByRole("link", { name: "Historial", exact: true })
       .click();
-    const archive = page.getByRole("region", {
-      name: "Archivo mensual de rutinas",
-    });
     await expect(
-      archive.getByText("VERSIÓN VIGENTE", { exact: false }),
-    ).toBeVisible();
-    await archive
-      .getByRole("button", { name: "Semana 4", exact: true })
-      .click();
-    await expect(
-      archive.getByRole("cell", { name: "Sentadilla Cuádriceps" }),
+      page.getByRole("region", { name: "Registro de cambios" }),
     ).toBeVisible();
     await expect(
-      archive.getByRole("cell", { name: "20 kg", exact: true }),
-    ).toBeVisible();
-    await expect(
-      archive.getByText("Pausa macro: 1.5 min · Entre series"),
-    ).toBeVisible();
-    await expect(
-      archive.getByRole("cell", { name: "1 min", exact: true }),
-    ).toBeVisible();
-    await expect(
-      archive.getByRole("button", { name: /guardar|editar|publicar/i }),
+      page.getByRole("region", { name: "Rutinas anteriores" }),
     ).toHaveCount(0);
+    await page.goto("/alumnos/" + fixture.studentId);
+    await expect(
+      page.getByText("Todavía no hay rutinas anteriores.", { exact: false }),
+    ).toBeVisible();
   } finally {
     await dropFixture(fixture.studentId);
   }
@@ -136,7 +123,7 @@ test("progress fetches subsequent pages independently of the twenty-session deta
   }
 });
 
-test("published routine versions remain separately browsable with their original prescriptions", async ({
+test("previous routines show dates and original prescriptions, independently of the active routine", async ({
   page,
 }) => {
   const fixture = await prepared();
@@ -197,25 +184,41 @@ test("published routine versions remain separately browsable with their original
     );
     expect(published.status).toBe("applied");
     await login(page);
-    await page.goto("/historial/" + fixture.studentId);
-    const archive = page.getByRole("region", {
-      name: "Archivo mensual de rutinas",
+    await page.goto("/alumnos/" + fixture.studentId);
+    const archive = page.getByRole("region", { name: "Rutinas anteriores" });
+    await expect(archive.getByText("Inicio:", { exact: false })).toBeVisible();
+    await expect(archive.getByRole("combobox")).toHaveCount(0);
+    mkdirSync(".local/screens/front-review", { recursive: true });
+    await page.screenshot({
+      path: ".local/screens/front-review/archive-list.png",
+      fullPage: true,
     });
+    await archive.getByRole("button", { name: /Ver rutina/ }).click();
+    const detail = page.getByRole("dialog");
     await expect(
-      archive.getByRole("cell", { name: "35 kg", exact: true }),
+      detail.getByRole("cell", { name: "20 kg", exact: true }),
     ).toBeVisible();
-    await archive
-      .getByLabel("Versión publicada")
-      .selectOption(fixture.snapshot.routine!.id);
+    await detail.getByRole("button", { name: "Semana 4", exact: true }).click();
     await expect(
-      archive.getByRole("cell", { name: "20 kg", exact: true }),
-    ).toBeVisible();
-    await expect(
-      archive.getByText("VERSIÓN ARCHIVADA", { exact: false }),
+      detail.getByRole("cell", { name: "20 kg", exact: true }),
     ).toBeVisible();
     await expect(
-      archive.getByRole("cell", { name: "35 kg", exact: true }),
+      detail.getByRole("cell", { name: "35 kg", exact: true }),
     ).toHaveCount(0);
+    await page.screenshot({
+      path: ".local/screens/front-review/archive-detail.png",
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({
+      path: ".local/screens/front-review/archive-detail-mobile.png",
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await detail.getByRole("button", { name: "Cerrar", exact: true }).click();
+    await expect(detail).toHaveCount(0);
   } finally {
     await dropFixture(fixture.studentId);
   }

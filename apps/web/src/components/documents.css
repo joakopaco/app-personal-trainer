@@ -201,3 +201,64 @@
     break-before: auto;
   }
 }
+
+.document-anatomy {
+  margin: 28px 0;
+  break-inside: avoid;
+}
+.document-anatomy-figures {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+}
+.document-anatomy figure {
+  flex: 0 1 200px;
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+}
+.document-anatomy .history-body {
+  height: 320px;
+  max-height: none;
+  background: none;
+}
+.document-anatomy .muscle-region {
+  pointer-events: none;
+}
+.document-muscle-list {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .document-anatomy .history-body {
+    height: 260px;
+  }
+  .document-anatomy-figures {
+    gap: 12px;
+  }
+}
+@media print {
+  .document-anatomy .history-body {
+    height: 270px;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
+.document-anatomy .muscle-region.trained {
+  fill: #aaff32;
+  stroke: #65940c;
+  stroke-width: 1.1;
+}
+.document-exercise .history-chart {
+  height: auto;
+  aspect-ratio: 650 / 240;
+  max-height: none;
+}
+@media print {
+  .document-preview {
+    --accent: #aaff32;
+    --accent-soft: #efffda;
+  }
+}

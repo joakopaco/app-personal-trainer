@@ -99,15 +99,15 @@ export function TrainingScreen() {
         <TrainingRecovery studentId={id!} />
         <UnfinishedAnnotations studentId={id!} />
         <p>
-          Los resultados confirmados ya están en el historial de{" "}
+          Los resultados confirmados ya están en el progreso de{" "}
           {row.projection.student.name}.
         </p>
         <div className="row">
           <Link className="button" to="/hoy">
             Volver a Hoy
           </Link>
-          <Link className="button secondary" to={"/historial/" + id}>
-            Ver resultados
+          <Link className="button secondary" to={"/progreso/" + id}>
+            Ver progreso
           </Link>
         </div>
       </>

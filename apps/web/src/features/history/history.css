@@ -284,7 +284,7 @@
   letter-spacing: -0.5px;
 }
 .history-routine-archive {
-  margin-top: 34px !important;
+  margin-top: 0;
 }
 .history-routine-archive h2 {
   margin: 8px 0;
@@ -479,4 +479,21 @@
   .history-body .muscle-region {
     transition: none;
   }
+}
+
+.history-progress > .muted {
+  margin: 20px 0;
+}
+.history-routine-archive .history-empty {
+  padding: 18px 0 0;
+  margin-bottom: 0;
+  min-height: 0;
+}
+.history-audit .audit-row {
+  padding: 0;
+  font-size: 14px;
+}
+.history-audit .audit-row > p,
+.history-audit .audit-row > ul {
+  margin: 0 0 18px;
 }

@@ -105,20 +105,83 @@ export function MuscleMap({
   );
 }
 
-function Trend({ exercise }: { exercise: ExerciseProgress }) {
+function ExportAnatomy({
+  female,
+  trained,
+}: {
+  female: boolean;
+  trained: Set<string>;
+}) {
+  const id = "export-anatomy-" + useId().replaceAll(":", "");
+  return (
+    <section
+      className="document-anatomy"
+      aria-label="Mapa muscular del progreso exportado"
+    >
+      <h2>Grupos musculares con registros</h2>
+      <div className="document-anatomy-figures">
+        {[false, true].map((back) => {
+          const shadeId = id + (back ? "-back" : "-front");
+          const markup = anatomicalFigure({
+            female,
+            back,
+            shadeId,
+            region: (name, path) =>
+              `<path d="${path}" class="muscle-region ${trained.has(name) ? "trained" : ""}"/>`,
+          });
+          return (
+            <figure key={shadeId}>
+              <svg
+                className="history-body"
+                viewBox="0 0 200 525"
+                role="img"
+                aria-label={
+                  back
+                    ? "Anatomía posterior del progreso"
+                    : "Anatomía frontal del progreso"
+                }
+              >
+                <defs>
+                  <linearGradient id={shadeId}>
+                    <stop stopColor="#fff" stopOpacity=".22" />
+                    <stop offset="1" stopColor="#152016" stopOpacity=".06" />
+                  </linearGradient>
+                </defs>
+                <g dangerouslySetInnerHTML={{ __html: markup }} />
+              </svg>
+              <figcaption>{back ? "Espalda" : "Frente"}</figcaption>
+            </figure>
+          );
+        })}
+      </div>
+      <p className="history-map-legend">
+        <span /> Con registros en el período exportado
+      </p>
+      <p className="document-muscle-list">{[...trained].join(" · ")}</p>
+    </section>
+  );
+}
+
+function Trend({
+  exercise,
+  report = false,
+}: {
+  exercise: ExerciseProgress;
+  report?: boolean;
+}) {
   const [focused, setFocused] = useState<number | null>(null);
   const chartRef = useRef<SVGSVGElement>(null);
   const [chartWidth, setChartWidth] = useState(650);
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || typeof ResizeObserver === "undefined") return;
+    if (report || !chart || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(([entry]) => {
       if (entry.contentRect.width > 0)
         setChartWidth(Math.max(240, Math.round(entry.contentRect.width)));
     });
     observer.observe(chart);
     return () => observer.disconnect();
-  }, []);
+  }, [report]);
   useEffect(() => setFocused(null), [exercise.exerciseId]);
   const left = 48,
     right = chartWidth - 18;
@@ -239,7 +302,7 @@ function Trend({ exercise }: { exercise: ExerciseProgress }) {
           : "Registro individual"}
       </p>
       <p className="muted">
-        {points.length} sesiones.{" "}
+        {points.length} {points.length === 1 ? "sesión" : "sesiones"}.{" "}
         {exercise.type === "load_reps"
           ? "Mayor carga de una serie por sesión; consultá las repeticiones para interpretar cada cambio. No equivale a una medición de fuerza máxima."
           : exercise.type === "reps"
@@ -669,8 +732,12 @@ export function Progress({
           </div>
           <h1>Progreso de {studentName}</h1>
           <p>
-            {exportData.period} · {exportData.count} sesiones finalizadas ·{" "}
-            {exportData.exercises.length} ejercicios
+            {exportData.period} · {exportData.count}{" "}
+            {exportData.count === 1
+              ? "sesión finalizada"
+              : "sesiones finalizadas"}{" "}
+            · {exportData.exercises.length}{" "}
+            {exportData.exercises.length === 1 ? "ejercicio" : "ejercicios"}
           </p>
           <p className="document-context">
             Cada punto muestra la mayor carga, cantidad de repeticiones o
@@ -678,11 +745,17 @@ export function Progress({
             calentamiento y ejercicios omitidos. Las repeticiones y las
             condiciones pueden variar; los valores no miden fuerza absoluta.
           </p>
+          <ExportAnatomy
+            female={gender === "femenino"}
+            trained={
+              new Set(exportData.exercises.map((exercise) => exercise.group))
+            }
+          />
           {exportData.exercises.map((exercise) => (
             <section key={exercise.key} className="document-exercise">
               <p className="eyebrow">{exercise.group}</p>
               <h2>{exercise.name}</h2>
-              <Trend exercise={exercise} />
+              <Trend exercise={exercise} report />
               <table>
                 <thead>
                   <tr>

@@ -1,10 +1,10 @@
 import "./routine-editor.css";
-import { StudentNavigation } from "../students/StudentNavigation";
+import { StudentHeader } from "../students/StudentHeader";
 import { ExportRoutine } from "./ExportRoutine";
 import { RoutineSummary } from "./RoutineSummary";
 import { useEffect, useState, useRef } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Plus, ArrowLeft, Pencil } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { Plus, Pencil } from "lucide-react";
 import {
   blankRoutine,
   validateRoutine,
@@ -291,23 +291,18 @@ export function RoutineBuilder() {
   }
   if (!row || !loaded) return <p role="status">Cargando borrador… {error}</p>;
   return (
-    <div className="routine-workspace">
-      <Link className="routine-back" to={"/alumnos/" + id}>
-        <ArrowLeft size={18} aria-hidden="true" /> Volver a{" "}
-        {row.projection.student.name}
-      </Link>
-      <header className="page-heading">
+    <div className="student-page routine-workspace">
+      <StudentHeader data={row.projection} />
+      <header className="student-section-toolbar">
         <div>
-          <p className="eyebrow">PROGRAMACIÓN MENSUAL</p>
-          <h1>
+          <h2>
             {mode === "edit"
               ? "Editar rutina"
               : mode === "start"
                 ? "Crear rutina"
                 : doc.name}
-          </h1>
+          </h2>
           <p className="muted">
-            {row.projection.student.name} ·{" "}
             {dirty
               ? "Borrador guardado en este dispositivo"
               : draftRevision
@@ -358,7 +353,6 @@ export function RoutineBuilder() {
           )}
         </div>
       </header>
-      <StudentNavigation studentId={id!} />
       {mode === "view" &&
         !dirty &&
         !draftRevision &&

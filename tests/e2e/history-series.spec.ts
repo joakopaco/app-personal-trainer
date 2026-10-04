@@ -1,9 +1,8 @@
 import { test, expect } from "@playwright/test";
-import { readFileSync } from "node:fs";
 import { prepared } from "../fixtures/prepared";
 import { accounts, command, execute, dropFixture } from "../fixtures/cloud";
 
-test("history and CSV retain the original series ordinal after an omitted series", async ({
+test("history shows audit changes without session or export controls and retains original series data", async ({
   page,
 }, info) => {
   const a = await prepared();
@@ -58,17 +57,34 @@ test("history and CSV retain the original series ordinal after an omitted series
     await expect(page.getByRole("navigation")).toBeVisible();
     await page.goto("/historial/" + a.studentId);
     await expect(
-      page.getByRole("heading", { name: "Historial", exact: true }),
+      page.getByRole("heading", { name: "Registro de cambios", exact: true }),
     ).toBeVisible();
-    const downloaded = page.waitForEvent("download");
-    await page
-      .getByRole("button", { name: "Exportar resultados de esta página" })
-      .click();
-    const file = info.outputPath("series.csv");
-    await (await downloaded).saveAs(file);
-    const csv = readFileSync(file, "utf8");
-    expect(csv).toContain(';"2";"20";"10";');
-    expect(csv).not.toContain(';"1";"20";"10";');
+    await expect(
+      page.getByText("Entrenamiento cerrado", { exact: false }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /exportar/i })).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByText("Sesiones y registros", { exact: true }),
+    ).toHaveCount(0);
+    const results = await a.client
+      .from("session_sets")
+      .select("ordinal,state,weight,reps")
+      .eq("item_id", item.id)
+      .order("ordinal");
+    expect(results.error).toBeNull();
+    expect(results.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ordinal: 1, state: "skipped" }),
+        expect.objectContaining({
+          ordinal: 2,
+          state: "done",
+          weight: 20,
+          reps: 10,
+        }),
+      ]),
+    );
   } finally {
     await dropFixture(a.studentId);
   }

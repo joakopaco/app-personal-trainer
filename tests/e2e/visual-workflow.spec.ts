@@ -58,9 +58,16 @@ test("mobile live correction, accessible dialog and desktop history render witho
     await expect(
       page.getByRole("heading", { name: "Entrenamiento finalizado" }),
     ).toBeVisible();
-    await page.getByRole("link", { name: "Ver resultados" }).click();
+    await page.getByRole("link", { name: "Ver progreso", exact: true }).click();
     await expect(
-      page.getByRole("heading", { name: "Historial", exact: true }),
+      page.getByRole("region", { name: "Progreso por grupo muscular" }),
+    ).toBeVisible();
+    await page
+      .getByRole("navigation", { name: "Secciones del alumno" })
+      .getByRole("link", { name: "Historial", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Registro de cambios", exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText("Resultado corregido", { exact: false }),

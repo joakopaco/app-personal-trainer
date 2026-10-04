@@ -82,18 +82,24 @@ test("profile separates sections and exports all four routine weeks without priv
       page.getByRole("region", { name: "Progreso por grupo muscular" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("region", { name: "Archivo mensual de rutinas" }),
+      page.getByRole("region", { name: "Rutinas anteriores" }),
     ).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Exportar progreso", exact: true }),
     ).toBeDisabled();
     await tabs.getByRole("link", { name: "Historial", exact: true }).click();
     await expect(
-      page.getByRole("region", { name: "Archivo mensual de rutinas" }),
+      page.getByRole("region", { name: "Registro de cambios" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("region", { name: "Progreso por grupo muscular" }),
+      page.getByRole("region", { name: "Rutinas anteriores" }),
     ).toHaveCount(0);
+    await expect(
+      page.getByText("Sesiones y registros", { exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /exportar/i })).toHaveCount(
+      0,
+    );
   } finally {
     await dropFixture(fixture.studentId);
   }
@@ -167,6 +173,24 @@ test("progress preview and CSV include subsequent pages, respect the selected ra
     await expect(
       preview.locator(".document-exercise > table tbody tr"),
     ).toHaveCount(205);
+    await expect(
+      preview.getByRole("img", { name: "Anatomía frontal del progreso" }),
+    ).toBeVisible();
+    await expect(
+      preview.getByRole("img", { name: "Anatomía posterior del progreso" }),
+    ).toBeVisible();
+    expect(
+      await preview.locator(".document-anatomy .muscle-region.trained").count(),
+    ).toBeGreaterThan(0);
+    await page.emulateMedia({ media: "print" });
+    await expect(
+      preview.getByRole("img", { name: "Anatomía frontal del progreso" }),
+    ).toBeVisible();
+    expect(
+      (await preview.locator(".document-anatomy svg").first().boundingBox())!
+        .height,
+    ).toBeGreaterThan(200);
+    await page.emulateMedia({ media: "screen" });
     const downloading = page.waitForEvent("download");
     await preview
       .getByRole("button", { name: "Descargar CSV", exact: true })
