@@ -20,9 +20,14 @@ const StudentProfile = lazy(() =>
     default: m.StudentProfile,
   })),
 );
-const RoutineList = lazy(() =>
-  import("../features/routines/RoutineBuilder").then((m) => ({
-    default: m.RoutineList,
+const RoutineCatalog = lazy(() =>
+  import("../features/routines/RoutineCatalog").then((m) => ({
+    default: m.RoutineCatalog,
+  })),
+);
+const TemplateEditor = lazy(() =>
+  import("../features/routines/TemplateEditor").then((m) => ({
+    default: m.TemplateEditor,
   })),
 );
 const RoutineBuilder = lazy(() =>
@@ -56,6 +61,10 @@ const ExerciseLibrary = lazy(() =>
 function StudentRoute({ component: Component }: { component: ComponentType }) {
   const { id } = useParams();
   return <Component key={id} />;
+}
+function LegacyRoutine() {
+  const { id } = useParams();
+  return <Navigate to={"/alumnos/" + id + "/rutina"} replace />;
 }
 function Protected() {
   const auth = useAuth();
@@ -91,9 +100,14 @@ function Protected() {
               element={<StudentRoute component={StudentProfile} />}
             />
             <Route path="/biblioteca" element={<ExerciseLibrary />} />
-            <Route path="/rutinas" element={<RoutineList />} />
+            <Route path="/rutinas" element={<RoutineCatalog />} />
             <Route
-              path="/rutinas/:id"
+              path="/rutinas/plantillas/:id"
+              element={<StudentRoute component={TemplateEditor} />}
+            />
+            <Route path="/rutinas/:id" element={<LegacyRoutine />} />
+            <Route
+              path="/alumnos/:id/rutina"
               element={<StudentRoute component={RoutineBuilder} />}
             />
             <Route

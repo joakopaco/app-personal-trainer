@@ -20,6 +20,8 @@ export async function saveLibrary(db: LocalStore, proposed: LibraryCommand) {
     if (
       old &&
       (old.kind !== proposed.kind ||
+        old.id !== proposed.id ||
+        old.expectedRevision !== proposed.expectedRevision ||
         JSON.stringify(old.payload) !== JSON.stringify(proposed.payload))
     )
       throw Error(

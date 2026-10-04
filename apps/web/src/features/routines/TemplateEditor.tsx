@@ -1,0 +1,388 @@
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Pencil } from "lucide-react";
+import { liveQuery } from "dexie";
+import { validateRoutine, type RoutineDocument } from "@pulso/domain/routines";
+import type { NumericField } from "@pulso/domain/numbers";
+import { useData } from "../../app/DataProvider";
+import { cloud } from "../../adapters/supabase";
+import { saveLibrary, type LibraryCommand } from "../../adapters/library";
+import {
+  isRestField,
+  parseDisplayedNumber,
+  restoreRestRaw,
+  storeRestRaw,
+} from "../../components/rest-minutes";
+import { RoutineFields } from "./RoutineFields";
+import { RoutineSummary } from "./RoutineSummary";
+import {
+  createTemplateDraft,
+  sameRoutineContent,
+  templateDraftKey,
+  templatePath,
+  type TemplateDraft,
+} from "./template-drafts";
+import "./routine-editor.css";
+
+export function TemplateEditor() {
+  const { id } = useParams(),
+    { db } = useData(),
+    navigate = useNavigate();
+  const [doc, setDoc] = useState<RoutineDocument | null>(null);
+  const [revision, setRevision] = useState(0),
+    [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false),
+    [loaded, setLoaded] = useState(false);
+  const [dirty, setDirty] = useState(false),
+    [conflict, setConflict] = useState(false);
+  const [error, setError] = useState(""),
+    [message, setMessage] = useState("");
+  const [reload, setReload] = useState(0),
+    [localFailed, setLocalFailed] = useState(false);
+  const rawValues = useRef<Record<string, string>>({}),
+    rawInvalid = useRef(new Set<string>());
+  const writes = useRef<Promise<unknown>>(Promise.resolve());
+  const [writing, setWriting] = useState(false);
+  const [pendingSave, setPendingSave] = useState(false);
+  useEffect(() => {
+    const sub = liveQuery(() => db.meta.get("library-pending")).subscribe(
+      (entry) =>
+        setPendingSave((entry?.value as LibraryCommand | undefined)?.id === id),
+    );
+    return () => sub.unsubscribe();
+  }, [db, id]);
+  useEffect(() => {
+    let active = true;
+    setLoaded(false);
+    setError("");
+    void (async () => {
+      try {
+        const local = (await db.meta.get(templateDraftKey(id!)))?.value as
+          TemplateDraft | undefined;
+        const pending = (await db.meta.get("library-pending"))?.value as
+          LibraryCommand | undefined;
+        const { data, error: loadError } = await cloud()
+          .from("routine_templates")
+          .select("id,document,revision")
+          .eq("id", id!)
+          .maybeSingle();
+        if (!active) return;
+        if (local) {
+          rawValues.current = Object.fromEntries(
+            Object.entries(local.rawValues).map(([key, value]) => [
+              key,
+              isRestField(key.split(":").at(-1) as NumericField)
+                ? restoreRestRaw(value)
+                : value,
+            ]),
+          );
+          rawInvalid.current = new Set(
+            Object.entries(rawValues.current)
+              .filter(
+                ([key, value]) =>
+                  value !== "" &&
+                  !parseDisplayedNumber(
+                    key.split(":").at(-1) as NumericField,
+                    value,
+                  ).ok,
+              )
+              .map(([key]) => key),
+          );
+          setDoc(local.document);
+          setEditing(true);
+          setDirty(true);
+          // An uncertain save may already have been confirmed from the sync center.
+          const same =
+            data && sameRoutineContent(data.document, local.document);
+          setRevision(
+            same && pending?.id !== id ? data.revision : local.revision,
+          );
+          setConflict(
+            Boolean(
+              data &&
+              !same &&
+              data.revision !== local.revision &&
+              pending?.id !== id,
+            ),
+          );
+          if (loadError)
+            setError(
+              "No se pudo consultar la versión de la nube. Podés seguir trabajando en tu borrador.",
+            );
+        } else {
+          if (loadError)
+            throw Error(
+              "No se pudo cargar la plantilla. Reintentá con conexión.",
+            );
+          if (!data)
+            throw Error("Esta plantilla no existe o no pertenece a tu cuenta.");
+          setDoc(data.document);
+          setRevision(data.revision);
+          setEditing(false);
+          setDirty(false);
+        }
+      } catch (e) {
+        if (active) setError((e as Error).message);
+      } finally {
+        if (active) setLoaded(true);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [db, id, reload]);
+  useEffect(() => {
+    const leave = (event: BeforeUnloadEvent) => {
+      if (localFailed || writing || busy) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    const link = (event: MouseEvent) => {
+      if (
+        (localFailed || writing || busy) &&
+        (event.target as Element).closest("a[href]")
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        setError(
+          "Esperá a que se guarden los cambios. Si hubo un error, volvé a intentar guardar antes de salir.",
+        );
+      }
+    };
+    window.addEventListener("beforeunload", leave);
+    document.addEventListener("click", link, true);
+    return () => {
+      window.removeEventListener("beforeunload", leave);
+      document.removeEventListener("click", link, true);
+    };
+  }, [localFailed, writing, busy]);
+  function change(next: RoutineDocument) {
+    const valid = new Set(
+      next.weeks.flatMap((w) =>
+        w.flatMap((d) =>
+          d.blocks.flatMap((b) => [b.id, ...b.exercises.map((e) => e.id)]),
+        ),
+      ),
+    );
+    for (const key of Object.keys(rawValues.current))
+      if (!valid.has(key.split(":")[0])) {
+        delete rawValues.current[key];
+        rawInvalid.current.delete(key);
+      }
+    setDoc(next);
+    setDirty(true);
+    setError("");
+    setMessage("");
+    setWriting(true);
+    const draft: TemplateDraft = {
+      id: id!,
+      document: next,
+      revision,
+      rawValues: Object.fromEntries(
+        Object.entries(rawValues.current).map(([key, value]) => [
+          key,
+          isRestField(key.split(":").at(-1) as NumericField)
+            ? storeRestRaw(value)
+            : value,
+        ]),
+      ),
+    };
+    const current = writes.current
+      .catch(() => undefined)
+      .then(() => db.meta.put({ key: templateDraftKey(id!), value: draft }));
+    writes.current = current;
+    void current.then(
+      () => {
+        if (writes.current === current) {
+          setWriting(false);
+          setLocalFailed(false);
+        }
+      },
+      () => {
+        setWriting(false);
+        setLocalFailed(true);
+        setError(
+          "No se pudo conservar el borrador en este dispositivo. Volvé a intentar guardar.",
+        );
+      },
+    );
+  }
+  async function save() {
+    if (!doc) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      if (rawInvalid.current.size)
+        throw Error("Completá o corregí los campos antes de guardar.");
+      const issues = validateRoutine(doc);
+      if (issues.length) throw Error(issues[0]);
+      // Capture the latest document, including a retry after a failed local write.
+      change(doc);
+      await writes.current;
+      const saved = await saveLibrary(db, {
+        workspaceId: db.scope.workspaceId,
+        operationId: crypto.randomUUID(),
+        id,
+        expectedRevision: revision,
+        kind: "template",
+        payload: { document: doc },
+      });
+      await db.meta.delete(templateDraftKey(id!));
+      setDoc(saved.document);
+      setRevision(saved.revision);
+      setDirty(false);
+      setEditing(false);
+      setConflict(false);
+      rawValues.current = {};
+      rawInvalid.current.clear();
+      setMessage("Plantilla guardada en tu catálogo.");
+    } catch (e) {
+      setError((e as Error).message);
+      const pending = (await db.meta.get("library-pending"))?.value as
+        LibraryCommand | undefined;
+      if (pending?.id !== id) {
+        const { data } = await cloud()
+          .from("routine_templates")
+          .select("revision")
+          .eq("id", id!)
+          .maybeSingle();
+        if (data && data.revision !== revision) setConflict(true);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="routine-workspace">
+      <Link className="routine-back" to="/rutinas">
+        <ArrowLeft size={18} aria-hidden="true" />
+        Volver al catálogo
+      </Link>
+      <header className="page-heading">
+        <div>
+          <p className="eyebrow">PLANTILLA REUTILIZABLE</p>
+          <h1>
+            {editing
+              ? revision
+                ? "Editar plantilla"
+                : "Crear plantilla"
+              : doc?.name || "Plantilla"}
+          </h1>
+          <p className="muted">
+            {writing
+              ? "Guardando borrador…"
+              : localFailed
+                ? "Borrador sin confirmar"
+                : dirty
+                  ? "Borrador guardado en este dispositivo"
+                  : "Tu biblioteca de rutinas"}
+          </p>
+        </div>
+        <div className="routine-heading-actions">
+          {doc &&
+            loaded &&
+            (editing ? (
+              <button
+                className="button"
+                disabled={busy || conflict}
+                onClick={save}
+              >
+                {busy
+                  ? "Guardando…"
+                  : pendingSave
+                    ? "Reintentar guardado"
+                    : "Guardar plantilla"}
+              </button>
+            ) : (
+              <button className="button" onClick={() => setEditing(true)}>
+                <Pencil size={17} aria-hidden="true" />
+                Editar plantilla
+              </button>
+            ))}
+        </div>
+      </header>
+      {error && (
+        <div role="alert" className="error">
+          <p>{error}</p>
+          {!doc && (
+            <button
+              className="button secondary"
+              onClick={() => setReload((r) => r + 1)}
+            >
+              Reintentar
+            </button>
+          )}
+        </div>
+      )}
+      {message && (
+        <p role="status" className="notice">
+          {message}
+        </p>
+      )}
+      {pendingSave && !busy && (
+        <p className="notice">
+          Falta confirmar el guardado. Reintentá para recuperar la confirmación
+          antes de seguir editando.
+        </p>
+      )}
+      {conflict && (
+        <section className="notice stack">
+          <strong>La plantilla cambió en otro dispositivo.</strong>
+          <p>
+            Conservamos tus cambios acá. Podés guardarlos como una nueva
+            plantilla, sin reemplazar la versión del catálogo.
+          </p>
+          <button
+            className="button secondary"
+            disabled={busy}
+            onClick={async () => {
+              if (!doc) return;
+              if (rawInvalid.current.size) {
+                setError("Corregí los campos antes de crear otra plantilla.");
+                return;
+              }
+              setBusy(true);
+              try {
+                await writes.current;
+                const copyId = await createTemplateDraft(db, {
+                  ...doc,
+                  name: doc.name.slice(0, 110) + " (copia)",
+                });
+                await db.meta.delete(templateDraftKey(id!));
+                navigate(templatePath(copyId));
+              } catch {
+                setError("No se pudo conservar la copia. Reintentá.");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Continuar como otra plantilla
+          </button>
+        </section>
+      )}
+      {!loaded && <p role="status">Cargando plantilla…</p>}
+      {loaded &&
+        doc &&
+        (editing ? (
+          <RoutineFields
+            doc={doc}
+            change={change}
+            busy={busy || pendingSave}
+            rawValues={rawValues}
+            rawInvalid={rawInvalid}
+          />
+        ) : (
+          <RoutineSummary document={doc} />
+        ))}
+      {loaded && doc && (
+        <p className="muted template-footnote">
+          Para usar esta plantilla, abrí la ficha de un alumno y elegila al
+          crear su rutina. Cada alumno recibe una copia independiente.
+        </p>
+      )}
+    </div>
+  );
+}

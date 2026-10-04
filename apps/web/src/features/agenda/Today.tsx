@@ -345,7 +345,7 @@ export function Today() {
             {studentId && !selected?.routine && (
               <p className="notice">
                 Este alumno necesita una{" "}
-                <Link to={"/rutinas/" + studentId}>rutina activa</Link>.
+                <Link to={"/alumnos/" + studentId + "/rutina"}>rutina activa</Link>.
               </p>
             )}
             {failure && (

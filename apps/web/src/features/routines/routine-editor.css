@@ -227,3 +227,42 @@
     row-gap: 16px;
   }
 }
+
+.routine-catalog .catalog-search {
+  max-width: 520px;
+  margin-bottom: 24px;
+}
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr));
+  gap: 20px;
+}
+.template-card {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.template-card h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 22px;
+}
+.template-card:hover {
+  border-color: var(--ink);
+}
+.template-card .badge {
+  font-size: 11px;
+}
+.template-open {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  font-weight: 600;
+}
+.template-footnote {
+  margin-top: 28px;
+  font-size: 14px;
+}

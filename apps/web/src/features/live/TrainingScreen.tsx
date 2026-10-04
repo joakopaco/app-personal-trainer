@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { liveQuery } from "dexie";
 import type { PendingCommand } from "@pulso/sync/local-db";
-import { Check, Timer, ChevronDown } from "lucide-react";
+import { ArrowLeft, Check, Timer, ChevronDown } from "lucide-react";
 import type { SessionItem, TrainingSession } from "@pulso/domain/contracts";
 import {
   parseNumber,
@@ -146,6 +146,10 @@ export function TrainingScreen() {
   }
   return (
     <>
+      <Link className="button secondary training-back" to="/hoy">
+        <ArrowLeft size={18} aria-hidden="true" />
+        Volver a Hoy
+      </Link>
       <div className="active-strip" aria-label="Alumnos entrenando">
         {data.rows
           .filter((r) => r.projection.sessions.length)

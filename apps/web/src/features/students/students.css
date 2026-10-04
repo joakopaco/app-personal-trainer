@@ -211,3 +211,14 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.student-routine-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.template-copy-form {
+  flex: 1 0 100%;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}

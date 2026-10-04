@@ -303,6 +303,7 @@ function AdministrativePending() {
           (r) =>
             r.key.startsWith("admin:") ||
             r.key.startsWith("draft:") ||
+            r.key.startsWith("template-draft:") ||
             r.key === "library-pending",
         ),
       ),
@@ -334,6 +335,39 @@ function AdministrativePending() {
               </button>
             </div>
           );
+        if (entry.key.startsWith("template-draft:")) {
+          const draft = entry.value as {
+            id: string;
+            document: { name: string };
+          };
+          return (
+            <div className="notice" key={entry.key}>
+              <strong>Plantilla: {draft.document.name || "Sin nombre"}</strong>
+              <div>
+                <a href={"/rutinas/plantillas/" + draft.id}>
+                  Abrir borrador de plantilla
+                </a>
+                <button
+                  className="link-button"
+                  onClick={async () => {
+                    download(
+                      "pulso-plantilla-" + draft.id + ".json",
+                      entry.value,
+                    );
+                    if (
+                      confirm(
+                        "Se descargó una copia. ¿Descartar este borrador local? La plantilla guardada en la nube se conserva.",
+                      )
+                    )
+                      await data.db.meta.delete(entry.key);
+                  }}
+                >
+                  Exportar y descartar borrador local
+                </button>
+              </div>
+            </div>
+          );
+        }
         const id = entry.key.split(":")[1];
         const name =
           data.rows.find((r) => r.studentId === id)?.projection.student.name ??
@@ -343,7 +377,7 @@ function AdministrativePending() {
             <strong>{name}</strong>
             {entry.key.startsWith("draft:") ? (
               <div>
-                <a href={"/rutinas/" + id}>Abrir borrador</a>
+                <a href={"/alumnos/" + id + "/rutina"}>Abrir borrador</a>
                 <button
                   className="link-button"
                   onClick={async () => {

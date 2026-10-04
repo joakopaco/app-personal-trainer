@@ -1,3 +1,4 @@
+import { SaveStudentTemplate } from "../routines/SaveStudentTemplate";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -134,7 +135,8 @@ export function StudentList() {
 export function StudentProfile() {
   const { id } = useParams(),
     { rows, onlineCommand } = useData();
-  const data = rows.find((r) => r.studentId === id)?.projection;
+  const row = rows.find((r) => r.studentId === id);
+  const data = row?.projection;
   const [error, setError] = useState(""),
     [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false);
@@ -231,10 +233,17 @@ export function StudentProfile() {
                   </div>
                 ))}
               </div>
-              <Link className="button" to={"/rutinas/" + s.id}>
-                Ver rutina
-                <ArrowUpRight size={18} />
-              </Link>
+              <div className="student-routine-actions">
+                <Link className="button" to={"/alumnos/" + s.id + "/rutina"}>
+                  Ver rutina
+                  <ArrowUpRight size={18} />
+                </Link>
+                {row?.confirmed.routine && (
+                  <SaveStudentTemplate
+                    document={row.confirmed.routine.document}
+                  />
+                )}
+              </div>
             </>
           ) : (
             <>
@@ -242,7 +251,7 @@ export function StudentProfile() {
                 Todavía no tiene una rutina. Prepará los días y bloques de
                 entrenamiento para este mes.
               </p>
-              <Link className="button" to={"/rutinas/" + s.id}>
+              <Link className="button" to={"/alumnos/" + s.id + "/rutina"}>
                 <Plus size={18} />
                 Preparar rutina
               </Link>

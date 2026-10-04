@@ -16,7 +16,8 @@ export function PendingReview() {
           (m) =>
             m.key === "library-pending" ||
             m.key.startsWith("admin:") ||
-            m.key.startsWith("draft:"),
+            m.key.startsWith("draft:") ||
+            m.key.startsWith("template-draft:"),
         ) || (await db.rawInputs.count()) > 0
       );
     }).subscribe(setLocalReview);

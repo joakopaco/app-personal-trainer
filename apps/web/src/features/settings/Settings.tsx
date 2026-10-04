@@ -52,6 +52,7 @@ export function Settings() {
           (m) =>
             m.key.startsWith("admin:") ||
             m.key.startsWith("draft:") ||
+            m.key.startsWith("template-draft:") ||
             m.key === "library-pending",
         )
       )

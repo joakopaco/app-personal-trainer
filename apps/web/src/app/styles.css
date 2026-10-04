@@ -1345,3 +1345,5 @@ th {
   font-size: 13px;
   color: var(--muted);
 }
+
+.training-back { margin-bottom: 20px; }
