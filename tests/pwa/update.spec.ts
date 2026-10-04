@@ -48,9 +48,23 @@ test("service worker update waits for pending edits and leaves private cache int
     await expect(
       page.getByText("Hay una nueva versión disponible.", { exact: true }),
     ).toBeVisible();
-    const reloaded = page.waitForEvent("load");
+    const reloaded = page.waitForEvent("load", { timeout: 20000 });
     await page.getByRole("button", { name: "Actualizar ahora" }).click();
-    await reloaded;
+    await reloaded.catch(async (error) => {
+      console.log(
+        "Update lifecycle at failure",
+        await page.evaluate(async () => {
+          const registration = await navigator.serviceWorker.getRegistration();
+          return {
+            waiting: registration?.waiting?.state,
+            active: registration?.active?.state,
+            controller: navigator.serviceWorker.controller?.state,
+            installing: registration?.installing?.state,
+          };
+        }),
+      );
+      throw error;
+    });
     await expect(
       page.getByRole("heading", {
         name: "Centro de sincronización",
