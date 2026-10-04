@@ -40,7 +40,7 @@ export function SaveNotice() {
     ),
   ];
   const libraryPath =
-    library?.kind === "template" && library.id
+    library?.kind.startsWith("template") && library.id
       ? "/rutinas/plantillas/" + library.id
       : "/biblioteca";
   const otherStudents = students.filter((id) => pathname !== "/entrenar/" + id);
@@ -92,7 +92,7 @@ export function SaveNotice() {
       {library && pathname !== libraryPath && (
         <Link to={libraryPath}>
           Continuar el guardado de{" "}
-          {library.kind === "template" ? "la plantilla" : "ejercicios"}
+          {library.kind.startsWith("template") ? "la plantilla" : "ejercicios"}
         </Link>
       )}
       {otherStudents.map((id) => (

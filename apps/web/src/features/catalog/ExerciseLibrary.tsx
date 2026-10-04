@@ -37,7 +37,9 @@ export function ExerciseLibrary() {
     const sub = liveQuery(() => db.meta.get("library-pending")).subscribe(
       (entry) => {
         const command = entry?.value as LibraryCommand | undefined;
-        setPendingSave(command?.kind !== "template" ? command : undefined);
+        setPendingSave(
+          command && !command.kind.startsWith("template") ? command : undefined,
+        );
       },
     );
     return () => sub.unsubscribe();

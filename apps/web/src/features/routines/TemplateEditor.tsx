@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Undo2 } from "lucide-react";
 import { liveQuery } from "dexie";
 import { validateRoutine, type RoutineDocument } from "@pulso/domain/routines";
 import type { NumericField } from "@pulso/domain/numbers";
@@ -43,11 +43,18 @@ export function TemplateEditor() {
     rawInvalid = useRef(new Set<string>());
   const writes = useRef<Promise<unknown>>(Promise.resolve());
   const [writing, setWriting] = useState(false);
-  const [pendingSave, setPendingSave] = useState(false);
+  const [confirmation, setConfirmation] = useState<"discard" | "delete" | null>(
+    null,
+  );
+  const [pendingOperation, setPendingOperation] = useState<LibraryCommand>();
+  const pendingSave = pendingOperation?.kind === "template";
+  const pendingDelete = pendingOperation?.kind === "template_delete";
   useEffect(() => {
     const sub = liveQuery(() => db.meta.get("library-pending")).subscribe(
-      (entry) =>
-        setPendingSave((entry?.value as LibraryCommand | undefined)?.id === id),
+      (entry) => {
+        const command = entry?.value as LibraryCommand | undefined;
+        setPendingOperation(command?.id === id ? command : undefined);
+      },
     );
     return () => sub.unsubscribe();
   }, [db, id]);
@@ -67,6 +74,17 @@ export function TemplateEditor() {
           .eq("id", id!)
           .maybeSingle();
         if (!active) return;
+        if (
+          !data &&
+          pending &&
+          pending.id === id &&
+          pending.kind === "template_delete"
+        ) {
+          // A lost acknowledgement must still be retryable after the row is gone.
+          setDoc(null);
+          setRevision(pending.expectedRevision ?? 0);
+          return;
+        }
         if (local) {
           rawValues.current = Object.fromEntries(
             Object.entries(local.rawValues).map(([key, value]) => [
@@ -91,7 +109,7 @@ export function TemplateEditor() {
           setDoc(local.document);
           setEditing(true);
           setDirty(true);
-          // An uncertain save may already have been confirmed from the sync center.
+          // An uncertain save may already have been confirmed on another screen.
           const same =
             data && sameRoutineContent(data.document, local.document);
           setRevision(
@@ -254,6 +272,55 @@ export function TemplateEditor() {
       setBusy(false);
     }
   }
+  async function discardDraft() {
+    setBusy(true);
+    setError("");
+    try {
+      await writes.current.catch(() => undefined);
+      await db.transaction("rw", db.meta, async () => {
+        const pending = (await db.meta.get("library-pending"))?.value as
+          LibraryCommand | undefined;
+        if (pending?.id === id)
+          throw Error(
+            "Primero reintentá la operación pendiente para confirmar qué quedó guardado.",
+          );
+        await db.meta.delete(templateDraftKey(id!));
+      });
+      navigate("/rutinas", { replace: true });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+      setConfirmation(null);
+    }
+  }
+  async function deleteTemplate() {
+    setBusy(true);
+    setError("");
+    try {
+      await writes.current.catch(() => undefined);
+      await saveLibrary(
+        db,
+        pendingDelete
+          ? pendingOperation!
+          : {
+              workspaceId: db.scope.workspaceId,
+              operationId: crypto.randomUUID(),
+              id,
+              expectedRevision: revision,
+              kind: "template_delete",
+              payload: { name: doc?.name || "Rutina" },
+            },
+      );
+      await db.meta.delete(templateDraftKey(id!));
+      navigate("/rutinas", { replace: true });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+      setConfirmation(null);
+    }
+  }
   return (
     <div className="routine-workspace">
       <Link className="routine-back" to="/rutinas">
@@ -264,11 +331,13 @@ export function TemplateEditor() {
         <div>
           <p className="eyebrow">PLANTILLA REUTILIZABLE</p>
           <h1>
-            {editing
-              ? revision
-                ? "Editar plantilla"
-                : "Crear plantilla"
-              : doc?.name || "Plantilla"}
+            {pendingDelete
+              ? "Eliminación pendiente"
+              : editing
+                ? revision
+                  ? "Editar plantilla"
+                  : "Crear plantilla"
+                : doc?.name || "Plantilla"}
           </h1>
           <p className="muted">
             {writing
@@ -282,6 +351,7 @@ export function TemplateEditor() {
         </div>
         <div className="routine-heading-actions">
           {doc &&
+            !pendingDelete &&
             loaded &&
             (editing ? (
               <button
@@ -327,6 +397,21 @@ export function TemplateEditor() {
           antes de seguir editando.
         </p>
       )}
+      {pendingDelete && (
+        <section className="notice stack">
+          <p>
+            Falta confirmar la eliminación. Reintentá para comprobar el
+            resultado; no se eliminará otra rutina.
+          </p>
+          <button
+            className="button danger"
+            disabled={busy}
+            onClick={deleteTemplate}
+          >
+            Reintentar eliminación
+          </button>
+        </section>
+      )}
       {conflict && (
         <section className="notice stack">
           <strong>La plantilla cambió en otro dispositivo.</strong>
@@ -370,7 +455,7 @@ export function TemplateEditor() {
           <RoutineFields
             doc={doc}
             change={change}
-            busy={busy || pendingSave}
+            busy={busy || Boolean(pendingOperation) || Boolean(confirmation)}
             rawValues={rawValues}
             rawInvalid={rawInvalid}
           />
@@ -382,6 +467,80 @@ export function TemplateEditor() {
           Para usar esta plantilla, abrí la ficha de un alumno y elegila al
           crear su rutina. Cada alumno recibe una copia independiente.
         </p>
+      )}
+      {loaded && doc && !pendingDelete && (dirty || revision > 0) && (
+        <section className="routine-manage" aria-label="Administrar rutina">
+          <div className="row">
+            {dirty && (
+              <button
+                className="button secondary"
+                disabled={busy || writing || Boolean(pendingOperation)}
+                onClick={() => setConfirmation("discard")}
+              >
+                <Undo2 size={18} aria-hidden="true" />
+                Descartar borrador
+              </button>
+            )}
+            {revision > 0 && (
+              <button
+                className="button danger"
+                disabled={
+                  busy || writing || Boolean(pendingOperation) || conflict
+                }
+                onClick={() => setConfirmation("delete")}
+              >
+                <Trash2 size={18} aria-hidden="true" />
+                Eliminar rutina
+              </button>
+            )}
+          </div>
+          <p className="muted">
+            Las rutinas asignadas a alumnos y su historial se conservan.
+          </p>
+        </section>
+      )}
+      {confirmation && (
+        <div className="modal-backdrop">
+          <section
+            className="modal stack"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="template-action-title"
+          >
+            <h2 id="template-action-title">
+              {confirmation === "discard"
+                ? "Descartar borrador"
+                : "Eliminar rutina"}
+            </h2>
+            <p>
+              {confirmation === "discard"
+                ? "Se descartarán los cambios de este dispositivo. Si ya existe una versión guardada, se conservará."
+                : `Se eliminará «${doc?.name || "Rutina"}» del catálogo y su borrador en este dispositivo. Las copias de los alumnos y sus entrenamientos no se modifican.`}
+            </p>
+            <div className="row">
+              <button
+                className="button secondary"
+                disabled={busy}
+                onClick={() => setConfirmation(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="button danger"
+                disabled={busy}
+                onClick={
+                  confirmation === "discard" ? discardDraft : deleteTemplate
+                }
+              >
+                {busy
+                  ? "Confirmando…"
+                  : confirmation === "discard"
+                    ? "Descartar borrador"
+                    : "Eliminar rutina"}
+              </button>
+            </div>
+          </section>
+        </div>
       )}
     </div>
   );

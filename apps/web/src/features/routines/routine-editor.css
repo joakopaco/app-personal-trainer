@@ -295,3 +295,17 @@
   margin-top: 28px;
   font-size: 14px;
 }
+.routine-manage {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.routine-manage p {
+  margin: 14px 0 0;
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .routine-manage .button {
+    flex: 1 1 180px;
+  }
+}
