@@ -1,6 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prepared } from "../fixtures/prepared";
 import { accounts, command, execute, dropFixture } from "../fixtures/cloud";
+import { routineFixture } from "../fixtures/routine";
+import { cloneRoutineDocument } from "@pulso/domain/routines";
 
 async function login(page: Page) {
   await page.goto("/login");
@@ -52,7 +54,13 @@ test("touch arrival flow and persistent visual rest timer", async ({
   page,
 }, info) => {
   test.setTimeout(90000);
-  const f = await prepared();
+  const doc = routineFixture();
+  const extra = cloneRoutineDocument(doc);
+  doc.weeks.forEach((w, i) => {
+    extra.weeks[i][0].name = "Día 2";
+    w.push(extra.weeks[i][0]);
+  });
+  const f = await prepared(doc);
   const other = await prepared();
   try {
     const s = f.snapshot.sessions[0];
@@ -100,6 +108,15 @@ test("touch arrival flow and persistent visual rest timer", async ({
       modal.getByRole("button", { name: "Semana 2", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
     await modal.getByRole("button", { name: "Semana 1", exact: true }).tap();
+    const dayPicker = modal.locator(".arrival-day-trigger");
+    await dayPicker.tap();
+    await expect(dayPicker).toHaveAttribute("aria-expanded", "true");
+    await modal
+      .locator(".arrival-day-options")
+      .getByRole("button", { name: "Día 2", exact: true })
+      .tap();
+    await expect(dayPicker).toHaveText("Día 2");
+    await expect(dayPicker).toHaveAttribute("aria-expanded", "false");
     await page.screenshot({
       path: `.local/screens/mobile/${info.project.name}-arrival.png`,
     });
@@ -107,6 +124,15 @@ test("touch arrival flow and persistent visual rest timer", async ({
       .getByRole("button", { name: "Iniciar entrenamiento", exact: true })
       .tap();
     await expect(page).toHaveURL(new RegExp("/entrenar/" + f.studentId));
+    await expect
+      .poll(async () => {
+        const { data } = await f.client.rpc("fetch_student", {
+          workspace_id: f.workspaceId,
+          student_id: f.studentId,
+        });
+        return data?.sessions?.[0]?.day_id;
+      })
+      .toBe(doc.weeks[0][1].id);
     const timer = page.getByRole("region", {
       name: "Temporizador de descanso",
     });
@@ -162,6 +188,36 @@ test("touch arrival flow and persistent visual rest timer", async ({
     await expect(
       timer.getByText("Descanso terminado", { exact: true }),
     ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Finalizar entrenamiento", exact: true })
+      .scrollIntoViewIfNeeded();
+    const topbar = page.locator(".training-topbar");
+    const back = topbar.getByRole("link", { name: "Volver a Hoy" });
+    await expect(back).toBeVisible();
+    expect((await topbar.boundingBox())!.y).toBeGreaterThanOrEqual(0);
+    expect((await topbar.boundingBox())!.y).toBeLessThan(2);
+    const nameBox = (await topbar.locator("h1").boundingBox())!;
+    const backBox = (await back.boundingBox())!;
+    expect(nameBox.x).toBeGreaterThan(backBox.x + backBox.width);
+    expect(
+      Math.abs(nameBox.y + nameBox.height / 2 - backBox.y - backBox.height / 2),
+    ).toBeLessThan(2);
+    await page.screenshot({
+      path: `.local/screens/mobile/${info.project.name}-sticky-training.png`,
+      scale: "css",
+    });
+    await page
+      .getByRole("button", { name: "Finalizar entrenamiento", exact: true })
+      .tap();
+    await page
+      .getByRole("button", { name: "Confirmar cierre", exact: true })
+      .tap();
+    await expect(
+      page.getByRole("heading", { name: "Entrenamiento finalizado" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Ver progreso", exact: true }),
+    ).toHaveCount(0);
   } finally {
     await dropFixture(f.studentId);
     await dropFixture(other.studentId);

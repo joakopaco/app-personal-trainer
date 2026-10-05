@@ -1,9 +1,8 @@
 import { createStudent, execute, command } from "./cloud";
 import { routineFixture } from "./routine";
-export async function prepared() {
+export async function prepared(doc = routineFixture()) {
   const a = await createStudent();
-  const doc = routineFixture(),
-    draftId = crypto.randomUUID(),
+  const draftId = crypto.randomUUID(),
     month = new Date().toISOString().slice(0, 7);
   const save = await execute(
     a.client,

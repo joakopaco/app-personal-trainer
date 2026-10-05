@@ -1,3 +1,4 @@
+import { DateInput } from "../../components/DateInput";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { cloud } from "../../adapters/supabase";
 import { Download } from "lucide-react";
@@ -475,16 +476,16 @@ export function Progress({
         <div className="row history-dates">
           <label className="field">
             Progreso desde
-            <input
-              type="date"
+            <DateInput
+              aria-label="Progreso desde"
               value={from}
               onChange={(event) => setFrom(event.target.value)}
             />
           </label>
           <label className="field">
             Progreso hasta
-            <input
-              type="date"
+            <DateInput
+              aria-label="Progreso hasta"
               value={to}
               onChange={(event) => setTo(event.target.value)}
             />

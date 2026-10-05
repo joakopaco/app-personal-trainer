@@ -1,3 +1,4 @@
+import { DateInput } from "../../components/DateInput";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CalendarClock } from "lucide-react";
 import type { CommandEnvelope, StudentSnapshot } from "@pulso/domain/contracts";
@@ -147,8 +148,8 @@ export function RescheduleVisit({
         <div className="reschedule-fields">
           <label className="field">
             Fecha de esta visita
-            <input
-              type="date"
+            <DateInput
+              aria-label="Fecha de esta visita"
               required
               min={retry ? undefined : todayKey()}
               value={date}

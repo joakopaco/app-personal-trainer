@@ -1,3 +1,4 @@
+import { DateInput } from "../../components/DateInput";
 import { auditChanges, eventNames } from "@pulso/domain/audit-display";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -115,8 +116,8 @@ export function History() {
         <div className="row history-dates">
           <label className="field">
             Desde
-            <input
-              type="date"
+            <DateInput
+              aria-label="Desde"
               value={from}
               onChange={(e) => {
                 setFrom(e.target.value);
@@ -126,8 +127,8 @@ export function History() {
           </label>
           <label className="field">
             Hasta
-            <input
-              type="date"
+            <DateInput
+              aria-label="Hasta"
               value={to}
               onChange={(e) => {
                 setTo(e.target.value);

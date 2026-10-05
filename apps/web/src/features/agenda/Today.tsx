@@ -1,6 +1,13 @@
+import { DateInput } from "../../components/DateInput";
 import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, ArrowRight, CalendarDays, CalendarClock } from "lucide-react";
+import {
+  Plus,
+  ArrowRight,
+  CalendarDays,
+  CalendarClock,
+  ChevronDown,
+} from "lucide-react";
 import { useData } from "../../app/DataProvider";
 import { todayKey, currentTime } from "@pulso/domain/dates";
 import {
@@ -15,6 +22,7 @@ export function Today() {
   const navigate = useNavigate();
   const starting = useRef(false);
   const [search, setSearch] = useState("");
+  const [dayMenuOpen, setDayMenuOpen] = useState(false);
   const [adding, setAdding] = useState(false),
     [studentId, setStudentId] = useState(""),
     [week, setWeek] = useState(
@@ -203,8 +211,8 @@ export function Today() {
             )}
             <label className="field">
               <span className="sr-only">Fecha de agenda</span>
-              <input
-                type="date"
+              <DateInput
+                aria-label="Fecha de agenda"
                 value={date}
                 onChange={(e) => {
                   if (e.target.value) setDate(e.target.value);
@@ -454,6 +462,7 @@ export function Today() {
                             onClick={() => {
                               setWeek(w);
                               setDayId("");
+                              setDayMenuOpen(false);
                             }}
                           >
                             {w}
@@ -463,30 +472,63 @@ export function Today() {
                     </fieldset>
                     <fieldset className="arrival-choice">
                       <legend>Día de rutina</legend>
-                      <div className="arrival-days">
-                        {selected.routine.document.weeks[week - 1].map((d) => (
-                          <button
-                            key={d.id}
-                            className={
-                              "button " +
-                              ((dayId ||
-                                selected.routine!.document.weeks[week - 1][0]
-                                  ?.id) === d.id
-                                ? ""
-                                : "secondary")
-                            }
-                            aria-pressed={
-                              (dayId ||
-                                selected.routine!.document.weeks[week - 1][0]
-                                  ?.id) === d.id
-                            }
-                            disabled={busy}
-                            onClick={() => setDayId(d.id)}
-                          >
-                            {d.name}
-                          </button>
-                        ))}
-                      </div>
+                      <button
+                        className="button secondary arrival-day-trigger"
+                        type="button"
+                        aria-expanded={dayMenuOpen}
+                        aria-controls="arrival-day-options"
+                        disabled={busy}
+                        onClick={() => setDayMenuOpen(!dayMenuOpen)}
+                      >
+                        {selected.routine.document.weeks[week - 1].find(
+                          (d) => d.id === dayId,
+                        )?.name ||
+                          selected.routine.document.weeks[week - 1][0]?.name ||
+                          "Sin días disponibles"}
+                        <ChevronDown size={20} aria-hidden="true" />
+                      </button>
+                      {dayMenuOpen && (
+                        <div
+                          className="arrival-days arrival-day-options"
+                          id="arrival-day-options"
+                        >
+                          {selected.routine.document.weeks[week - 1].map(
+                            (d) => (
+                              <button
+                                key={d.id}
+                                className={
+                                  "button " +
+                                  ((dayId ||
+                                    selected.routine!.document.weeks[
+                                      week - 1
+                                    ][0]?.id) === d.id
+                                    ? ""
+                                    : "secondary")
+                                }
+                                aria-pressed={
+                                  (dayId ||
+                                    selected.routine!.document.weeks[
+                                      week - 1
+                                    ][0]?.id) === d.id
+                                }
+                                disabled={busy}
+                                onClick={() => {
+                                  setDayId(d.id);
+                                  setDayMenuOpen(false);
+                                }}
+                              >
+                                {d.name}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      )}
+                      {selected.routine.document.weeks[week - 1].length ===
+                        1 && (
+                        <small className="muted">
+                          Esta semana tiene un solo día de rutina configurado.
+                        </small>
+                      )}
                     </fieldset>
                   </>
                 )}

@@ -107,9 +107,6 @@ export function TrainingScreen() {
           <Link className="button" to="/hoy">
             Volver a Hoy
           </Link>
-          <Link className="button secondary" to={"/progreso/" + id}>
-            Ver progreso
-          </Link>
         </div>
       </>
     );
@@ -152,36 +149,44 @@ export function TrainingScreen() {
   }
   return (
     <>
-      <Link className="button secondary training-back" to="/hoy">
-        <ArrowLeft size={18} aria-hidden="true" />
-        Volver a Hoy
-      </Link>
-      <div className="active-strip" aria-label="Alumnos entrenando">
-        {data.rows
-          .filter((r) => r.projection.sessions.length)
-          .map((r) => (
-            <Link
-              key={r.studentId}
-              className={
-                "active-chip " + (r.studentId === id ? "selected" : "")
-              }
-              to={"/entrenar/" + r.studentId}
-            >
-              {r.projection.student.name}
-              <span>
-                {data.pending.some((p) => p.studentId === r.studentId)
-                  ? " · pendiente"
-                  : ""}
-              </span>
-            </Link>
-          ))}
+      <div className="training-topbar">
+        <Link
+          className="button secondary training-back"
+          to="/hoy"
+          aria-label="Volver a Hoy"
+          title="Volver a Hoy"
+        >
+          <ArrowLeft size={24} aria-hidden="true" />
+        </Link>
+        <h1>{row.projection.student.name}</h1>
       </div>
+      {data.rows.filter((r) => r.projection.sessions.length).length > 1 && (
+        <div className="active-strip" aria-label="Alumnos entrenando">
+          {data.rows
+            .filter((r) => r.projection.sessions.length)
+            .map((r) => (
+              <Link
+                key={r.studentId}
+                className={
+                  "active-chip " + (r.studentId === id ? "selected" : "")
+                }
+                to={"/entrenar/" + r.studentId}
+              >
+                {r.projection.student.name}
+                <span>
+                  {data.pending.some((p) => p.studentId === r.studentId)
+                    ? " · pendiente"
+                    : ""}
+                </span>
+              </Link>
+            ))}
+        </div>
+      )}
       <header className="training-header">
         <div>
           <p className="eyebrow">
             ENTRENAMIENTO EN CURSO · SEMANA {session.week}
           </p>
-          <h1>{row.projection.student.name}</h1>
           <p className="muted">{row.projection.routine?.document.name}</p>
         </div>
         <span
