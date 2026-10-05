@@ -502,7 +502,7 @@ export function TemplateEditor() {
       {confirmation && (
         <div className="modal-backdrop">
           <section
-            className="modal stack"
+            className="card modal stack"
             role="dialog"
             aria-modal="true"
             aria-labelledby="template-action-title"

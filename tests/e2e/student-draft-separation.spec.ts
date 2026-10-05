@@ -111,6 +111,10 @@ test("active routine stays separate; unchanged editing, save and discard survive
     await expect(page.getByRole("dialog")).toContainText(
       "versión guardada más reciente",
     );
+    await page.screenshot({
+      path: `.local/screens/discard-dialog-${test.info().project.name || "desktop"}.png`,
+      fullPage: true,
+    });
     await page
       .getByRole("dialog")
       .getByRole("button", { name: "Descartar borrador", exact: true })

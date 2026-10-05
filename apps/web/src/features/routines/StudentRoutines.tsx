@@ -184,7 +184,7 @@ export function DiscardStudentDraft({
       {confirm && (
         <div className="modal-backdrop">
           <section
-            className="modal stack"
+            className="card modal stack"
             role="dialog"
             aria-modal="true"
             aria-label="Descartar borrador"
