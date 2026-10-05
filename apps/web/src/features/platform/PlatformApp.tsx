@@ -266,7 +266,7 @@ function OperatorLogin() {
               disabled={busy}
             />
           </label>
-          <Captcha key={attempt} onToken={setCaptcha} />
+          <Captcha key={attempt} onToken={setCaptcha} responsive />
           {error && (
             <p className="error" role="alert">
               {error}
@@ -392,7 +392,7 @@ function OperatorPassword({
         <small className="muted">
           12 caracteres o más, con mayúscula, minúscula y número.
         </small>
-        <Captcha key={attempt} onToken={setCaptcha} />
+        <Captcha key={attempt} onToken={setCaptcha} responsive />
         {error && (
           <p className="error" role="alert">
             {error}

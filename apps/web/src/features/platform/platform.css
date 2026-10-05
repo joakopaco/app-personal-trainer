@@ -6,23 +6,54 @@
   background: #f4f4f4;
 }
 .platform-auth-card {
-  width: min(100%, 460px);
+  width: min(100%, 480px);
+  min-width: 0;
+  padding: 32px;
+  gap: 20px;
+  border-radius: 20px;
+  box-shadow: 0 12px 40px #00000008;
 }
 .platform-auth-card > .brand-art {
-  padding: 10px 12px;
+  --brand-height: 48px;
+  padding: 14px 18px;
   box-sizing: content-box;
-  border-radius: 10px;
+  border-radius: 14px;
+  justify-self: center;
+}
+.platform-auth-card > p {
+  margin: 0;
+}
+.platform-auth-card > .eyebrow,
+.platform-auth-card > .muted {
+  text-align: center;
 }
 .platform-auth-card h1 {
-  font-size: clamp(26px, 5vw, 34px);
+  font-size: clamp(26px, 5vw, 30px);
+  line-height: 1.2;
+  text-align: center;
   margin: 0;
+}
+.platform-auth-card form {
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr);
+}
+.platform-auth-card form > div {
+  min-width: 0;
+}
+.platform-auth-card input,
+.platform-auth-card .button {
+  min-height: 48px;
 }
 .platform-private-note {
   display: flex;
   gap: 10px;
   align-items: center;
+  justify-content: center;
   font-size: 13px;
   color: var(--muted);
+}
+.platform-private-note svg {
+  flex-shrink: 0;
 }
 .platform-shell {
   min-height: 100dvh;

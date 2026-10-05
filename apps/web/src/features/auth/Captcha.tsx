@@ -41,10 +41,25 @@ function loadTurnstile() {
     });
   return scriptReady;
 }
-export function Captcha({ onToken }: { onToken: (token: string) => void }) {
+export function Captcha({
+  onToken,
+  responsive = false,
+}: {
+  onToken: (token: string) => void;
+  responsive?: boolean;
+}) {
   const element = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    if (!responsive || !element.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setCompact(entry.contentRect.width < 300);
+    });
+    observer.observe(element.current);
+    return () => observer.disconnect();
+  }, [responsive]);
   useEffect(() => {
     if (!captchaSiteKey) return;
     let active = true,
@@ -57,7 +72,7 @@ export function Captcha({ onToken }: { onToken: (token: string) => void }) {
         widget = api.render(element.current, {
           sitekey: captchaSiteKey,
           theme: "light",
-          size: "flexible",
+          size: compact ? "compact" : "flexible",
           language: "es",
           callback: (token: string) => {
             if (active) {
@@ -83,7 +98,7 @@ export function Captcha({ onToken }: { onToken: (token: string) => void }) {
       active = false;
       if (widget !== undefined) window.turnstile?.remove(widget);
     };
-  }, [onToken, attempt]);
+  }, [onToken, attempt, compact]);
   if (!captchaSiteKey)
     return captchaRequired ? (
       <p className="error" role="alert">
