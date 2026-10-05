@@ -32,8 +32,9 @@ Orden de producción:
 2. `20261005024938_gym_provisioning.sql`.
 3. `20261005025615_gym_routine_workflows.sql`.
 4. `20261005032916_gym_access_hardening.sql`.
-5. Desplegar `supabase/functions/gym-accounts/index.ts` con `verify_jwt=true`.
-6. Publicar frontend mediante `main` y comprobar el commit en Vercel.
+5. `20261005035932_gym_query_indexes.sql` (índices de relaciones y evaluación de identidad una vez por consulta).
+6. Desplegar `supabase/functions/gym-accounts/index.ts` con `verify_jwt=true`.
+7. Publicar frontend mediante `main` y comprobar el commit en Vercel.
 
 La función verifica además `auth.getUser`, el acceso vigente y permisos transaccionales. Las funciones de aprovisionamiento solo pueden ejecutarse con `service_role`. No desactivar RLS ni ampliar `owns_workspace`. Un rollback del frontend no requiere borrar estas tablas ni afecta los datos de personal trainer.
 
@@ -42,3 +43,7 @@ Verificación: unitarias/legacy, pruebas SQL existentes, E2E de personal trainer
 ## Revisión final
 
 Una revisión independiente identificó cuatro errores de recuperación: restauración de nuevas rutinas, idempotencia al guardar rutina, resolución de conflicto de sesión y respuesta perdida al cambiar contraseña. Cada uno tiene una prueba reproducible y corrección. Se agregó además una prueba de reautenticación con Turnstile para producción. Las evidencias de ejecución están en los informes locales de pruebas; nunca incluyen contraseñas temporales en capturas.
+
+Comprobaciones de entrega: 75 unitarias, 43 legacy, 41 SQL, 71 recorridos E2E comprobados (70 en la pasada completa y repetición exitosa del caso interrumpido por `UND_ERR_SOCKET` local), 12 casos móviles de personal trainer y 2 matrices móviles de gimnasio. Build y typecheck correctos.
+
+Advisors: las tablas de recibos/reservas y operadores tienen RLS sin políticas deliberadamente: ningún cliente puede leerlas o escribirlas directamente. Las RPC públicas con `SECURITY DEFINER` son APIs acotadas con identidad y autorización en servidor; las RPC administrativas quedan exclusivas de `service_role`. No ampliar políticas para silenciar esos avisos. Ver [criterio de RLS sin políticas](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) y [revisión de funciones privilegiadas](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable). El aviso previo del proyecto sobre [contraseñas filtradas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) permanece; esta entrega no modifica la configuración de Auth de personal trainer.
