@@ -409,13 +409,3 @@
     scroll-behavior: auto;
   }
 }
-@media (max-width: 400px) {
-  .gym-editor .routine-week-tools .routine-tabs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-  .gym-editor .routine-week-tools .routine-tabs .button {
-    font-size: 14px;
-    padding: 10px 8px;
-  }
-}

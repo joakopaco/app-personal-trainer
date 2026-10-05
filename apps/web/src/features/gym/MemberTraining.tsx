@@ -304,7 +304,10 @@ function Training({ initial }: { initial: GymSession }) {
         setPending(null);
         persist(resultsRef.current, revision, null);
       }
-      if (code === "40001") setConflict(true);
+      if (code === "40001") {
+        setConflict(true);
+        setConfirm(false);
+      }
       setError(gymError(e));
     } finally {
       setBusy(false);
@@ -332,7 +335,7 @@ function Training({ initial }: { initial: GymSession }) {
           {dirty ? "Cambios sin guardar" : "Guardado"}
         </span>
       </div>
-      {error && (
+      {error && !confirm && !resolve && (
         <p role="alert" className="error">
           {error}
         </p>
@@ -503,6 +506,11 @@ function Training({ initial }: { initial: GymSession }) {
             Se descartará la edición local y se cargarán las series guardadas
             más recientes. Los cambios del otro dispositivo se conservan.
           </p>
+          {error && (
+            <p role="alert" className="error">
+              {error}
+            </p>
+          )}
           <button
             className="button secondary"
             onClick={() => {
@@ -526,6 +534,7 @@ function Training({ initial }: { initial: GymSession }) {
             disabled={busy}
             onClick={async () => {
               setBusy(true);
+              setError("");
               try {
                 const latest = await rows<GymSession>(
                   cloud()
@@ -571,6 +580,11 @@ function Training({ initial }: { initial: GymSession }) {
             Se guardarán las series confirmadas. Podrás consultar tus resultados
             en Progreso.
           </p>
+          {error && (
+            <p role="alert" className="error">
+              {error}
+            </p>
+          )}
           <div className="gym-actions">
             <button
               className="button secondary"

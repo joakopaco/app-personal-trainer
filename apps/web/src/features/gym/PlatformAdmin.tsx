@@ -78,7 +78,7 @@ export function PlatformAdmin() {
         }
       />
       <LoadState {...data} retry={data.reload} />
-      {error && (
+      {error && !confirm && (
         <p role="alert" className="error">
           {error}
         </p>
@@ -103,7 +103,10 @@ export function PlatformAdmin() {
               <button
                 className="button secondary"
                 disabled={busy}
-                onClick={() => setConfirm(g)}
+                onClick={() => {
+                  setError("");
+                  setConfirm(g);
+                }}
               >
                 {g.active ? "Suspender" : "Reactivar"}
               </button>
@@ -157,11 +160,17 @@ export function PlatformAdmin() {
               ? "Se pausará el acceso del gimnasio y sus entrenados. Las rutinas y el historial se conservan."
               : "El gimnasio y sus entrenados activos podrán volver a ingresar."}
           </p>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
           <button
             className="button"
             disabled={busy}
             onClick={async () => {
               setBusy(true);
+              setError("");
               try {
                 await accountAction({
                   action: "set_gym_active",

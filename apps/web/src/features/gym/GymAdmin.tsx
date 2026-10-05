@@ -315,7 +315,7 @@ export function GymMemberProfile() {
         }
       />
       <LoadState {...data} retry={data.reload} />
-      {error && (
+      {error && !confirm && (
         <p role="alert" className="error">
           {error}
         </p>
@@ -352,7 +352,10 @@ export function GymMemberProfile() {
               <button
                 className="button secondary"
                 disabled={busy}
-                onClick={() => setConfirm(true)}
+                onClick={() => {
+                  setError("");
+                  setConfirm(true);
+                }}
               >
                 {m.active ? "Suspender acceso" : "Reactivar acceso"}
               </button>
@@ -467,6 +470,11 @@ export function GymMemberProfile() {
               }}
             >
               <p>Sus rutinas y entrenamientos se conservan.</p>
+              {error && (
+                <p className="error" role="alert">
+                  {error}
+                </p>
+              )}
               <button
                 className="button"
                 disabled={busy}

@@ -4,6 +4,7 @@ import { prepared } from "../fixtures/prepared";
 import { accounts, dropFixture, command, execute } from "../fixtures/cloud";
 
 async function capture(page: Page, name: string) {
+  await page.evaluate(() => scrollTo(0, 0));
   await page.screenshot({
     path: `.local/screens/front-review/${name}.png`,
     fullPage: true,
@@ -40,9 +41,21 @@ async function capture(page: Page, name: string) {
     );
   });
   expect(overlaps, `${name}: overlapping buttons`).toEqual([]);
+  const clipped = await page
+    .locator("main input:not([type=checkbox]), main select, main textarea")
+    .evaluateAll((nodes) =>
+      nodes
+        .filter((n) => {
+          const r = n.getBoundingClientRect(),
+            p = n.parentElement!.getBoundingClientRect();
+          return r.width > 0 && (r.left < p.left - 1 || r.right > p.right + 1);
+        })
+        .map((n) => n.outerHTML.slice(0, 160)),
+    );
+  expect(clipped, `${name}: fields outside container`).toEqual([]);
 }
 
-for (const width of [390, 1440])
+for (const width of [320, 390, 768, 1024, 1440])
   test(`frontend review and stable student header at ${width}px`, async ({
     page,
   }) => {

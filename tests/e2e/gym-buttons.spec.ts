@@ -47,7 +47,7 @@ async function capture(page: Page, name: string) {
   });
 }
 
-for (const width of [320, 1440])
+for (const width of [320, 768, 1440])
   test(`gym action audit: profiles, assignment, exports, duplication, own routine and timer at ${width}px`, async ({
     page,
   }) => {
@@ -193,6 +193,9 @@ for (const width of [320, 1440])
       await page
         .getByRole("button", { name: "Cerrar sesión", exact: true })
         .click();
+      await expect(
+        page.getByRole("button", { name: "Ingresar", exact: true }),
+      ).toBeVisible();
       await login(1);
       await capture(page, `member-home-${width}`);
       await expect(page.getByText("Nota exclusiva del gimnasio")).toHaveCount(
