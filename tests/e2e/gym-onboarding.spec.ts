@@ -1,5 +1,6 @@
+import { operatorFixture } from "../fixtures/operator";
 import { test, expect } from "@playwright/test";
-import { accounts, adminClient } from "../fixtures/cloud";
+import { adminClient } from "../fixtures/cloud";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 
@@ -12,20 +13,17 @@ test("private operator provisions a gym and first login requires a new password"
   let gymId: string | undefined, userId: string | undefined;
   const other = await browser.newContext();
   mkdirSync(".local/screens/gym", { recursive: true });
-  await service
-    .from("platform_operators")
-    .upsert({ user_id: accounts[0].userId });
+  const identity = await operatorFixture();
   try {
-    await page.goto("/login");
-    await page.getByLabel("Email", { exact: true }).fill(accounts[0].email);
+    await page.goto("http://127.0.0.1:5173/administracion");
+    await page.getByLabel("Usuario", { exact: true }).fill(identity.username);
     await page
       .getByLabel("Contraseña", { exact: true })
-      .fill(accounts[0].password);
+      .fill(identity.password);
     await page.getByRole("button", { name: "Ingresar", exact: true }).click();
     await expect(
-      page.getByRole("navigation", { name: "Principal" }),
+      page.getByRole("heading", { name: "Gimnasios", exact: true }),
     ).toBeVisible();
-    await page.goto("/administracion");
     await page.getByRole("button", { name: "Agregar gimnasio" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Nombre del gimnasio").fill("Horizonte Onboarding");
@@ -86,10 +84,7 @@ test("private operator provisions a gym and first login requires a new password"
     ).toBeVisible();
   } finally {
     await other.close();
-    await service
-      .from("platform_operators")
-      .delete()
-      .eq("user_id", accounts[0].userId);
+    await identity.cleanup();
     if (!userId) {
       const account = await service
         .from("gym_accounts")

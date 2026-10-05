@@ -22,7 +22,7 @@ test("shell updates silently without interrupting offline training and preserves
     await page.route("http://127.0.0.1:54341/**", (r) => r.abort());
     await page.getByLabel("Peso kg").fill("48");
     await page.getByLabel("Peso kg").blur();
-    await expect(page.getByRole("status")).toContainText(
+    await expect(page.locator(".save-indicator")).toContainText(
       "Guardado en este dispositivo",
     );
     // Install a new shell while an offline training edit is outstanding.

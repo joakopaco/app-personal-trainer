@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useData } from "../../app/DataProvider";
 import { useAuth } from "../auth/AuthProvider";
 import { SignOutButton } from "../auth/SignOutButton";
-import { PlatformAdminLink } from "../gym/PlatformAdmin";
 import { cloud, updateVerifiedPassword } from "../../adapters/supabase";
 import {
   passwordHint,
@@ -47,7 +46,6 @@ export function Settings() {
     <>
       <p className="eyebrow">TU CUENTA</p>
       <h1>Ajustes</h1>
-      <PlatformAdminLink />
       <div className="profile-settings stack">
         {message && (
           <p className="notice" role="status">

@@ -29,7 +29,6 @@ import {
 import { GymRoutines, GymRoutineEditor } from "./GymRoutines";
 import { MemberHome, MemberTraining } from "./MemberTraining";
 import { GymProgress } from "./GymProgress";
-import { PlatformAdmin } from "./PlatformAdmin";
 import "./gym.css";
 
 const Context = createContext<{
@@ -208,9 +207,6 @@ export function GymPortal() {
                   element={<GymSettings />}
                 />
               </>
-            )}
-            {access.operator && (
-              <Route path="/administracion/*" element={<PlatformAdmin />} />
             )}
             <Route path="*" element={<Navigate to={base} replace />} />
           </Routes>

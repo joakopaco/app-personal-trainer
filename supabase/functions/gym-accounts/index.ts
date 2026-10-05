@@ -18,6 +18,7 @@ Deno.serve(async (req) => {
     if (authError || !user) return respond({ error: 'Volvé a ingresar.' }, 401);
     const { data: access, error: accessError } = await caller.rpc('gym_access');
     if (accessError || access.blocked) return respond({ error: 'Acceso no disponible.' }, 403);
+    if (access.mode === 'trainer' && !access.operator) return respond({ error: 'Acceso no disponible.' }, 403);
     if (access.mustChangePassword && body.action !== 'change_password') return respond({ error: 'Primero elegí tu nueva contraseña.' }, 403);
     const service = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
     const rpc = async (name: string, args: Record<string, unknown>) => {

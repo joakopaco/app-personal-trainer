@@ -1,0 +1,13 @@
+.local/
+.superpowers/
+**/.env
+**/.env.*
+node_modules/
+**/node_modules/
+**/dist/
+**/dist-admin/
+test-results*/
+playwright-report/
+supabase/.temp/
+supabase/.branches/
+.git/

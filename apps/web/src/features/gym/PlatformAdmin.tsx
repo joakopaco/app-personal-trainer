@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { Plus, Building2 } from "lucide-react";
 import { cloud } from "../../adapters/supabase";
 import {
@@ -11,7 +10,7 @@ import {
   type GymAccount,
 } from "./api";
 import {
-  CreateAccount,
+  AccountCreationForm,
   Credentials,
   Empty,
   LoadState,
@@ -20,19 +19,7 @@ import {
 } from "./ui";
 import "./gym.css";
 
-export function PlatformAdminLink() {
-  const permission = useResource(
-    () => rows<boolean>(cloud().rpc("is_platform_operator")),
-    "operator",
-  );
-  return permission.value ? (
-    <Link className="button secondary" to="/administracion">
-      <Building2 size={18} />
-      Administrar gimnasios
-    </Link>
-  ) : null;
-}
-export function PlatformAdmin() {
+export function PlatformAdmin({ operatorId }: { operatorId: string }) {
   const data = useResource(async () => {
     if (!(await rows<boolean>(cloud().rpc("is_platform_operator"))))
       throw Error("Esta sección es privada. Tu cuenta no tiene acceso.");
@@ -139,7 +126,8 @@ export function PlatformAdmin() {
         ))}
       </div>
       {create && (
-        <CreateAccount
+        <AccountCreationForm
+          ownerId={operatorId}
           kind="gym"
           close={() => setCreate(false)}
           done={data.reload}

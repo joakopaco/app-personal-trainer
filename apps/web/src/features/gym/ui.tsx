@@ -159,17 +159,22 @@ export function Credentials({
     </Modal>
   );
 }
-export function CreateAccount({
-  kind,
-  close,
-  done,
-}: {
+type CreateAccountProps = {
   kind: "gym" | "member";
   close: () => void;
   done: () => void;
-}) {
+};
+export function CreateAccount(props: CreateAccountProps) {
   const { session } = useAuth();
-  const storageKey = "pulso-gym-provision:" + session!.user.id + ":" + kind;
+  return <AccountCreationForm {...props} ownerId={session!.user.id} />;
+}
+export function AccountCreationForm({
+  kind,
+  close,
+  done,
+  ownerId,
+}: CreateAccountProps & { ownerId: string }) {
+  const storageKey = "pulso-gym-provision:" + ownerId + ":" + kind;
   const [recovered] = useState(() => {
     try {
       return JSON.parse(sessionStorage.getItem(storageKey) || "null") as {

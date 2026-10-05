@@ -1,7 +1,8 @@
+import { operatorFixture } from "../fixtures/operator";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { accountClient, adminClient, config } from "../fixtures/cloud";
+import { adminClient, config } from "../fixtures/cloud";
 
 async function invoke(client: SupabaseClient, body: object) {
   const {
@@ -23,11 +24,10 @@ async function invoke(client: SupabaseClient, body: object) {
   };
 }
 test("provisioning, first login, member creation and reset stay scoped", async () => {
-  const operator = await accountClient();
+  const operator = await operatorFixture();
   const admin = adminClient();
   const ids: string[] = [];
   let gymId: string | undefined;
-  await admin.from("platform_operators").upsert({ user_id: operator.userId });
   try {
     const request = {
       action: "create_gym",
@@ -142,10 +142,7 @@ test("provisioning, first login, member creation and reset stay scoped", async (
     });
     expect((await member.rpc("gym_access")).data.mustChangePassword).toBe(true);
   } finally {
-    await admin
-      .from("platform_operators")
-      .delete()
-      .eq("user_id", operator.userId);
+    await operator.cleanup();
     if (gymId) await admin.from("gyms").delete().eq("id", gymId);
     for (const id of ids) await admin.auth.admin.deleteUser(id);
   }

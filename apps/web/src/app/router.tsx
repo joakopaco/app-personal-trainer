@@ -11,11 +11,6 @@ import { DataProvider } from "./DataProvider";
 const GymPortal = lazy(() =>
   import("../features/gym/GymPortal").then((m) => ({ default: m.GymPortal })),
 );
-const PlatformAdmin = lazy(() =>
-  import("../features/gym/PlatformAdmin").then((m) => ({
-    default: m.PlatformAdmin,
-  })),
-);
 const Today = lazy(() =>
   import("../features/agenda/Today").then((m) => ({ default: m.Today })),
 );
@@ -118,7 +113,6 @@ function Protected() {
         <SaveNotice />
         <Suspense fallback={<p role="status">Cargando…</p>}>
           <Routes>
-            <Route path="/administracion/*" element={<PlatformAdmin />} />
             <Route path="/hoy" element={<Today />} />
             <Route path="/alumnos" element={<StudentList />} />
             <Route

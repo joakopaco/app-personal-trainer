@@ -1,10 +1,17 @@
 import { createClient, type Session } from "@supabase/supabase-js";
+export const isPlatformPortal =
+  typeof window !== "undefined" &&
+  /^\/administracion(?:\/|$)/.test(window.location.pathname);
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase =
   url && key
     ? createClient(url, key, {
-        auth: { flowType: "pkce", detectSessionInUrl: false },
+        auth: {
+          flowType: "pkce",
+          detectSessionInUrl: false,
+          ...(isPlatformPortal ? { storageKey: "pulso-platform-auth" } : {}),
+        },
       })
     : null;
 export function cloud() {

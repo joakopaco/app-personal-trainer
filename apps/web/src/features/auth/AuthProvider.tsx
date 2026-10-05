@@ -67,6 +67,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!userId || !supabase) return;
     setLoading(true);
     setError("");
+    if (session?.user.app_metadata?.platform_operator === true) {
+      setError(
+        "Esta cuenta es exclusiva del portal privado de administración de Pulso.",
+      );
+      setLoading(false);
+      return;
+    }
     if (gymAccount) {
       setLoading(false);
       return;

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { gymFixture } from "../fixtures/gym";
-import { accounts, adminClient } from "../fixtures/cloud";
+import { operatorFixture } from "../fixtures/operator";
 import { mkdirSync } from "node:fs";
 
 async function login(page: Page, account: { email: string; password: string }) {
@@ -32,11 +32,8 @@ test("gym account controls: visible errors, retry, suspension and reactivation o
   test.setTimeout(90000);
   mkdirSync(".local/screens/account-controls", { recursive: true });
   const f = await gymFixture(),
-    service = adminClient();
+    identity = await operatorFixture();
   const operatorContext = await browser.newContext();
-  await service
-    .from("platform_operators")
-    .upsert({ user_id: accounts[0].userId });
   try {
     await page.setViewportSize({ width: 320, height: 850 });
     await login(page, f.accounts[0]);
@@ -82,8 +79,16 @@ test("gym account controls: visible errors, retry, suspension and reactivation o
     ).toBeVisible();
 
     const operator = await operatorContext.newPage();
-    await login(operator, accounts[0]);
-    await operator.goto("/administracion");
+    await operator.goto("http://127.0.0.1:5173/administracion");
+    await operator
+      .getByLabel("Usuario", { exact: true })
+      .fill(identity.username);
+    await operator
+      .getByLabel("Contraseña", { exact: true })
+      .fill(identity.password);
+    await operator
+      .getByRole("button", { name: "Ingresar", exact: true })
+      .click();
     const card = operator
       .locator("article")
       .filter({ hasText: f.accounts[0].email });
@@ -147,10 +152,7 @@ test("gym account controls: visible errors, retry, suspension and reactivation o
     await expect(operator.getByRole("dialog")).toHaveCount(0);
   } finally {
     await operatorContext.close();
-    await service
-      .from("platform_operators")
-      .delete()
-      .eq("user_id", accounts[0].userId);
+    await identity.cleanup();
     await f.cleanup();
   }
 });

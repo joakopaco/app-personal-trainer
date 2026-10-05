@@ -12,3 +12,6 @@ supabase/.branches/
 .local/
 
 test-results-pwa/
+
+.vercel/
+dist-admin/
