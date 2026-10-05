@@ -179,6 +179,9 @@ export function AccountCreationForm({
     try {
       return JSON.parse(sessionStorage.getItem(storageKey) || "null") as {
         name: string;
+        firstName?: string;
+        lastName?: string;
+        gender?: string;
         email: string;
         operationId: string;
       } | null;
@@ -194,6 +197,12 @@ export function AccountCreationForm({
   const [operationId] = useState(
     () => recovered?.operationId || crypto.randomUUID(),
   );
+  const [firstName, setFirstName] = useState(recovered?.firstName || "");
+  const [lastName, setLastName] = useState(recovered?.lastName || "");
+  const [gender, setGender] = useState(recovered?.gender || "unspecified");
+  // Replay older pending requests exactly; their server reservation has no gender.
+  const legacyRequest =
+    kind === "member" && !!recovered && !recovered.firstName;
   if (password)
     return (
       <Credentials
@@ -220,17 +229,36 @@ export function AccountCreationForm({
           setBusy(true);
           setError("");
           try {
+            const details =
+              kind === "member" && !legacyRequest
+                ? {
+                    name: `${firstName.trim()} ${lastName.trim()}`,
+                    email,
+                    operationId,
+                    gender,
+                  }
+                : { name, email, operationId };
+            if (
+              kind === "member" &&
+              !legacyRequest &&
+              (!firstName.trim() || !lastName.trim())
+            ) {
+              throw Error("Completá el nombre y el apellido.");
+            }
             // Persist the request ID, never the temporary password. A lost
             // response can be recovered safely by replaying the same request.
             sessionStorage.setItem(
               storageKey,
-              JSON.stringify({ name, email, operationId }),
+              JSON.stringify({
+                ...details,
+                ...(!legacyRequest && kind === "member"
+                  ? { firstName, lastName }
+                  : {}),
+              }),
             );
             const result = await accountAction({
               action: kind === "gym" ? "create_gym" : "create_member",
-              operationId,
-              name,
-              email,
+              ...details,
             });
             sessionStorage.removeItem(storageKey);
             if (result.temporaryPassword) setPassword(result.temporaryPassword);
@@ -245,16 +273,57 @@ export function AccountCreationForm({
           }
         }}
       >
-        <label className="field">
-          {kind === "gym" ? "Nombre del gimnasio" : "Nombre y apellido"}
-          <input
-            required
-            maxLength={120}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={busy}
-          />
-        </label>
+        {kind === "member" && !legacyRequest ? (
+          <>
+            <div className="gym-name-fields">
+              <label className="field">
+                Nombre
+                <input
+                  required
+                  autoComplete="given-name"
+                  maxLength={59}
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  disabled={busy}
+                />
+              </label>
+              <label className="field">
+                Apellido
+                <input
+                  required
+                  autoComplete="family-name"
+                  maxLength={60}
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  disabled={busy}
+                />
+              </label>
+            </div>
+            <label className="field">
+              Género
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                disabled={busy}
+              >
+                <option value="unspecified">Prefiere no indicar</option>
+                <option value="female">Femenino</option>
+                <option value="male">Masculino</option>
+              </select>
+            </label>
+          </>
+        ) : (
+          <label className="field">
+            {kind === "gym" ? "Nombre del gimnasio" : "Nombre y apellido"}
+            <input
+              required
+              maxLength={120}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={busy}
+            />
+          </label>
+        )}
         <label className="field">
           Email
           <input

@@ -97,11 +97,24 @@ test("provisioning, first login, member creation and reset stay scoped", async (
       action: "create_member",
       operationId: randomUUID(),
       name: "Entrenado prueba",
+      gender: "female",
       email: `member-${randomUUID()}@example.test`,
     };
+    expect(
+      (await invoke(gym, { ...memberRequest, gender: "invalid" })).status,
+    ).toBe(400);
     const memberResult = await invoke(gym, memberRequest);
     expect(memberResult.status).toBe(200);
     ids.push(memberResult.body.userId);
+    const profile = await admin
+      .from("gym_accounts")
+      .select("name,gender")
+      .eq("user_id", memberResult.body.userId)
+      .single();
+    expect(profile.data).toEqual({
+      name: memberRequest.name,
+      gender: "female",
+    });
     const member = createClient(config.url, config.anonKey, {
       auth: { persistSession: false },
     });

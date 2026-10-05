@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
       return data;
     };
     if (body.action === 'create_gym' || body.action === 'create_member') {
-      const request = { action: body.action, operationId: body.operationId, name: String(body.name ?? '').trim(), email: String(body.email ?? '').trim().toLowerCase() };
+      const request = { action: body.action, operationId: body.operationId, name: String(body.name ?? '').trim(), email: String(body.email ?? '').trim().toLowerCase(), ...(body.action === 'create_member' && body.gender !== undefined ? { gender: body.gender } : {}) };
       const reservation = await rpc('gym_provision_begin', { actor: user.id, request });
       if (reservation.complete) return respond({ userId: reservation.userId, gymId: reservation.gymId, alreadyCreated: true });
       try {

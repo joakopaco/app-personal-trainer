@@ -2,8 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 import base from "./playwright.config";
 export default defineConfig({
   ...base,
+  outputDir: ".local/playwright-gym",
   testIgnore: [],
   testMatch: [
+    "gym-member-templates.spec.ts",
     "gym-responsive.spec.ts",
     "gym-buttons.spec.ts",
     "gym-account-controls.spec.ts",

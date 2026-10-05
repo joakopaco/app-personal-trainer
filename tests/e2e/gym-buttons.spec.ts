@@ -118,7 +118,8 @@ for (const width of [320, 768, 1440])
       await page
         .getByRole("button", { name: "Publicar rutina", exact: true })
         .click();
-      await expect(page).toHaveURL(/\/gimnasio\/rutinas$/);
+      await expect(page).toHaveURL(/\/gimnasio\/entrenados\//);
+      await page.goto("/gimnasio/rutinas");
       await page
         .getByRole("button", { name: "Ver rutina", exact: true })
         .click();
@@ -196,15 +197,14 @@ for (const width of [320, 768, 1440])
       await expect(
         page.getByRole("button", { name: "Ingresar", exact: true }),
       ).toBeVisible();
+      await expect(page).toHaveURL(/\/$/);
       await login(1);
       await capture(page, `member-home-${width}`);
       await expect(page.getByText("Nota exclusiva del gimnasio")).toHaveCount(
         0,
       );
       await page.getByRole("link", { name: "Rutinas", exact: true }).click();
-      await page
-        .getByRole("button", { name: "Personalizadas para mí", exact: true })
-        .click();
+      await page.getByRole("button", { name: "Para mí", exact: true }).click();
       await page
         .getByRole("button", { name: "Elegir rutina", exact: true })
         .click();

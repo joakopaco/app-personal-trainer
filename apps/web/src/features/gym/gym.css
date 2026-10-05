@@ -47,7 +47,64 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  align-items: stretch;
+}
+.gym-page .button,
+.gym-modal .button {
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.gym-page .button > svg,
+.gym-modal .button > svg {
+  flex-shrink: 0;
+}
+.gym-name-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.gym-template-start {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.gym-template-start p {
+  margin: 8px 0 0;
+}
+.gym-template-list {
+  display: grid;
+  gap: 10px;
+}
+.gym-template-list .button {
+  justify-content: flex-start;
+  text-align: left;
+}
+.gym-editor .routine-week-tools > .link-button,
+.gym-editor .routine-day-tools .link-button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  padding: 10px 14px;
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+}
+.gym-editor .routine-day-tools summary {
+  min-height: 44px;
+}
+.gym-routine-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 620px;
+}
+.gym-routine-tabs:has(> :nth-child(2):last-child) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .gym-tabs {
   border-bottom: 1px solid var(--line);
@@ -65,6 +122,9 @@
 }
 .gym-grid .card {
   min-width: 0;
+}
+.gym-grid .card > p {
+  margin: 0;
 }
 .gym-page .stack {
   gap: 20px;
@@ -345,6 +405,31 @@
   }
 }
 @media (max-width: 700px) {
+  .gym-page .button,
+  .gym-modal .button {
+    min-height: 48px;
+  }
+  .gym-actions > .button {
+    flex: 1 1 150px;
+  }
+  .gym-routine-tabs > .button {
+    padding: 10px 8px;
+    font-size: 14px;
+    line-height: 1.3;
+  }
+  .gym-template-start > .button {
+    width: 100%;
+  }
+  .gym-name-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gym-editor.routine-workspace .link-button,
+  .gym-editor.routine-workspace .routine-tabs .button {
+    min-height: 48px;
+  }
+  .gym-editor .routine-day-tools .link-button {
+    flex: 1 1 140px;
+  }
   .gym-shell .sidebar nav {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -390,6 +475,17 @@
   }
   .gym-set input[type="number"] {
     padding: 8px 4px;
+  }
+  .gym-training .rest-clock-actions .button {
+    padding: 10px 6px;
+    font-size: 14px;
+    gap: 6px;
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+  .gym-training .rest-clock-actions .button > svg {
+    width: 18px;
+    height: 18px;
   }
   .gym-tabs {
     gap: 8px;

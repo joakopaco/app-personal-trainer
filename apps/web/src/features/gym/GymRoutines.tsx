@@ -84,7 +84,11 @@ export function GymRoutines() {
           )
         }
       />
-      <div className="gym-tabs" role="group" aria-label="Origen de las rutinas">
+      <div
+        className="gym-tabs gym-routine-tabs"
+        role="group"
+        aria-label="Origen de las rutinas"
+      >
         {(admin
           ? [
               ["catalog", "Catálogo"],
@@ -92,7 +96,7 @@ export function GymRoutines() {
             ]
           : [
               ["catalog", "Del gimnasio"],
-              ["personal", "Personalizadas para mí"],
+              ["personal", "Para mí"],
               ["own", "Mi rutina"],
             ]
         ).map(([key, label]) => (
@@ -303,7 +307,11 @@ export function GymRoutineEditor() {
     [search] = useSearchParams(),
     { access } = useGym();
   return (
-    <Editor key={id + access.userId} id={id} memberId={search.get("member")} />
+    <Editor
+      key={id + access.userId + search.get("member")}
+      id={id}
+      memberId={search.get("member")}
+    />
   );
 }
 function Editor({ id, memberId }: { id: string; memberId: string | null }) {
@@ -326,6 +334,11 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
       payload: Record<string, unknown>;
     } | null>(null),
     [confirm, setConfirm] = useState<"discard" | "retire" | null>(null);
+  const [pickingTemplate, setPickingTemplate] = useState(false);
+  const [templateVersion, setTemplateVersion] = useState(0);
+  const targetMember = record?.member_id || memberId;
+  const returnTo =
+    admin && targetMember ? "/gimnasio/entrenados/" + targetMember : base;
   const rawValues = useRef<Record<string, string>>({}),
     rawInvalid = useRef(new Set<string>());
   useEffect(() => {
@@ -432,7 +445,11 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
       localStorage.removeItem(key);
       setPendingSave(null);
       setSaved(JSON.stringify(doc));
-      if (id === "nueva") navigate(base + "/" + result.id, { replace: true });
+      if (id === "nueva")
+        navigate(
+          base + "/" + result.id + (memberId ? "?member=" + memberId : ""),
+          { replace: true },
+        );
       else {
         setRecord((r) => r && { ...r, draft: doc, revision: result.revision });
         setMessage("Borrador guardado. Publicalo cuando esté listo.");
@@ -457,10 +474,10 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
   return (
     <>
       <PageHeading
-        back={memberId ? "/gimnasio/entrenados/" + memberId : base}
+        back={returnTo}
         eyebrow={
           admin
-            ? memberId
+            ? targetMember
               ? "RUTINA PERSONALIZADA"
               : "CATÁLOGO DEL GIMNASIO"
             : "MI RUTINA PROPIA"
@@ -502,7 +519,7 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
                       expectedRevision: record.revision,
                     });
                     localStorage.removeItem(key);
-                    navigate(base);
+                    navigate(returnTo);
                   } catch (e) {
                     setError(gymError(e));
                   } finally {
@@ -533,9 +550,45 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
         </p>
       )}
       {!doc && !error && <p role="status">Cargando rutina…</p>}
+      {admin && id === "nueva" && doc && (
+        <section className="card gym-template-start">
+          <div>
+            <h2>Punto de partida</h2>
+            <p className="muted">
+              Empezá desde cero en el editor o copiá una plantilla del catálogo
+              de tu gimnasio.
+            </p>
+          </div>
+          <button
+            className="button secondary"
+            disabled={busy || !!pendingSave}
+            onClick={() => setPickingTemplate(true)}
+          >
+            <Copy size={18} /> Usar plantilla
+          </button>
+        </section>
+      )}
+      {pickingTemplate && (
+        <TemplatePicker
+          dirty={dirty}
+          close={() => setPickingTemplate(false)}
+          apply={(template) => {
+            rawValues.current = {};
+            rawInvalid.current.clear();
+            setError("");
+            change(template);
+            setTemplateVersion((v) => v + 1);
+            setPickingTemplate(false);
+            setMessage(
+              "Plantilla copiada. Podés adaptarla; la original se conserva.",
+            );
+          }}
+        />
+      )}
       {doc && (
         <div className="gym-editor routine-workspace">
           <RoutineFields
+            key={templateVersion}
             doc={doc}
             change={change}
             busy={busy || !!pendingSave}
@@ -603,7 +656,7 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
                       { id, expectedRevision: record.revision },
                     );
                   localStorage.removeItem(key);
-                  navigate(base);
+                  navigate(returnTo);
                 } catch (e) {
                   setError(gymError(e));
                   setConfirm(null);
@@ -618,5 +671,136 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
         </Modal>
       )}
     </>
+  );
+}
+
+function TemplatePicker({
+  close,
+  apply,
+  dirty,
+}: {
+  close: () => void;
+  apply: (doc: RoutineDocument) => void;
+  dirty: boolean;
+}) {
+  const { access } = useGym();
+  const data = useResource(
+    () =>
+      rows<GymRoutine[]>(
+        cloud()
+          .from("gym_routines")
+          .select(routineColumns)
+          .eq("gym_id", access.gymId)
+          .eq("kind", "catalog")
+          .eq("retired", false)
+          .not("published_revision_id", "is", null)
+          .order("name"),
+      ),
+    access.gymId,
+  );
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<GymRoutine | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [replace, setReplace] = useState(false);
+  return (
+    <Modal
+      title="Elegir plantilla"
+      close={() => {
+        if (!busy) close();
+      }}
+    >
+      <p>
+        Copiá una rutina publicada del catálogo y adaptala a la nueva rutina.
+      </p>
+      <label className="field">
+        Buscar plantilla
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Nombre de la rutina"
+        />
+      </label>
+      <LoadState {...data} retry={data.reload} />
+      <div
+        className="gym-template-list"
+        role="group"
+        aria-label="Plantillas del gimnasio"
+      >
+        {data.value
+          ?.filter((r) =>
+            r.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
+          )
+          .map((r) => (
+            <button
+              key={r.id}
+              className={"button " + (selected?.id === r.id ? "" : "secondary")}
+              disabled={busy}
+              aria-pressed={selected?.id === r.id}
+              onClick={() => setSelected(r)}
+            >
+              {r.name}
+            </button>
+          ))}
+      </div>
+      {data.value?.length === 0 && (
+        <p className="muted">
+          Todavía no hay plantillas publicadas. Podés crear la rutina desde cero
+          o publicar una en el catálogo.
+        </p>
+      )}
+      {!!data.value?.length &&
+        !data.value.some((r) =>
+          r.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
+        ) && <p className="muted">No hay plantillas con ese nombre.</p>}
+      {dirty && (
+        <label className="gym-check">
+          <input
+            type="checkbox"
+            checked={replace}
+            onChange={(e) => setReplace(e.target.checked)}
+            disabled={busy}
+          />
+          Reemplazar la preparación actual con esta plantilla
+        </label>
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="gym-actions">
+        <button className="button secondary" disabled={busy} onClick={close}>
+          Cancelar
+        </button>
+        <button
+          className="button"
+          disabled={busy || !selected || (dirty && !replace)}
+          onClick={async () => {
+            if (!selected || busy) return;
+            setBusy(true);
+            setError("");
+            try {
+              const revision = await rows<GymRevision>(
+                cloud()
+                  .from("gym_routine_revisions")
+                  .select("*")
+                  .eq("id", selected.published_revision_id)
+                  .single(),
+              );
+              const copy = cloneRoutineDocument(revision.document);
+              apply(copy);
+            } catch (e) {
+              setError(gymError(e));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Copiando…" : "Usar esta plantilla"}
+        </button>
+      </div>
+    </Modal>
   );
 }

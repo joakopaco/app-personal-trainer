@@ -18,7 +18,8 @@ test("lost account response can be recovered after reload without recreating ide
     await page.getByRole("link", { name: "Entrenados", exact: true }).click();
     await page.getByRole("button", { name: "Agregar entrenado" }).click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Nombre y apellido").fill("Alta recuperable");
+    await dialog.getByLabel("Nombre", { exact: true }).fill("Alta");
+    await dialog.getByLabel("Apellido", { exact: true }).fill("recuperable");
     await dialog.getByLabel("Email").fill(email);
     await page.route(
       "**/functions/v1/gym-accounts",
