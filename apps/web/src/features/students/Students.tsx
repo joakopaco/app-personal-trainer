@@ -279,7 +279,16 @@ export function StudentProfile() {
                   ))}
                 </div>
                 <div className="student-routine-actions">
-                  <Link className="button" to={"/alumnos/" + s.id + "/rutina"}>
+                  <Link
+                    className="button"
+                    to={"/alumnos/" + s.id + "/rutina?nueva=1"}
+                  >
+                    <Plus size={18} /> Nueva rutina
+                  </Link>
+                  <Link
+                    className="button secondary"
+                    to={"/alumnos/" + s.id + "/rutina"}
+                  >
                     Ver rutina
                     <ArrowUpRight size={18} />
                   </Link>

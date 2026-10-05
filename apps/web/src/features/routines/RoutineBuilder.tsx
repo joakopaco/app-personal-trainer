@@ -3,7 +3,7 @@ import { StudentHeader } from "../students/StudentHeader";
 import { ExportRoutine } from "./ExportRoutine";
 import { RoutineSummary } from "./RoutineSummary";
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Plus, Pencil } from "lucide-react";
 import {
   blankRoutine,
@@ -26,6 +26,8 @@ import { gateway } from "../../adapters/supabase-gateway";
 import type { StudentSnapshot } from "@pulso/domain/contracts";
 export function RoutineBuilder() {
   const { id } = useParams();
+  const [params, setParams] = useSearchParams();
+  const [initialSource, setInitialSource] = useState("");
   const { rows, db, onlineCommand } = useData();
   const row = rows.find((r) => r.studentId === id);
   const [doc, setDoc] = useState<RoutineDocument>(blankRoutine),
@@ -128,6 +130,41 @@ export function RoutineBuilder() {
       active = false;
     };
   }, [row?.studentId, db, id]);
+  useEffect(() => {
+    if (loaded && params.get("nueva") === "1") {
+      setInitialSource(params.get("base") || "");
+      setMode("start");
+      setParams({}, { replace: true });
+    }
+  }, [loaded, params, setParams]);
+  async function createNew(next: RoutineDocument) {
+    const nextBase = row!.confirmed.routine?.id ?? null;
+    const nextRevision = row!.confirmed.revision;
+    // Persist the replacement before showing it. Reuse the explicitly replaced
+    // draft so its old cloud copy cannot resurface after publication.
+    await db.meta.put({
+      key: "draft:" + id,
+      value: {
+        doc: next,
+        draftId,
+        draftRevision,
+        base: nextBase,
+        studentRevision: nextRevision,
+        rawValues: {},
+      },
+    });
+    rawValues.current = {};
+    rawInvalid.current.clear();
+    setDoc(next);
+    setBase(nextBase);
+    setStudentRevision(nextRevision);
+    setDirty(true);
+    setError("");
+    setMessage(
+      "Nueva rutina en preparación. Guardá el borrador y luego activalo cuando esté listo.",
+    );
+    setMode("edit");
+  }
   function change(next: RoutineDocument) {
     const valid = new Set(
       next.weeks.flatMap((w) =>
@@ -290,6 +327,9 @@ export function RoutineBuilder() {
     }
   }
   if (!row || !loaded) return <p role="status">Cargando borrador… {error}</p>;
+  const isNew =
+    !row.projection.routine ||
+    doc.weeks[0][0].id !== row.projection.routine.document.weeks[0][0].id;
   return (
     <div className="student-page routine-workspace">
       <StudentHeader data={row.projection} />
@@ -297,19 +337,23 @@ export function RoutineBuilder() {
         <div>
           <h2>
             {mode === "edit"
-              ? "Editar rutina"
+              ? isNew
+                ? "Nueva rutina · borrador"
+                : "Editar rutina"
               : mode === "start"
                 ? "Crear rutina"
                 : doc.name}
           </h2>
           <p className="muted">
-            {dirty
-              ? "Borrador guardado en este dispositivo"
-              : draftRevision
-                ? "Borrador listo para activar"
-                : row.projection.routine
-                  ? "Rutina activa"
-                  : "Programación de 4 semanas"}
+            {mode === "start"
+              ? "Elegí una base para preparar su próxima rutina"
+              : dirty
+                ? "Borrador guardado en este dispositivo"
+                : draftRevision
+                  ? "Borrador listo para activar"
+                  : row.projection.routine
+                    ? "Rutina activa"
+                    : "Programación de 4 semanas"}
           </p>
         </div>
         <div className="routine-heading-actions">
@@ -330,7 +374,8 @@ export function RoutineBuilder() {
               disabled={busy}
               onClick={() => setMode("edit")}
             >
-              <Pencil size={17} aria-hidden="true" /> Editar rutina
+              <Pencil size={17} aria-hidden="true" />{" "}
+              {draftRevision ? "Editar borrador" : "Editar rutina"}
             </button>
           )}
           {mode !== "start" && draftRevision > 0 && (
@@ -342,17 +387,29 @@ export function RoutineBuilder() {
               Activar rutina
             </button>
           )}
-          {mode === "view" && !draftRevision && !dirty && (
+          {mode !== "start" && (
             <button
               className="button secondary"
               disabled={busy}
-              onClick={() => setMode("start")}
+              onClick={() => {
+                setInitialSource("");
+                setMessage("");
+                setMode("start");
+              }}
             >
               <Plus size={17} aria-hidden="true" /> Nueva rutina
             </button>
           )}
         </div>
       </header>
+      {mode !== "start" && (dirty || draftRevision > 0) && (
+        <p className="notice">
+          {row.projection.routine
+            ? `La rutina vigente, «${row.projection.routine.document.name}», sigue activa. `
+            : ""}
+          Guardá el borrador y luego pulsá Activar rutina para aplicarlo.
+        </p>
+      )}
       {mode === "view" &&
         !dirty &&
         !draftRevision &&
@@ -411,11 +468,15 @@ export function RoutineBuilder() {
       )}
       {mode === "start" && (
         <TemplateTools
-          onApply={(next) => {
-            change(next);
-            setMode("edit");
-          }}
-          onCancel={row.projection.routine ? () => setMode("view") : undefined}
+          studentId={id!}
+          hasDraft={dirty || draftRevision > 0}
+          initialSource={initialSource}
+          onApply={createNew}
+          onCancel={
+            row.projection.routine || dirty || draftRevision
+              ? () => setMode(dirty || draftRevision ? "edit" : "view")
+              : undefined
+          }
         />
       )}
       {mode === "view" && <RoutineSummary document={doc} />}

@@ -20,7 +20,7 @@ test("trainer can build a block routine and train from the mobile UI", async ({
       .getByRole("button", { name: "Crear rutina", exact: true })
       .click();
     await expect(
-      page.getByRole("heading", { name: "Editar rutina", exact: true }),
+      page.getByRole("heading", { name: "Nueva rutina · borrador", exact: true }),
     ).toBeVisible();
     await page
       .getByRole("button", { name: "Agregar bloque", exact: true })

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { type RoutineDocument } from "@pulso/domain/routines";
 import { cloud } from "../../adapters/supabase";
 import { formatRestMinutes } from "../../components/rest-minutes";
@@ -262,13 +263,21 @@ export function RoutineArchive({
                   {entry.end ? routineDate(entry.end) : "Sin fecha registrada"}
                 </p>
               </div>
-              <button
-                className="button secondary"
-                onClick={() => setSelected(entry)}
-                aria-label={`Ver rutina ${entry.document.name}`}
-              >
-                Ver rutina
-              </button>
+              <div className="row">
+                <Link
+                  className="button secondary"
+                  to={`/alumnos/${studentId}/rutina?nueva=1&base=archive:${entry.id}`}
+                >
+                  Usar como base
+                </Link>
+                <button
+                  className="button secondary"
+                  onClick={() => setSelected(entry)}
+                  aria-label={`Ver rutina ${entry.document.name}`}
+                >
+                  Ver rutina
+                </button>
+              </div>
             </article>
           ))}
         </div>
