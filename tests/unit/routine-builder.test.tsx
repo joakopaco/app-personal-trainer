@@ -50,6 +50,7 @@ function setup(hasRoutine = true) {
   };
   const local = new Map<string, { key: string; value: unknown }>();
   const onlineCommand = vi.fn().mockResolvedValue({ ...snapshot, revision: 2 });
+  api.fetchStudent.mockResolvedValue(snapshot);
   api.useData.mockReturnValue({
     rows: [
       {
@@ -107,13 +108,16 @@ function setup(hasRoutine = true) {
 test("a first routine starts with a deliberate choice and stores its working draft", async () => {
   const { snapshot, local } = setup(false);
   fireEvent.click(await screen.findByRole("button", { name: "Crear rutina" }));
-  expect(screen.getByLabelText("Nombre de la rutina")).toBeTruthy();
+  expect(await screen.findByLabelText("Nombre de la rutina")).toBeTruthy();
   expect(screen.queryByLabelText("Punto de partida")).toBeNull();
   expect(
     screen.queryByRole("button", {
-      name: /Comparar con|Descartar borrador|Imprimir|Guardar como/,
+      name: /Comparar con|Imprimir|Guardar como/,
     }),
   ).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Descartar borrador" }),
+  ).toBeTruthy();
   await waitFor(() =>
     expect(local.has("draft:" + snapshot.student.id)).toBe(true),
   );
@@ -121,7 +125,7 @@ test("a first routine starts with a deliberate choice and stores its working dra
 
 test("a stale save opens comparison automatically and preserves the selected local changes", async () => {
   const { snapshot, onlineCommand, local } = setup();
-  fireEvent.click(await screen.findByRole("button", { name: "Editar rutina" }));
+  await screen.findByLabelText("Nombre de la rutina");
   fireEvent.change(screen.getByLabelText("Nombre de la rutina"), {
     target: { value: "Mi borrador" },
   });

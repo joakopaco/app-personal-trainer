@@ -91,7 +91,9 @@ test("catalog creates and edits standalone templates, preserves incomplete field
         .microRest,
     ).toBe(30);
     await page.getByRole("link", { name: "Volver al catálogo" }).click();
-    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name, exact: true }),
+    ).toBeVisible();
     await page.screenshot({
       path: ".local/routine-catalog/catalog-mobile.png",
       fullPage: true,
@@ -232,9 +234,7 @@ test("student routine copies are renamed and independent; returning from trainin
     await expect(
       page.getByRole("link", { name: "Alumnos", exact: true }),
     ).toHaveAttribute("aria-current", "page");
-    await page
-      .getByRole("button", { name: "Nueva rutina", exact: true })
-      .click();
+    await page.getByRole("link", { name: "Nueva rutina", exact: true }).click();
     await page
       .getByRole("combobox", { name: "Punto de partida", exact: true })
       .selectOption(id);

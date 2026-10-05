@@ -281,7 +281,7 @@ export function StudentProfile() {
                 <div className="student-routine-actions">
                   <Link
                     className="button"
-                    to={"/alumnos/" + s.id + "/rutina?nueva=1"}
+                    to={"/alumnos/" + s.id + "/borradores/editar?nueva=1"}
                   >
                     <Plus size={18} /> Nueva rutina
                   </Link>
@@ -320,6 +320,18 @@ export function StudentProfile() {
                 </Link>
               </>
             )}
+          </section>
+          <section className="card stack">
+            <h2>Borradores</h2>
+            <p className="muted">
+              Prepará la próxima rutina sin cambiar la que está en curso.
+            </p>
+            <Link
+              className="button secondary"
+              to={"/alumnos/" + s.id + "/borradores"}
+            >
+              Ver borradores
+            </Link>
           </section>
           <RoutineArchive
             studentId={s.id}

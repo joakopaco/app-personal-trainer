@@ -110,9 +110,7 @@ test("a template is selected at creation and later draft edits survive reload", 
     expect(template.error).toBeNull();
     await login(page);
     await page.goto("/rutinas/" + a.studentId);
-    await page
-      .getByRole("button", { name: "Nueva rutina", exact: true })
-      .click();
+    await page.getByRole("link", { name: "Nueva rutina", exact: true }).click();
     await page.getByLabel("Punto de partida").selectOption(id);
     await page
       .getByRole("button", { name: "Crear rutina", exact: true })

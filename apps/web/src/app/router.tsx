@@ -30,6 +30,16 @@ const TemplateEditor = lazy(() =>
     default: m.TemplateEditor,
   })),
 );
+const ActiveRoutine = lazy(() =>
+  import("../features/routines/StudentRoutines").then((m) => ({
+    default: m.ActiveRoutine,
+  })),
+);
+const StudentDrafts = lazy(() =>
+  import("../features/routines/StudentRoutines").then((m) => ({
+    default: m.StudentDrafts,
+  })),
+);
 const RoutineBuilder = lazy(() =>
   import("../features/routines/RoutineBuilder").then((m) => ({
     default: m.RoutineBuilder,
@@ -105,10 +115,18 @@ function Protected() {
               path="/rutinas/plantillas/:id"
               element={<StudentRoute component={TemplateEditor} />}
             />
+            <Route
+              path="/alumnos/:id/borradores"
+              element={<StudentRoute component={StudentDrafts} />}
+            />
+            <Route
+              path="/alumnos/:id/borradores/editar"
+              element={<StudentRoute component={RoutineBuilder} />}
+            />
             <Route path="/rutinas/:id" element={<LegacyRoutine />} />
             <Route
               path="/alumnos/:id/rutina"
-              element={<StudentRoute component={RoutineBuilder} />}
+              element={<StudentRoute component={ActiveRoutine} />}
             />
             <Route
               path="/entrenar/:id"

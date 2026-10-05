@@ -1,9 +1,8 @@
 import "./routine-editor.css";
 import { StudentHeader } from "../students/StudentHeader";
-import { ExportRoutine } from "./ExportRoutine";
 import { RoutineSummary } from "./RoutineSummary";
 import { useEffect, useState, useRef } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { Plus, Pencil } from "lucide-react";
 import {
   blankRoutine,
@@ -19,6 +18,7 @@ import {
 } from "../../components/rest-minutes";
 import { useData } from "../../app/DataProvider";
 import { cloud } from "../../adapters/supabase";
+import { DiscardStudentDraft } from "./StudentRoutines";
 import { TemplateTools } from "./TemplateTools";
 import { parseNumber } from "@pulso/domain/numbers";
 import { DraftComparison } from "./DraftComparison";
@@ -27,6 +27,10 @@ import type { StudentSnapshot } from "@pulso/domain/contracts";
 export function RoutineBuilder() {
   const { id } = useParams();
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const savedDocument = useRef<RoutineDocument | null>(null);
+  const writes = useRef<Promise<unknown>>(Promise.resolve());
+  const requestedDraft = params.get("draft");
   const [initialSource, setInitialSource] = useState("");
   const { rows, db, onlineCommand } = useData();
   const row = rows.find((r) => r.studentId === id);
@@ -53,7 +57,38 @@ export function RoutineBuilder() {
     if (!row) return;
     let active = true;
     void (async () => {
-      const local = await db.meta.get("draft:" + id);
+      let query = cloud()
+        .from("routine_drafts")
+        .select("*")
+        .eq("student_id", id!);
+      if (requestedDraft) query = query.eq("id", requestedDraft);
+      const { data, error: loadError } = await query
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      const stored = await db.meta.get("draft:" + id);
+      const local =
+        stored &&
+        (!requestedDraft ||
+          (stored.value as { draftId: string }).draftId === requestedDraft)
+          ? stored
+          : undefined;
+      if (!active) return;
+      if (loadError && !local) {
+        setError(
+          "No se pudo cargar el borrador. Volvé a intentar con conexión.",
+        );
+        return;
+      }
+      if (stored && requestedDraft && !local) {
+        setError(
+          "Hay cambios pendientes en otro borrador de este alumno. Guardalo o descartalo antes de abrir otro.",
+        );
+        return;
+      }
+      if (requestedDraft && !local && !data?.[0]) {
+        navigate(`/alumnos/${id}/borradores`, { replace: true });
+        return;
+      }
       if (local) {
         const l = local.value as {
           doc: RoutineDocument;
@@ -62,6 +97,7 @@ export function RoutineBuilder() {
           base: string | null;
           studentRevision: number;
           rawValues?: Record<string, string>;
+          savedDocument?: RoutineDocument | null;
         };
         if (active) {
           rawValues.current = Object.fromEntries(
@@ -91,37 +127,36 @@ export function RoutineBuilder() {
           setDraftRevision(l.draftRevision);
           setBase(l.base);
           setStudentRevision(l.studentRevision);
-          setDirty(true);
+          savedDocument.current =
+            l.savedDocument ??
+            (data?.[0]?.revision === l.draftRevision
+              ? data[0].document
+              : !l.draftRevision
+                ? (row.confirmed.routine?.document ?? null)
+                : null);
+          const changed =
+            JSON.stringify(l.doc) !== JSON.stringify(savedDocument.current) ||
+            rawInvalid.current.size > 0;
+          setDirty(changed);
           setMode("edit");
           setLoaded(true);
         }
         return;
       }
-      const { data, error } = await cloud()
-        .from("routine_drafts")
-        .select("*")
-        .eq("student_id", id!)
-        .order("updated_at", { ascending: false })
-        .limit(1);
-      if (!active) return;
-      if (error) {
-        setError(
-          "No se pudo cargar el borrador. Volvé a intentar con conexión.",
-        );
-        return;
-      }
       if (data?.[0]) {
+        savedDocument.current = data[0].document;
         setDoc(data[0].document);
         setDraftId(data[0].id);
         setDraftRevision(data[0].revision);
         setBase(data[0].base_revision_id);
         setMode("edit");
       } else {
+        savedDocument.current = row.projection.routine?.document ?? null;
         setDoc(row.projection.routine?.document ?? blankRoutine());
         setBase(row.projection.routine?.id ?? null);
         setDraftId(crypto.randomUUID());
         setDraftRevision(0);
-        setMode(row.projection.routine ? "view" : "start");
+        setMode(row.projection.routine ? "edit" : "start");
       }
       setStudentRevision(row.confirmed.revision);
       setLoaded(true);
@@ -129,11 +164,14 @@ export function RoutineBuilder() {
     return () => {
       active = false;
     };
-  }, [row?.studentId, db, id]);
+  }, [row?.studentId, db, id, requestedDraft]);
   useEffect(() => {
     if (loaded && params.get("nueva") === "1") {
       setInitialSource(params.get("base") || "");
       setMode("start");
+      setError("");
+      setComparison(null);
+      setMessage("");
       setParams({}, { replace: true });
     }
   }, [loaded, params, setParams]);
@@ -142,6 +180,8 @@ export function RoutineBuilder() {
     const nextRevision = row!.confirmed.revision;
     // Persist the replacement before showing it. Reuse the explicitly replaced
     // draft so its old cloud copy cannot resurface after publication.
+    await writes.current;
+    savedDocument.current = null;
     await db.meta.put({
       key: "draft:" + id,
       value: {
@@ -180,29 +220,41 @@ export function RoutineBuilder() {
       }
 
     setDoc(next);
-    setDirty(true);
+    const changed =
+      JSON.stringify(next) !== JSON.stringify(savedDocument.current) ||
+      rawInvalid.current.size > 0;
+    setDirty(changed);
     setMessage("");
-    void db.meta
-      .put({
-        key: "draft:" + id,
-        value: {
-          doc: next,
-          draftId,
-          draftRevision,
-          base,
-          studentRevision,
-          rawValues: Object.fromEntries(
-            Object.entries(rawValues.current).map(([key, value]) => [
-              key,
-              isRestField(
-                key.split(":").at(-1) as Parameters<typeof parseNumber>[0],
-              )
-                ? storeRestRaw(value)
-                : value,
-            ]),
-          ),
-        },
-      })
+    writes.current = writes.current
+      .catch(() => undefined)
+      .then(
+        async () =>
+          await (!changed
+            ? db.meta.delete("draft:" + id)
+            : db.meta.put({
+                key: "draft:" + id,
+                value: {
+                  doc: next,
+                  savedDocument: savedDocument.current,
+                  draftId,
+                  draftRevision,
+                  base,
+                  studentRevision,
+                  rawValues: Object.fromEntries(
+                    Object.entries(rawValues.current).map(([key, value]) => [
+                      key,
+                      isRestField(
+                        key.split(":").at(-1) as Parameters<
+                          typeof parseNumber
+                        >[0],
+                      )
+                        ? storeRestRaw(value)
+                        : value,
+                    ]),
+                  ),
+                },
+              })),
+      )
       .catch(() =>
         setError("No se pudo conservar el borrador en este dispositivo."),
       );
@@ -210,7 +262,7 @@ export function RoutineBuilder() {
   async function handleCommandError(cause: unknown) {
     const message = (cause as Error).message;
     setError(message);
-    if (!/cambiaron|versión|conflict|changed|stale draft/i.test(message))
+    if (!/cambiaron|cambió|versión|conflict|changed|stale draft/i.test(message))
       return;
     try {
       const remote = await gateway(db.scope).fetchStudent(db.scope, id!);
@@ -263,6 +315,12 @@ export function RoutineBuilder() {
         throw Error("Completá o corregí los campos antes de guardar.");
       const issues = validateRoutine(doc);
       if (issues.length) throw Error(issues[0]);
+      await writes.current;
+      const latest = await gateway(db.scope).fetchStudent(db.scope, id!);
+      if ((latest.routine?.id ?? null) !== base)
+        throw Error(
+          "La rutina activa cambió. Revisá los cambios antes de guardar.",
+        );
       const snapshot = await onlineCommand(
         id!,
         "save_draft",
@@ -272,8 +330,9 @@ export function RoutineBuilder() {
           baseRoutineRevisionId: base,
           document: doc,
         },
-        studentRevision,
+        latest.revision,
       );
+      savedDocument.current = structuredClone(doc);
       setDraftRevision(draftRevision + 1);
       setStudentRevision(snapshot.revision);
       setDirty(false);
@@ -299,6 +358,7 @@ export function RoutineBuilder() {
         throw Error("Guardá el borrador antes de activar.");
       const issues = validateRoutine(doc, true);
       if (issues.length) throw Error(issues[0]);
+      const latest = await gateway(db.scope).fetchStudent(db.scope, id!);
       const snapshot = await onlineCommand(
         id!,
         "publish_routine",
@@ -312,21 +372,37 @@ export function RoutineBuilder() {
             month: "2-digit",
           }).format(new Date()),
         },
-        studentRevision,
+        latest.revision,
       );
       setBase(snapshot.routine!.id);
       setStudentRevision(snapshot.revision);
       setDraftId(crypto.randomUUID());
       setDraftRevision(0);
       setMessage("Rutina activa. La versión anterior se conserva.");
-      setMode("view");
+      navigate(`/alumnos/${id}/rutina`, {
+        replace: true,
+        state: { activated: true },
+      });
     } catch (e) {
       await handleCommandError(e);
     } finally {
       setBusy(false);
     }
   }
-  if (!row || !loaded) return <p role="status">Cargando borrador… {error}</p>;
+  if (!row || !loaded)
+    return (
+      <div className="stack">
+        <p role={error ? "alert" : "status"}>{error || "Cargando borrador…"}</p>
+        {error && (
+          <button
+            className="button secondary"
+            onClick={() => navigate(`/alumnos/${id}/borradores`)}
+          >
+            Volver a borradores
+          </button>
+        )}
+      </div>
+    );
   const isNew =
     !row.projection.routine ||
     doc.weeks[0][0].id !== row.projection.routine.document.weeks[0][0].id;
@@ -339,7 +415,7 @@ export function RoutineBuilder() {
             {mode === "edit"
               ? isNew
                 ? "Nueva rutina · borrador"
-                : "Editar rutina"
+                : "Editar borrador"
               : mode === "start"
                 ? "Crear rutina"
                 : doc.name}
@@ -352,7 +428,7 @@ export function RoutineBuilder() {
                 : draftRevision
                   ? "Borrador listo para activar"
                   : row.projection.routine
-                    ? "Rutina activa"
+                    ? "Sin cambios pendientes"
                     : "Programación de 4 semanas"}
           </p>
         </div>
@@ -362,7 +438,7 @@ export function RoutineBuilder() {
               className={
                 "button" + (draftRevision && !dirty ? " secondary" : "")
               }
-              disabled={busy}
+              disabled={busy || !dirty}
               onClick={save}
             >
               Guardar borrador
@@ -374,8 +450,7 @@ export function RoutineBuilder() {
               disabled={busy}
               onClick={() => setMode("edit")}
             >
-              <Pencil size={17} aria-hidden="true" />{" "}
-              {draftRevision ? "Editar borrador" : "Editar rutina"}
+              <Pencil size={17} aria-hidden="true" /> Editar borrador
             </button>
           )}
           {mode !== "start" && draftRevision > 0 && (
@@ -394,11 +469,24 @@ export function RoutineBuilder() {
               onClick={() => {
                 setInitialSource("");
                 setMessage("");
+                setError("");
+                setComparison(null);
                 setMode("start");
               }}
             >
               <Plus size={17} aria-hidden="true" /> Nueva rutina
             </button>
+          )}
+          {mode !== "start" && (dirty || draftRevision > 0) && (
+            <DiscardStudentDraft
+              studentId={id!}
+              draftId={draftId}
+              revision={draftRevision}
+              beforeDiscard={() => writes.current}
+              onDiscard={() =>
+                navigate(`/alumnos/${id}/borradores`, { replace: true })
+              }
+            />
           )}
         </div>
       </header>
@@ -407,21 +495,11 @@ export function RoutineBuilder() {
           {row.projection.routine
             ? `La rutina vigente, «${row.projection.routine.document.name}», sigue activa. `
             : ""}
-          Guardá el borrador y luego pulsá Activar rutina para aplicarlo.
+          {dirty
+            ? "Guardá los cambios y activá el borrador cuando esté listo."
+            : "Borrador guardado. Podés activarlo cuando esté listo."}
         </p>
       )}
-      {mode === "view" &&
-        !dirty &&
-        !draftRevision &&
-        row.projection.routine && (
-          <div className="row">
-            <ExportRoutine
-              document={row.projection.routine.document}
-              student={row.projection.student.name}
-              month={row.projection.period?.month}
-            />
-          </div>
-        )}
       {error && (
         <p className="error" role="alert">
           {error}
@@ -461,6 +539,8 @@ export function RoutineBuilder() {
               },
             });
             setComparison(null);
+            setError("");
+            savedDocument.current = null;
             setMode("edit");
             setMessage("Borrador revisado. Guardalo antes de activar.");
           }}
@@ -474,7 +554,10 @@ export function RoutineBuilder() {
           onApply={createNew}
           onCancel={
             row.projection.routine || dirty || draftRevision
-              ? () => setMode(dirty || draftRevision ? "edit" : "view")
+              ? () =>
+                  dirty || draftRevision
+                    ? setMode("edit")
+                    : navigate(`/alumnos/${id}/rutina`)
               : undefined
           }
         />

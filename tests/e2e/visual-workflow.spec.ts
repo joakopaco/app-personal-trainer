@@ -97,7 +97,7 @@ test("mobile live correction, accessible dialog and desktop history render witho
       .getByRole("button", { name: "Editar rutina", exact: true })
       .click();
     await expect(
-      page.getByRole("heading", { name: "Editar rutina", exact: true }),
+      page.getByRole("heading", { name: "Editar borrador", exact: true }),
     ).toBeVisible();
     await page.screenshot({
       path: ".local/screens/builder-desktop.png",

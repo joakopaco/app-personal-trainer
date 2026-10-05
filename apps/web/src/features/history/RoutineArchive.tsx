@@ -266,7 +266,7 @@ export function RoutineArchive({
               <div className="row">
                 <Link
                   className="button secondary"
-                  to={`/alumnos/${studentId}/rutina?nueva=1&base=archive:${entry.id}`}
+                  to={`/alumnos/${studentId}/borradores/editar?nueva=1&base=archive:${entry.id}`}
                 >
                   Usar como base
                 </Link>

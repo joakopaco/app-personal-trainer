@@ -353,7 +353,7 @@
   width: 100%;
   margin: 0;
 }
-.student-page .student-heading {
+.student-page .page-heading.student-heading {
   margin: 0;
 }
 .student-page .student-heading h1 {

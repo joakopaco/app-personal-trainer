@@ -1,5 +1,11 @@
 import { NavLink } from "react-router-dom";
-import { UserRound, ClipboardList, TrendingUp, History } from "lucide-react";
+import {
+  UserRound,
+  ClipboardList,
+  TrendingUp,
+  History,
+  FilePenLine,
+} from "lucide-react";
 import "./students.css";
 
 export function StudentNavigation({ studentId }: { studentId: string }) {
@@ -12,6 +18,9 @@ export function StudentNavigation({ studentId }: { studentId: string }) {
       <NavLink to={"/alumnos/" + studentId + "/rutina"}>
         <ClipboardList size={18} />
         Rutina actual
+      </NavLink>
+      <NavLink to={"/alumnos/" + studentId + "/borradores"}>
+        <FilePenLine size={18} /> Borradores
       </NavLink>
       <NavLink to={"/progreso/" + studentId}>
         <TrendingUp size={18} />
