@@ -68,6 +68,14 @@ test("private operator provisions a gym and first login requires a new password"
     const newPassword = `Changed!${randomUUID()}Aa1`;
     await gym.getByLabel("Nueva contraseña", { exact: true }).fill(newPassword);
     await gym.getByLabel("Repetí la contraseña").fill(newPassword);
+    await gym.route(
+      "**/functions/v1/gym-accounts",
+      async (route) => {
+        await route.fetch();
+        await route.abort("failed");
+      },
+      { times: 1 },
+    );
     await gym.getByRole("button", { name: "Guardar nueva contraseña" }).click();
     await expect(
       gym.getByRole("link", { name: "Entrenados", exact: true }),

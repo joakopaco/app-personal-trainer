@@ -108,4 +108,4 @@ Ejecutar las regresiones de personal trainer además de las nuevas pruebas; no b
 
 ## Estado
 
-Diseño preparado para revisión. No hay cambios de producto ni migraciones de esta modalidad aplicados todavía. El email de operador se solicita al usuario antes de habilitar la administración en producción.
+Diseño aprobado por el usuario e implementado en una modalidad independiente. La verificación y el despliegue se documentan en `docs/ops/gym-accounts.md`. La habilitación del primer operador en producción requiere el email que indique el usuario.

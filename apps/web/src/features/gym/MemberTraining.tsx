@@ -209,6 +209,7 @@ function Training({ initial }: { initial: GymSession }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [confirm, setConfirm] = useState(false),
+    [resolve, setResolve] = useState(false),
     [conflict, setConflict] = useState(false),
     [pending, setPending] = useState<Pending | null>(null);
   const resultsRef = useRef(results);
@@ -337,10 +338,15 @@ function Training({ initial }: { initial: GymSession }) {
         </p>
       )}
       {conflict && (
-        <p>
-          Para evitar sobrescribir cambios, abrí este entrenamiento desde la
-          pestaña donde guardaste por última vez.
-        </p>
+        <div className="notice stack">
+          <p>
+            Hay una versión más reciente guardada. Podés revisar tu edición
+            local antes de reemplazarla.
+          </p>
+          <button className="button secondary" onClick={() => setResolve(true)}>
+            Revisar versión guardada
+          </button>
+        </div>
       )}
       <GymRestTimer
         storageKey={"pulso-gym-timer:" + access.userId + ":" + initial.id}
@@ -485,6 +491,74 @@ function Training({ initial }: { initial: GymSession }) {
           Tu registro sigue guardado en este dispositivo. Pulsá Guardar
           entrenamiento para reintentar.
         </p>
+      )}
+      {resolve && (
+        <Modal
+          title="Recuperar entrenamiento"
+          close={() => {
+            if (!busy) setResolve(false);
+          }}
+        >
+          <p>
+            Se descartará la edición local y se cargarán las series guardadas
+            más recientes. Los cambios del otro dispositivo se conservan.
+          </p>
+          <button
+            className="button secondary"
+            onClick={() => {
+              const value =
+                localStorage.getItem(storageKey) ||
+                JSON.stringify({ results: resultsRef.current, revision });
+              const url = URL.createObjectURL(
+                new Blob([value], { type: "application/json" }),
+              );
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "entrenamiento-edicion-local.json";
+              a.click();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }}
+          >
+            Descargar edición local
+          </button>
+          <button
+            className="button"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const latest = await rows<GymSession>(
+                  cloud()
+                    .from("gym_sessions")
+                    .select("*")
+                    .eq("id", initial.id)
+                    .eq("member_id", access.userId)
+                    .single(),
+                );
+                localStorage.removeItem(storageKey);
+                if (latest.status === "finished") {
+                  navigate("/mi-entrenamiento");
+                  return;
+                }
+                const next = initialResults(latest);
+                resultsRef.current = next;
+                setResults(next);
+                setRevision(latest.revision);
+                setDirty(false);
+                setPending(null);
+                setConflict(false);
+                setError("");
+                setResolve(false);
+              } catch (e) {
+                setError(gymError(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Usar versión guardada
+          </button>
+        </Modal>
       )}
       {confirm && (
         <Modal

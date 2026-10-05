@@ -4,7 +4,7 @@ El piloto usa Vercel `joako-personal/app-personal-trainer` y Supabase `dnsakonvr
 
 ## Piloto sin envío de correo (decisión del usuario, 2026-10-03)
 
-- Registro únicamente de entrenadores con email y contraseña (mínimo 8 caracteres, mayúscula, minúscula y número). Supabase conserva una identidad única por email. Los alumnos siguen siendo fichas y su acceso muestra Próximamente.
+- Registro público únicamente de entrenadores con email y contraseña (mínimo 8 caracteres, mayúscula, minúscula y número). Supabase conserva una identidad única por email. Los alumnos de personal trainer siguen siendo fichas. La modalidad adicional de gimnasio se administra por invitación controlada; ver [operación de gimnasio](gym-accounts.md).
 - En producción `Confirm email` está desactivado y `VITE_AUTH_EMAIL_ENABLED=false`. Supabase autoconfirma el alta y devuelve una sesión: la app la conserva y abre el espacio privado. El frontend no concede permisos ni modifica `email_confirmed_at`; las políticas y RPC siguen verificando al usuario en el servidor.
 - No hay SMTP propio, verificación de titularidad del correo ni recuperación automática habilitada en la interfaz. Conservar contraseñas. La recuperación manual requiere comprobar la identidad del participante con el operador; no conceder acceso solamente porque alguien declara un email. No marcar estos correos como verificados por su titular.
 - Las respuestas duplicadas se presentan de forma genérica en la UI, pero Auth puede revelar que un email ya existe cuando la confirmación está desactivada. Turnstile y límites siguen habilitados; no afirmar resistencia completa a enumeración de cuentas.

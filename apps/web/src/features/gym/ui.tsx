@@ -4,6 +4,7 @@ import { ArrowLeft, X, Copy, Check } from "lucide-react";
 import { accountAction, gymError } from "./api";
 import { cloud } from "../../adapters/supabase";
 import { useAuth } from "../auth/AuthProvider";
+import { Captcha, captchaRequired, captchaSiteKey } from "../auth/Captcha";
 
 export function PageHeading({
   eyebrow,
@@ -288,6 +289,8 @@ export function PasswordForm({
 }) {
   const [password, setPassword] = useState(""),
     [repeat, setRepeat] = useState(""),
+    [captcha, setCaptcha] = useState(""),
+    [captchaAttempt, setCaptchaAttempt] = useState(0),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   return (
@@ -295,7 +298,7 @@ export function PasswordForm({
       className="stack"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (busy) return;
+        if (busy || ((captchaRequired || captchaSiteKey) && !captcha)) return;
         if (password !== repeat) {
           setError("Las contraseñas no coinciden.");
           return;
@@ -303,14 +306,35 @@ export function PasswordForm({
         setBusy(true);
         setError("");
         try {
-          await accountAction({ action: "change_password", password });
+          let uncertain: unknown;
+          try {
+            await accountAction({ action: "change_password", password });
+          } catch (e) {
+            // Auth may have committed even if the Edge response was lost.
+            uncertain = e;
+          }
           const signed = await cloud().auth.signInWithPassword({
             email,
             password,
+            options: { captchaToken: captcha || undefined },
           });
           if (signed.error)
             throw Error(
-              "Contraseña actualizada. Cerrá sesión e ingresá con la nueva contraseña.",
+              uncertain
+                ? "No pudimos confirmar el cambio. Reintentá cuando vuelva la conexión. Si cerrás esta pantalla, ingresá con la nueva contraseña; si no funciona, usá la anterior."
+                : "Contraseña actualizada. Cerrá sesión e ingresá con la nueva contraseña.",
+            );
+          const access = await cloud().rpc("gym_access");
+          if (
+            access.error ||
+            access.data?.blocked ||
+            access.data?.mustChangePassword
+          )
+            throw (
+              uncertain ||
+              Error(
+                "No pudimos confirmar el acceso. Reintentá el cambio de contraseña.",
+              )
             );
           setPassword("");
           setRepeat("");
@@ -319,6 +343,8 @@ export function PasswordForm({
           setError(gymError(e));
         } finally {
           setBusy(false);
+          setCaptcha("");
+          setCaptchaAttempt((n) => n + 1);
         }
       }}
     >
@@ -358,7 +384,11 @@ export function PasswordForm({
           {error}
         </p>
       )}
-      <button className="button" disabled={busy}>
+      <Captcha key={captchaAttempt} onToken={setCaptcha} />
+      <button
+        className="button"
+        disabled={busy || (!!(captchaRequired || captchaSiteKey) && !captcha)}
+      >
         {busy ? "Guardando…" : "Guardar nueva contraseña"}
       </button>
     </form>

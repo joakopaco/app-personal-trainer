@@ -321,6 +321,10 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
+    [pendingSave, setPendingSave] = useState<{
+      operationId: string;
+      payload: Record<string, unknown>;
+    } | null>(null),
     [confirm, setConfirm] = useState<"discard" | "retire" | null>(null);
   const rawValues = useRef<Record<string, string>>({}),
     rawInvalid = useRef(new Set<string>());
@@ -349,11 +353,14 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
           try {
             const parsed = JSON.parse(local);
             if (
-              parsed.base === JSON.stringify(initial) &&
+              (id === "nueva" ||
+                parsed.pendingSave ||
+                parsed.base === JSON.stringify(initial)) &&
               validateRoutine(parsed.document).length === 0
-            )
+            ) {
               initial = parsed.document;
-            else
+              setPendingSave(parsed.pendingSave || null);
+            } else
               setMessage(
                 "Hay cambios de otra versión guardados en este dispositivo. Se muestra la versión del servidor.",
               );
@@ -399,9 +406,9 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
     }
     setBusy(true);
     setError("");
-    try {
-      const result = await command(
-        "save_routine",
+    const request = pendingSave || {
+      operationId: crypto.randomUUID(),
+      payload:
         id === "nueva"
           ? {
               kind: admin ? (memberId ? "personal" : "catalog") : "own",
@@ -409,8 +416,21 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
               document: doc,
             }
           : { id, expectedRevision: record!.revision, document: doc },
+    };
+    try {
+      // Retain the exact command until its outcome is known, including after reload.
+      localStorage.setItem(
+        key,
+        JSON.stringify({ base: saved, document: doc, pendingSave: request }),
+      );
+      setPendingSave(request);
+      const result = await command(
+        "save_routine",
+        request.payload,
+        request.operationId,
       );
       localStorage.removeItem(key);
+      setPendingSave(null);
       setSaved(JSON.stringify(doc));
       if (id === "nueva") navigate(base + "/" + result.id, { replace: true });
       else {
@@ -418,6 +438,17 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
         setMessage("Borrador guardado. Publicalo cuando esté listo.");
       }
     } catch (e) {
+      if (
+        ["22023", "40001", "42501", "23505"].includes(
+          (e as { code?: string }).code || "",
+        )
+      ) {
+        setPendingSave(null);
+        localStorage.setItem(
+          key,
+          JSON.stringify({ base: saved, document: doc }),
+        );
+      }
       setError(gymError(e));
     } finally {
       setBusy(false);
@@ -444,7 +475,9 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
           <>
             <button
               className="button secondary"
-              disabled={busy || !doc || (!dirty && id !== "nueva")}
+              disabled={
+                busy || !doc || (!dirty && id !== "nueva" && !pendingSave)
+              }
               onClick={save}
             >
               Guardar borrador
@@ -452,7 +485,7 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
             {record && (
               <button
                 className="button"
-                disabled={busy || dirty || !record.draft}
+                disabled={busy || dirty || !!pendingSave || !record.draft}
                 onClick={async () => {
                   if (!doc || rawInvalid.current.size) return;
                   const errors = validateRoutine(doc, true);
@@ -493,13 +526,19 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
           {message}
         </p>
       )}
+      {pendingSave && !busy && (
+        <p className="notice">
+          La preparación sigue en este dispositivo. Pulsá Guardar borrador para
+          confirmar el guardado pendiente antes de seguir editando.
+        </p>
+      )}
       {!doc && !error && <p role="status">Cargando rutina…</p>}
       {doc && (
         <div className="gym-editor routine-workspace">
           <RoutineFields
             doc={doc}
             change={change}
-            busy={busy}
+            busy={busy || !!pendingSave}
             rawValues={rawValues}
             rawInvalid={rawInvalid}
             trainerCatalog={false}
@@ -510,7 +549,7 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
         {(record?.draft || dirty || id === "nueva") && (
           <button
             className="button secondary"
-            disabled={busy}
+            disabled={busy || !!pendingSave}
             onClick={() => setConfirm("discard")}
           >
             Descartar borrador
@@ -519,7 +558,7 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
         {record?.published_revision_id && !record.retired && admin && (
           <button
             className="button secondary"
-            disabled={busy}
+            disabled={busy || !!pendingSave}
             onClick={() => setConfirm("retire")}
           >
             Retirar rutina
