@@ -1,3 +1,4 @@
+import { RestTimer } from "./RestTimer";
 import { TrainingRecovery } from "./TrainingRecovery";
 import { UnfinishedAnnotations } from "./UnfinishedAnnotations";
 import {
@@ -16,7 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { liveQuery } from "dexie";
 import type { PendingCommand } from "@pulso/sync/local-db";
-import { ArrowLeft, Check, Timer, ChevronDown } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown } from "lucide-react";
 import type { SessionItem, TrainingSession } from "@pulso/domain/contracts";
 import {
   parseNumber,
@@ -946,72 +947,4 @@ function PreviousResult({
     };
   }, [exerciseId, studentId]);
   return <small>{value}</small>;
-}
-function RestTimer({ session }: { session: TrainingSession }) {
-  const { db } = useData();
-  const [end, setEnd] = useState<number | null>(null),
-    [paused, setPaused] = useState<number | null>(null),
-    [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    let active = true;
-    void db.meta.get("timer:" + session.id).then((r) => {
-      if (r && active) {
-        const t = r.value as { end: number | null; paused: number | null };
-        setEnd(t.end);
-        setPaused(t.paused);
-      }
-    });
-    const timer = setInterval(() => setNow(Date.now()), 500);
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, [session.id, db]);
-  const remaining =
-    paused ?? Math.max(0, Math.ceil(((end ?? now) - now) / 1000));
-  function save(nextEnd: number | null, nextPaused: number | null) {
-    setEnd(nextEnd);
-    setPaused(nextPaused);
-    void db.meta.put({
-      key: "timer:" + session.id,
-      value: { end: nextEnd, paused: nextPaused },
-    });
-  }
-  return (
-    <div className="rest-timer row spread">
-      <div className="row">
-        <Timer size={18} />
-        <strong>
-          Descanso · {Math.floor(remaining / 60)}:
-          {String(remaining % 60).padStart(2, "0")}
-        </strong>
-        <small>min:seg</small>
-      </div>
-      <div className="row">
-        <button
-          className="button secondary small"
-          onClick={() => save(Date.now() + 60_000, null)}
-        >
-          1 min
-        </button>
-        <button
-          className="button secondary small"
-          onClick={() => save(Date.now() + (remaining + 15) * 1000, null)}
-        >
-          +0,25 min
-        </button>
-        <button
-          className="button secondary small"
-          disabled={remaining === 0}
-          onClick={() =>
-            paused !== null
-              ? save(Date.now() + paused * 1000, null)
-              : save(null, remaining)
-          }
-        >
-          {paused !== null ? "Continuar" : "Pausar"}
-        </button>
-      </div>
-    </div>
-  );
 }

@@ -72,3 +72,107 @@
     flex: 1;
   }
 }
+
+.agenda-date-controls {
+  min-width: 0;
+  max-width: 100%;
+}
+.agenda-date-controls .field {
+  width: 180px;
+  max-width: 100%;
+}
+.arrival-students {
+  display: grid;
+  gap: 8px;
+  max-height: min(360px, 40dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+  margin: -4px;
+}
+.arrival-student {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 12px;
+  text-align: left;
+}
+.arrival-student:hover,
+.arrival-student:focus-visible {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.arrival-student > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+.arrival-student > svg {
+  flex-shrink: 0;
+}
+.arrival-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+}
+.arrival-selected > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.arrival-choice {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.arrival-choice legend {
+  font-weight: 600;
+  font-size: 14px;
+  padding: 0;
+  margin-bottom: 10px;
+}
+.arrival-weeks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.arrival-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.arrival-days > button {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.arrival-dialog > .button {
+  min-height: 52px;
+}
+@media (max-width: 480px) {
+  .agenda-section > .section-heading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .agenda-date-controls {
+    width: 100%;
+  }
+  .agenda-date-controls .field {
+    flex: 1;
+  }
+}

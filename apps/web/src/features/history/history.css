@@ -367,11 +367,12 @@
 }
 .history-dates {
   margin-top: 16px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 .history-dates .field {
-  flex: 1;
-  min-width: 145px;
+  min-width: 0;
 }
 @media (max-width: 850px) {
   .history-progress-grid {
@@ -496,4 +497,10 @@
 .history-audit .audit-row > p,
 .history-audit .audit-row > ul {
   margin: 0 0 18px;
+}
+
+@media (max-width: 480px) {
+  .history-dates {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

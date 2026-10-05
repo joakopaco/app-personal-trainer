@@ -26,12 +26,12 @@ test("offline edits survive a reload and synchronize exactly once", async ({
     await page.route("http://127.0.0.1:54341/**", (r) => r.abort());
     await page.getByLabel("Peso kg").fill("42,5");
     await page.getByLabel("Peso kg").blur();
-    await expect(page.getByRole("status")).toContainText(
+    await expect(page.locator(".save-indicator")).toContainText(
       "Guardado en este dispositivo",
     );
     await page.reload();
     await expect(page.getByLabel("Peso kg")).toHaveValue("42.5");
-    await expect(page.getByRole("status")).toContainText(
+    await expect(page.locator(".save-indicator")).toContainText(
       "Guardado en este dispositivo",
     );
     await page.unroute("http://127.0.0.1:54341/**");

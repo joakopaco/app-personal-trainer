@@ -18,7 +18,7 @@ test("remote and local values are compared and only an explicit resolution overw
     await page.route("http://127.0.0.1:54341/**", (r) => r.abort());
     await page.getByLabel("Peso kg").fill("44");
     await page.getByLabel("Peso kg").blur();
-    await expect(page.getByRole("status")).toContainText(
+    await expect(page.locator(".save-indicator")).toContainText(
       "Guardado en este dispositivo",
     );
     const se = a.snapshot.sessions[0];

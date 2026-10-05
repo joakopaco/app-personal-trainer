@@ -49,7 +49,10 @@ test("trainer can build a block routine and train from the mobile UI", async ({
     await page
       .getByRole("button", { name: "Agregar ahora", exact: true })
       .click();
-    await page.getByLabel("Alumno", { exact: true }).selectOption(a.studentId);
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: new RegExp(a.studentId.slice(0, 8)) })
+      .click();
     await page
       .getByRole("button", { name: "Iniciar entrenamiento", exact: true })
       .click();

@@ -21,7 +21,7 @@ test("logout blocks pending edits, then another trainer never sees the prior cac
     await page.route("http://127.0.0.1:54341/**", (r) => r.abort());
     await page.getByLabel("Peso kg").fill("32");
     await page.getByLabel("Peso kg").blur();
-    await expect(page.getByRole("status")).toContainText(
+    await expect(page.locator(".save-indicator")).toContainText(
       "Guardado en este dispositivo",
     );
     await page.getByRole("link", { name: "Ajustes", exact: true }).click();

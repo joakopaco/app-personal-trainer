@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, ArrowRight, CalendarDays, CalendarClock } from "lucide-react";
 import { useData } from "../../app/DataProvider";
@@ -13,6 +13,8 @@ import { PendingReschedules } from "./PendingReschedules";
 export function Today() {
   const { rows, error, db, onlineCommand, makeCommand, sync } = useData();
   const navigate = useNavigate();
+  const starting = useRef(false);
+  const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false),
     [studentId, setStudentId] = useState(""),
     [week, setWeek] = useState(
@@ -33,6 +35,8 @@ export function Today() {
   const agenda = useAgendaVisits(date);
   const { visits, allVisits } = agenda;
   async function start() {
+    if (starting.current) return;
+    starting.current = true;
     setBusy(true);
     setFailure("");
     try {
@@ -50,6 +54,7 @@ export function Today() {
       const day =
         snapshot.routine.document.weeks[week - 1].find((d) => d.id === dayId) ??
         snapshot.routine.document.weeks[week - 1][0];
+      if (!day) throw Error("Esta semana no tiene días de entrenamiento.");
       const sessionId = crypto.randomUUID();
       const command = makeCommand(
         studentId,
@@ -73,6 +78,7 @@ export function Today() {
     } catch (e) {
       setFailure((e as Error).message);
     } finally {
+      starting.current = false;
       setBusy(false);
     }
   }
@@ -113,6 +119,10 @@ export function Today() {
         <button
           className="button"
           onClick={() => {
+            setStudentId("");
+            setDayId("");
+            setSearch("");
+            setFailure("");
             setAdding(true);
             setVisitId(undefined);
           }}
@@ -268,6 +278,8 @@ export function Today() {
                     className="button small"
                     disabled={date !== todayKey()}
                     onClick={() => {
+                      setFailure("");
+                      setDayId("");
                       setStudentId(v.student.id);
                       setVisitId(v.id);
                       setAdding(true);
@@ -326,78 +338,160 @@ export function Today() {
       {adding && (
         <div className="modal-backdrop">
           <section
-            className="card modal stack"
+            className="card modal stack arrival-dialog"
             role="dialog"
             aria-modal="true"
             aria-label="Agregar entrenamiento"
           >
             <div className="row spread">
               <h2>Empezar ahora</h2>
-              <button className="link-button" onClick={() => setAdding(false)}>
+              <button
+                className="button secondary small"
+                disabled={busy}
+                onClick={() => setAdding(false)}
+              >
                 Cerrar
               </button>
             </div>
-            <label className="field">
-              Alumno
-              <select
-                aria-label="Alumno"
-                value={studentId}
-                onChange={(e) => {
-                  setStudentId(e.target.value);
-                  setDayId("");
-                  setVisitId(undefined);
-                }}
-              >
-                <option value="">Elegí un alumno</option>
-                {rows
-                  .filter(
+            {!selected ? (
+              <>
+                <label className="field">
+                  Buscar alumno
+                  <input
+                    type="search"
+                    value={search}
+                    placeholder="Nombre del alumno"
+                    onChange={(e) => setSearch(e.target.value)}
+                    autoComplete="off"
+                  />
+                </label>
+                <div
+                  className="arrival-students"
+                  aria-label="Alumnos disponibles"
+                >
+                  {rows
+                    .filter(
+                      (r) =>
+                        !r.projection.student.archived &&
+                        !r.projection.sessions.length &&
+                        r.projection.student.name
+                          .toLocaleLowerCase()
+                          .includes(search.toLocaleLowerCase().trim()),
+                    )
+                    .map((r) => (
+                      <button
+                        key={r.studentId}
+                        className="arrival-student"
+                        aria-label={r.projection.student.name}
+                        onClick={() => {
+                          setStudentId(r.studentId);
+                          setDayId("");
+                          setVisitId(undefined);
+                          setFailure("");
+                        }}
+                      >
+                        <span className="avatar" aria-hidden="true">
+                          {r.projection.student.name.slice(0, 2).toUpperCase()}
+                        </span>
+                        <span>
+                          <strong>{r.projection.student.name}</strong>
+                          <small>
+                            {r.projection.routine
+                              ? "Elegir rutina del día"
+                              : "Sin rutina activa"}
+                          </small>
+                        </span>
+                        <ArrowRight size={18} aria-hidden="true" />
+                      </button>
+                    ))}
+                  {!rows.some(
                     (r) =>
                       !r.projection.student.archived &&
-                      !r.projection.sessions.length,
-                  )
-                  .map((r) => (
-                    <option key={r.studentId} value={r.studentId}>
-                      {r.projection.student.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label className="field">
-              Semana
-              <select
-                value={week}
-                disabled={!selected?.routine}
-                onChange={(e) => {
-                  setWeek(Number(e.target.value));
-                  setDayId("");
-                }}
-              >
-                {[1, 2, 3, 4].map((w) => (
-                  <option key={w}>{w}</option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Día de rutina
-              <select
-                disabled={!selected?.routine}
-                value={
-                  dayId ||
-                  selected?.routine?.document.weeks[week - 1][0]?.id ||
-                  ""
-                }
-                onChange={(e) => setDayId(e.target.value)}
-              >
-                {!selected?.routine && (
-                  <option value="">Primero elegí un alumno con rutina</option>
+                      !r.projection.sessions.length &&
+                      r.projection.student.name
+                        .toLocaleLowerCase()
+                        .includes(search.toLocaleLowerCase().trim()),
+                  ) && (
+                    <p className="muted">
+                      No hay alumnos disponibles con ese nombre. Quienes ya
+                      están entrenando aparecen en Hoy.
+                    </p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="arrival-selected">
+                  <div>
+                    <small>Alumno</small>
+                    <strong>{selected.student.name}</strong>
+                  </div>
+                  <button
+                    className="button secondary small"
+                    disabled={busy}
+                    onClick={() => {
+                      setStudentId("");
+                      setVisitId(undefined);
+                    }}
+                  >
+                    Cambiar alumno
+                  </button>
+                </div>
+                {selected.routine && (
+                  <>
+                    <fieldset className="arrival-choice">
+                      <legend>Semana</legend>
+                      <div className="arrival-weeks">
+                        {[1, 2, 3, 4].map((w) => (
+                          <button
+                            key={w}
+                            className={
+                              "button " + (week === w ? "" : "secondary")
+                            }
+                            aria-label={"Semana " + w}
+                            aria-pressed={week === w}
+                            disabled={busy}
+                            onClick={() => {
+                              setWeek(w);
+                              setDayId("");
+                            }}
+                          >
+                            {w}
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+                    <fieldset className="arrival-choice">
+                      <legend>Día de rutina</legend>
+                      <div className="arrival-days">
+                        {selected.routine.document.weeks[week - 1].map((d) => (
+                          <button
+                            key={d.id}
+                            className={
+                              "button " +
+                              ((dayId ||
+                                selected.routine!.document.weeks[week - 1][0]
+                                  ?.id) === d.id
+                                ? ""
+                                : "secondary")
+                            }
+                            aria-pressed={
+                              (dayId ||
+                                selected.routine!.document.weeks[week - 1][0]
+                                  ?.id) === d.id
+                            }
+                            disabled={busy}
+                            onClick={() => setDayId(d.id)}
+                          >
+                            {d.name}
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+                  </>
                 )}
-                {selected?.routine?.document.weeks[week - 1].map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+              </>
+            )}
             {studentId && !selected?.routine && (
               <p className="notice">
                 Este alumno necesita una{" "}
@@ -414,10 +508,14 @@ export function Today() {
             )}
             <button
               className="button"
-              disabled={busy || !studentId || !selected?.routine}
+              disabled={
+                busy ||
+                !studentId ||
+                !selected?.routine?.document.weeks[week - 1].length
+              }
               onClick={start}
             >
-              Iniciar entrenamiento
+              {busy ? "Iniciando…" : "Iniciar entrenamiento"}
             </button>
             <small>
               Hora actual {currentTime()}. Esta llegada no cambia el horario
