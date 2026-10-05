@@ -106,7 +106,7 @@ export function MuscleMap({
   );
 }
 
-function ExportAnatomy({
+export function ExportAnatomy({
   female,
   trained,
 }: {
@@ -163,7 +163,7 @@ function ExportAnatomy({
   );
 }
 
-function Trend({
+export function Trend({
   exercise,
   report = false,
 }: {

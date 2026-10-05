@@ -13,6 +13,20 @@ const secondsLeft = (state: ClockState, now: number) =>
 
 export function RestTimer({ session }: { session: { id: string } }) {
   const { db } = useData();
+  return <RestClock session={session} storage={db.meta} />;
+}
+
+// The same clock serves both modalities; only persistence changes.
+export function RestClock({
+  session,
+  storage,
+}: {
+  session: { id: string };
+  storage: {
+    get: (key: string) => PromiseLike<{ value: unknown } | undefined>;
+    put: (entry: { key: string; value: unknown }) => PromiseLike<unknown>;
+  };
+}) {
   const [state, setState] = useState(initial);
   const latest = useRef(initial);
   const writes = useRef(Promise.resolve());
@@ -21,8 +35,7 @@ export function RestTimer({ session }: { session: { id: string } }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     let active = true;
-    void db.meta
-      .get("timer:" + session.id)
+    void Promise.resolve(storage.get("timer:" + session.id))
       .then((r) => {
         if (!active) return;
         const saved = r?.value as Partial<ClockState> | undefined;
@@ -55,12 +68,12 @@ export function RestTimer({ session }: { session: { id: string } }) {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [session.id, db]);
+  }, [session.id, storage]);
   function save(next: ClockState) {
     latest.current = next;
     writes.current = writes.current.then(async () => {
       try {
-        await db.meta.put({ key: "timer:" + session.id, value: next });
+        await storage.put({ key: "timer:" + session.id, value: next });
         setError("");
       } catch {
         setError(

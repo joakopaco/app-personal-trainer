@@ -7,6 +7,14 @@ import { AuthProvider, useAuth } from "../features/auth/AuthProvider";
 import { Login } from "../features/auth/Login";
 import { AuthCallback } from "../features/auth/AuthCallback";
 import { DataProvider } from "./DataProvider";
+const GymPortal = lazy(() =>
+  import("../features/gym/GymPortal").then((m) => ({ default: m.GymPortal })),
+);
+const PlatformAdmin = lazy(() =>
+  import("../features/gym/PlatformAdmin").then((m) => ({
+    default: m.PlatformAdmin,
+  })),
+);
 const Today = lazy(() =>
   import("../features/agenda/Today").then((m) => ({ default: m.Today })),
 );
@@ -85,6 +93,12 @@ function Protected() {
       </main>
     );
   if (!auth.session) return <Login />;
+  if (auth.gymAccount)
+    return (
+      <Suspense fallback={<p role="status">Preparando tu gimnasio…</p>}>
+        <GymPortal key={auth.session.user.id} />
+      </Suspense>
+    );
   if (auth.error || !auth.scope)
     return (
       <main>
@@ -103,6 +117,7 @@ function Protected() {
         <SaveNotice />
         <Suspense fallback={<p role="status">Cargando…</p>}>
           <Routes>
+            <Route path="/administracion/*" element={<PlatformAdmin />} />
             <Route path="/hoy" element={<Today />} />
             <Route path="/alumnos" element={<StudentList />} />
             <Route

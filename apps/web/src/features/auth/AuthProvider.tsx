@@ -17,6 +17,7 @@ type AuthValue = {
   retry: () => void;
   recovery: boolean;
   finishRecovery: () => void;
+  gymAccount: boolean;
 };
 const Context = createContext<AuthValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -57,12 +58,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   const userId = session?.user.id;
+  // Server-assigned routing hint only; gym permissions are resolved independently
+  // by gym_access and checked by the database on every operation.
+  const gymAccount = session?.user.app_metadata?.gym_account === true;
   useEffect(() => {
     let active = true;
     setScope(null);
     if (!userId || !supabase) return;
     setLoading(true);
     setError("");
+    if (gymAccount) {
+      setLoading(false);
+      return;
+    }
     supabase.rpc("ensure_workspace").then(({ data, error }) => {
       if (!active) return;
       if (error) {
@@ -93,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [userId, attempt]);
+  }, [userId, attempt, gymAccount]);
   useEffect(() => {
     if (!userId || !scope) return;
     const timer = setInterval(() => {
@@ -117,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         retry: () => setAttempt((x) => x + 1),
         recovery,
         finishRecovery: () => setRecovery(false),
+        gymAccount,
       }}
     >
       {children}

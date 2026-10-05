@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { ArrowRight, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { cloud, supabase } from "../../adapters/supabase";
 import { Captcha, captchaRequired, captchaSiteKey } from "./Captcha";
 import { Brand } from "../../components/Brand";
@@ -35,7 +35,7 @@ export function Login() {
     event.preventDefault();
     if (
       busy ||
-      role !== "trainer" ||
+      (role !== "trainer" && mode !== "login") ||
       (!emailEnabled && (mode === "recovery" || mode === "resend")) ||
       ((captchaRequired || captchaSiteKey) && !captcha)
     )
@@ -154,134 +154,123 @@ export function Login() {
               }}
             >
               <option value="trainer">Entrenador</option>
-              <option value="student">Alumno · Próximamente</option>
+              <option value="gym">Gimnasio</option>
+              <option value="member">Entrenado</option>
             </select>
           </label>
-          {role === "student" ? (
-            <div className="coming-soon">
-              <Users size={32} aria-hidden="true" />
-              <p className="eyebrow">EN DESARROLLO</p>
-              <h1>Alumnos, próximamente</h1>
-              <p>
-                Estamos preparando tu espacio para acompañar cada entrenamiento.
-                Por ahora, tu entrenador administra tu ficha.
-              </p>
-              <button
-                className="button secondary"
-                onClick={() => setRole("trainer")}
-              >
-                Volver a entrenador
-              </button>
-            </div>
-          ) : (
-            <>
-              <p className="eyebrow">TU ESPACIO PRIVADO</p>
-              <h1>
-                {mode === "login"
-                  ? "Tu jornada empieza acá"
-                  : mode === "signup"
-                    ? "Creá tu cuenta"
-                    : mode === "resend"
-                      ? "Confirmá tu email"
-                      : "Recuperá tu acceso"}
-              </h1>
-              <p className="muted">
-                {mode === "signup"
-                  ? emailEnabled
-                    ? "Un espacio propio para vos y tus alumnos. Confirmá tu correo para empezar."
-                    : "Un espacio propio para vos y tus alumnos. Creá tu cuenta y empezá a entrenar."
-                  : mode === "login"
+          <>
+            <p className="eyebrow">TU ESPACIO PRIVADO</p>
+            <h1>
+              {mode === "login"
+                ? "Tu jornada empieza acá"
+                : mode === "signup"
+                  ? "Creá tu cuenta"
+                  : mode === "resend"
+                    ? "Confirmá tu email"
+                    : "Recuperá tu acceso"}
+            </h1>
+            <p className="muted">
+              {mode === "signup"
+                ? emailEnabled
+                  ? "Un espacio propio para vos y tus alumnos. Confirmá tu correo para empezar."
+                  : "Un espacio propio para vos y tus alumnos. Creá tu cuenta y empezá a entrenar."
+                : mode === "login"
+                  ? role === "trainer"
                     ? "Ingresá con tu cuenta de entrenador."
-                    : mode === "resend"
-                      ? "Te enviamos un nuevo enlace de confirmación."
-                      : "Te enviamos un enlace para elegir una contraseña nueva."}
+                    : role === "gym"
+                      ? "Ingresá con la cuenta que te entregó Pulso."
+                      : "Ingresá con la cuenta que te entregó tu gimnasio."
+                  : mode === "resend"
+                    ? "Te enviamos un nuevo enlace de confirmación."
+                    : "Te enviamos un enlace para elegir una contraseña nueva."}
+            </p>
+            {!supabase && (
+              <p className="notice">
+                El acceso está en preparación. Intentá más tarde.
               </p>
-              {!supabase && (
-                <p className="notice">
-                  El acceso está en preparación. Intentá más tarde.
-                </p>
-              )}
-              <form className="stack" onSubmit={submit}>
+            )}
+            <form className="stack" onSubmit={submit}>
+              <label className="field">
+                Email
+                <input
+                  type="email"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                  value={email}
+                  disabled={busy}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </label>
+              {(mode === "login" || mode === "signup") && (
                 <label className="field">
-                  Email
+                  Contraseña
                   <input
-                    type="email"
-                    autoComplete="username"
-                    autoCapitalize="none"
-                    spellCheck={false}
+                    type="password"
+                    aria-label="Contraseña"
+                    aria-describedby={
+                      mode === "signup" ? "password-hint" : undefined
+                    }
+                    autoComplete={
+                      mode === "signup" ? "new-password" : "current-password"
+                    }
+                    minLength={mode === "signup" ? 8 : undefined}
+                    pattern={mode === "signup" ? passwordPattern : undefined}
                     required
-                    value={email}
+                    value={password}
                     disabled={busy}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  {mode === "signup" && (
+                    <small id="password-hint">{passwordHint}</small>
+                  )}
+                </label>
+              )}
+              {mode === "signup" && (
+                <label className="field">
+                  Repetí la contraseña
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    value={repeat}
+                    disabled={busy}
+                    onChange={(e) => setRepeat(e.target.value)}
                   />
                 </label>
-                {(mode === "login" || mode === "signup") && (
-                  <label className="field">
-                    Contraseña
-                    <input
-                      type="password"
-                      aria-label="Contraseña"
-                      aria-describedby={
-                        mode === "signup" ? "password-hint" : undefined
-                      }
-                      autoComplete={
-                        mode === "signup" ? "new-password" : "current-password"
-                      }
-                      minLength={mode === "signup" ? 8 : undefined}
-                      pattern={mode === "signup" ? passwordPattern : undefined}
-                      required
-                      value={password}
-                      disabled={busy}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                    {mode === "signup" && (
-                      <small id="password-hint">{passwordHint}</small>
-                    )}
-                  </label>
-                )}
-                {mode === "signup" && (
-                  <label className="field">
-                    Repetí la contraseña
-                    <input
-                      type="password"
-                      autoComplete="new-password"
-                      required
-                      value={repeat}
-                      disabled={busy}
-                      onChange={(e) => setRepeat(e.target.value)}
-                    />
-                  </label>
-                )}
-                <Captcha key={captchaAttempt} onToken={setCaptcha} />
-                {error && (
-                  <p className="error" role="alert">
-                    {error}
-                  </p>
-                )}
-                {message && (
-                  <p className="notice" role="status">
-                    {message}
-                  </p>
-                )}
-                <button
-                  className="button"
-                  disabled={
-                    busy ||
-                    !supabase ||
-                    (!!(captchaRequired || captchaSiteKey) && !captcha)
-                  }
-                >
-                  {busy
-                    ? "Un momento…"
-                    : mode === "login"
-                      ? "Ingresar"
-                      : mode === "signup"
-                        ? "Crear mi cuenta"
-                        : mode === "resend"
-                          ? "Reenviar confirmación"
-                          : "Enviar enlace"}
-                  <ArrowRight size={17} />
-                </button>
+              )}
+              <Captcha key={captchaAttempt} onToken={setCaptcha} />
+              {error && (
+                <p className="error" role="alert">
+                  {error}
+                </p>
+              )}
+              {message && (
+                <p className="notice" role="status">
+                  {message}
+                </p>
+              )}
+              <button
+                className="button"
+                disabled={
+                  busy ||
+                  !supabase ||
+                  (!!(captchaRequired || captchaSiteKey) && !captcha)
+                }
+              >
+                {busy
+                  ? "Un momento…"
+                  : mode === "login"
+                    ? "Ingresar"
+                    : mode === "signup"
+                      ? "Crear mi cuenta"
+                      : mode === "resend"
+                        ? "Reenviar confirmación"
+                        : "Enviar enlace"}
+                <ArrowRight size={17} />
+              </button>
+              {role === "trainer" && (
                 <div className="auth-actions">
                   {mode === "login" ? (
                     <>
@@ -325,20 +314,20 @@ export function Login() {
                     </button>
                   )}
                 </div>
-              </form>
-              {!emailEnabled && (
-                <p className="muted">
-                  Durante el piloto no enviamos correos de confirmación ni de
-                  recuperación. Guardá tu contraseña; si perdés el acceso,
-                  contactá al administrador del piloto.
-                </p>
               )}
-              <p className="auth-note">
-                <ShieldCheck size={16} aria-hidden="true" /> Una cuenta por
-                email. Cada entrenador tiene su espacio privado.
+            </form>
+            {!emailEnabled && role === "trainer" && (
+              <p className="muted">
+                Durante el piloto no enviamos correos de confirmación ni de
+                recuperación. Guardá tu contraseña; si perdés el acceso,
+                contactá al administrador del piloto.
               </p>
-            </>
-          )}
+            )}
+            <p className="auth-note">
+              <ShieldCheck size={16} aria-hidden="true" /> Una cuenta por email.
+              Cada entrenador tiene su espacio privado.
+            </p>
+          </>
         </div>
       </section>
     </div>

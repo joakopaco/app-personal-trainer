@@ -22,12 +22,14 @@ export function RoutineFields({
   busy,
   rawValues,
   rawInvalid,
+  trainerCatalog = true,
 }: {
   doc: RoutineDocument;
   change: (doc: RoutineDocument) => void;
   busy: boolean;
   rawValues: RefObject<Record<string, string>>;
   rawInvalid: RefObject<Set<string>>;
+  trainerCatalog?: boolean;
 }) {
   const [week, setWeek] = useState(0),
     [day, setDay] = useState(0);
@@ -40,6 +42,7 @@ export function RoutineFields({
   }
   const [ownExercises, setOwnExercises] = useState<ExerciseDefinition[]>([]);
   useEffect(() => {
+    if (!trainerCatalog) return;
     let active = true;
     void cloud()
       .from("custom_exercises")
@@ -51,7 +54,7 @@ export function RoutineFields({
     return () => {
       active = false;
     };
-  }, []);
+  }, [trainerCatalog]);
   const [targetBlock, setTargetBlock] = useState("");
   const [dragOver, setDragOver] = useState<string | null>(null);
   // WebKit can strip custom DataTransfer formats during native drags.

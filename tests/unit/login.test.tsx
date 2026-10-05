@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-const auth = vi.hoisted(() => ({ signUp: vi.fn(), signOut: vi.fn() }));
+const auth = vi.hoisted(() => ({ signUp: vi.fn(), signOut: vi.fn(), signInWithPassword: vi.fn() }));
 vi.mock("../../apps/web/src/adapters/supabase", () => ({
   supabase: { auth },
   cloud: () => ({ auth }),
@@ -18,6 +18,24 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllEnvs();
+});
+
+test('gym and member can sign in but cannot self-register', async () => {
+  const { Login } = await import('../../apps/web/src/features/auth/Login');
+  render(<Login />);
+  const user = userEvent.setup();
+  auth.signInWithPassword.mockResolvedValue({ error: null });
+  for (const role of ['gym', 'member']) {
+    await user.selectOptions(screen.getByLabelText('Tipo de cuenta'), role);
+    expect(screen.queryByRole('button', { name: /^Crear cuenta$/ })).toBeNull();
+    await user.clear(screen.getByLabelText('Email', { exact: true }));
+    await user.type(screen.getByLabelText('Email', { exact: true }), 'gym@example.test');
+    await user.type(screen.getByLabelText('Contraseña', { exact: true }), 'Temporary-pass-123');
+    await user.click(screen.getByRole('button', { name: 'Ingresar' }));
+    await waitFor(() => expect(auth.signInWithPassword).toHaveBeenCalledWith(expect.objectContaining({ email: 'gym@example.test' })));
+    expect(screen.queryByRole('alert')).toBeNull();
+    auth.signInWithPassword.mockClear();
+  }
 });
 
 async function signup(password = "Long-password-123") {

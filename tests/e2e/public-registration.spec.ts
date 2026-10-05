@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { adminClient, config } from "../fixtures/cloud";
 
-test("student access is upcoming and never sends an authentication request", async ({
+test("gym and member access offer login but no public registration", async ({
   page,
 }) => {
   const requests: string[] = [];
@@ -10,17 +10,22 @@ test("student access is upcoming and never sends an authentication request", asy
     if (/\/auth\/v1\/(signup|token)/.test(r.url())) requests.push(r.url());
   });
   await page.goto("/login");
-  await page.getByLabel("Tipo de cuenta").selectOption("student");
-  await expect(
-    page.getByRole("heading", { name: "Alumnos, próximamente" }),
-  ).toBeVisible();
-  await expect(page.getByLabel("Email", { exact: true })).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Ingresar", exact: true }),
-  ).toHaveCount(0);
+  for (const role of ["gym", "member"]) {
+    await page.getByLabel("Tipo de cuenta").selectOption(role);
+    await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Ingresar", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Crear cuenta", exact: true }),
+    ).toHaveCount(0);
+  }
   expect(requests).toEqual([]);
   await page.getByLabel("Tipo de cuenta").selectOption("trainer");
   await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Crear cuenta", exact: true }),
+  ).toBeVisible();
 });
 
 test("signup confirms email in a fresh browser and keeps one identity across profile metadata", async ({
