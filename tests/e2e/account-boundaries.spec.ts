@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { accounts, adminClient, config, dropFixture } from "../fixtures/cloud";
 import { createClient } from "@supabase/supabase-js";
 import { prepared } from "../fixtures/prepared";
-test("logout blocks pending edits, then another trainer never sees the prior cache", async ({
+test("logout preserves pending edits privately and restores them only to the same trainer", async ({
   page,
 }) => {
   const a = await prepared();
@@ -28,20 +28,8 @@ test("logout blocks pending edits, then another trainer never sees the prior cac
     await page
       .getByRole("button", { name: "Cerrar sesión", exact: true })
       .click();
-    await expect(
-      page.getByText(
-        "Hay cambios sin confirmar. Volvé al entrenamiento y revisalos antes de salir.",
-      ),
-    ).toBeVisible();
-    await page.unroute("http://127.0.0.1:54341/**");
-    await page.goto("/entrenar/" + a.studentId);
-    await page.getByRole("button", { name: "Reintentar guardado" }).click();
-    await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
-    await page.getByRole("link", { name: "Ajustes", exact: true }).click();
-    await page
-      .getByRole("button", { name: "Cerrar sesión", exact: true })
-      .click();
     await expect(page.getByLabel("Email")).toBeVisible();
+    await page.unroute("http://127.0.0.1:54341/**");
     await page.getByLabel("Email").fill(accounts[1].email);
     await page
       .getByLabel("Contraseña", { exact: true })
@@ -52,6 +40,22 @@ test("logout blocks pending edits, then another trainer never sees the prior cac
     await expect(
       page.getByText(a.snapshot.student.name, { exact: true }),
     ).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Cerrar sesión", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Ingresar", exact: true }),
+    ).toBeVisible();
+    // Keep writes offline while restoring A, proving the value survived locally.
+    await page.route("**/rest/v1/rpc/apply_training_command", (r) => r.abort());
+    await page.getByLabel("Email").fill(accounts[0].email);
+    await page
+      .getByLabel("Contraseña", { exact: true })
+      .fill(accounts[0].password);
+    await page.getByRole("button", { name: "Ingresar", exact: true }).click();
+    await expect(page.getByRole("navigation")).toBeVisible();
+    await page.goto("/entrenar/" + a.studentId);
+    await expect(page.getByLabel("Peso kg")).toHaveValue("32");
   } finally {
     await dropFixture(a.studentId);
   }

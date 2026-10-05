@@ -220,6 +220,27 @@ small {
   font-size: 11px;
   color: var(--muted);
 }
+.sidebar-foot .signout-control {
+  margin: 24px 0 18px;
+}
+.sidebar-foot .signout-control .button {
+  width: 100%;
+  font-size: 14px;
+  justify-content: flex-start;
+  color: #ffffff;
+  background: #1c1c1c;
+  border-color: #454545;
+}
+.sidebar-foot .signout-control .button:hover {
+  background: #303030;
+}
+.signout-control [role="alert"] {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.settings-signout {
+  display: none;
+}
 main {
   min-width: 0;
   padding: 42px clamp(20px, 4vw, 64px);
@@ -516,6 +537,9 @@ main {
   color: var(--muted);
 }
 @media (max-width: 760px) {
+  .settings-signout {
+    display: block;
+  }
   .app-shell {
     display: block;
   }

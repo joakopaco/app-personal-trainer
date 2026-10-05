@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useData } from "../../app/DataProvider";
 import { useAuth } from "../auth/AuthProvider";
+import { SignOutButton } from "../auth/SignOutButton";
 import { PlatformAdminLink } from "../gym/PlatformAdmin";
 import { cloud, updateVerifiedPassword } from "../../adapters/supabase";
 import {
@@ -41,37 +42,6 @@ export function Settings() {
       active = false;
     };
   }, [data.db.scope.userId]);
-  async function signOut() {
-    setBusy(true);
-    try {
-      if (await data.db.hasPending())
-        throw Error(
-          "Hay cambios sin confirmar. Volvé al entrenamiento y revisalos antes de salir.",
-        );
-      if (
-        (await data.db.meta.toArray()).some(
-          (m) =>
-            m.key.startsWith("admin:") ||
-            m.key.startsWith("draft:") ||
-            m.key.startsWith("template-draft:") ||
-            m.key === "library-pending",
-        )
-      )
-        throw Error(
-          "Tenés una rutina, plantilla o ficha sin terminar de guardar. Volvé a esa pantalla y guardala antes de salir.",
-        );
-      data.suspend();
-      localStorage.removeItem("pulso-access:" + data.db.scope.userId);
-      await data.db.purge();
-      const { error } = await cloud().auth.signOut({ scope: "local" });
-      if (error) throw error;
-      location.assign("/login");
-    } catch (e) {
-      setMessage((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <>
@@ -253,15 +223,7 @@ export function Settings() {
             </form>
           )}
         </section>
-        <div className="page-actions">
-          <button
-            className="button secondary"
-            disabled={busy}
-            onClick={signOut}
-          >
-            Cerrar sesión
-          </button>
-        </div>
+        <SignOutButton className="settings-signout" />
       </div>
     </>
   );

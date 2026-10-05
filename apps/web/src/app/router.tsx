@@ -4,6 +4,7 @@ import { AppUpdates } from "../components/AppUpdates";
 import { SaveNotice } from "../components/SaveNotice";
 import { AppShell } from "./AppShell";
 import { AuthProvider, useAuth } from "../features/auth/AuthProvider";
+import { SignOutButton } from "../features/auth/SignOutButton";
 import { Login } from "../features/auth/Login";
 import { AuthCallback } from "../features/auth/AuthCallback";
 import { DataProvider } from "./DataProvider";
@@ -112,7 +113,7 @@ function Protected() {
   if (auth.recovery) return <Navigate to="/auth/callback" replace />;
   return (
     <DataProvider key={auth.scope.userId}>
-      <AppShell>
+      <AppShell accountActions={<SignOutButton />}>
         <AppUpdates />
         <SaveNotice />
         <Suspense fallback={<p role="status">Cargando…</p>}>

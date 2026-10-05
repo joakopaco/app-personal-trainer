@@ -16,7 +16,13 @@ const links = [
   ["/biblioteca", "Ejercicios", Dumbbell],
   ["/ajustes", "Ajustes", Settings],
 ] as const;
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  accountActions,
+}: {
+  children: ReactNode;
+  accountActions?: ReactNode;
+}) {
   const { pathname } = useLocation();
   useEffect(() => {
     // Run after the outgoing session saves its position. Live training restores
@@ -52,7 +58,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             </NavLink>
           ))}
         </nav>
-        <div className="sidebar-foot">Prepará. Acompañá. Progresá.</div>
+        <div className="sidebar-foot">
+          {accountActions}
+          <span>Prepará. Acompañá. Progresá.</span>
+        </div>
       </aside>
       <main id="contenido" tabIndex={-1}>
         {children}
