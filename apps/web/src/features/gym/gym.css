@@ -162,6 +162,19 @@
 .gym-modal .icon-button {
   flex-shrink: 0;
 }
+.gym-modal .routine-summary > .routine-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.gym-modal .routine-summary-exercises article {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.gym-modal .routine-summary-exercises dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
 .gym-modal input,
 .gym-modal select,
 .gym-modal textarea {
@@ -394,5 +407,15 @@
 @media (prefers-reduced-motion: reduce) {
   .gym-page * {
     scroll-behavior: auto;
+  }
+}
+@media (max-width: 400px) {
+  .gym-editor .routine-week-tools .routine-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .gym-editor .routine-week-tools .routine-tabs .button {
+    font-size: 14px;
+    padding: 10px 8px;
   }
 }
