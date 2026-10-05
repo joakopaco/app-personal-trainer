@@ -16,10 +16,11 @@
 - Capturas revisadas en `.local/screens/`: rutina vigente, formulario centrado de creación y versión móvil.
 - Migración 202610050019 aplicada localmente sin reiniciar la base. El script transaccional de publicación se probó localmente y registra la migración de forma repetible.
 
-## Publicación pendiente
+## Aplicación en producción
 
-No publicar el frontend antes de aplicar `202610050019_discard_student_draft.sql` al proyecto Supabase `dnsakonvrdwwmssftkpa`.
-El script listo para el SQL Editor es `.local/deploy-student-drafts.sql`; no elimina datos al ejecutarse, solo instala la función y registra la migración.
-
-No se aplicó en producción: la cuenta de Supabase CLI no tiene acceso a este proyecto, la conexión de Chrome carece de su registro nativo y Computer Use se detuvo al no poder determinar con seguridad la URL actual. No se modificó la configuración del navegador ni se ejecutó SQL remoto.
-Después de confirmar la migración, publicar con el flujo habitual `git push origin HEAD:main` y verificar Vercel y los assets servidos.
+- El 4 de octubre de 2026 (Argentina) se aplicó la migración mediante el plugin Supabase al proyecto `dnsakonvrdwwmssftkpa`, confirmado como `app-personal-trainer`.
+- El registro generado por MCP (`20261005022200`) se alineó con la versión ya versionada y probada en el repositorio: `202610050019`. La migración instala la función; no descarta datos existentes.
+- Se verificaron la firma instalada, `search_path` vacío, ausencia de permiso de ejecución para `anon` y permiso para `authenticated`. Una llamada sin identidad fue rechazada correctamente.
+- El asesor de seguridad no reportó errores. La advertencia sobre RPC `SECURITY DEFINER` accesibles a usuarios autenticados es intencional: la función valida identidad, propiedad, alumno y revisión. Referencia: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
+- También señaló la configuración existente de protección de contraseñas filtradas desactivada; no se modificó la configuración de autenticación en esta publicación. Referencia: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- El frontend se publica mediante el flujo habitual `git push origin HEAD:main`; verificar el estado de Vercel y los assets servidos antes de confirmar al usuario.
