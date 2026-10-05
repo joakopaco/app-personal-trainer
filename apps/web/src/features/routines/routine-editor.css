@@ -309,3 +309,241 @@
     flex: 1 1 180px;
   }
 }
+
+/* Shared canvas for student programs and reusable templates. */
+.routine-composer {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  min-width: 0;
+}
+.routine-canvas {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.routine-canvas > .button {
+  justify-self: start;
+}
+.exercise-palette {
+  position: sticky;
+  top: 20px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.palette-content {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: calc(100dvh - 40px);
+}
+.palette-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.palette-heading h2 {
+  font-size: 16px;
+  margin: 0;
+}
+.palette-heading svg {
+  flex: none;
+}
+.palette-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.palette-destination {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.palette-destination > small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.palette-groups {
+  overflow-y: auto;
+  min-height: 120px;
+  overscroll-behavior: contain;
+  padding: 3px;
+  margin: -3px;
+}
+.palette-group {
+  border-bottom: 1px solid var(--line);
+}
+.palette-group summary {
+  cursor: pointer;
+  min-height: 48px;
+  padding: 12px 2px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.palette-group summary > small {
+  float: right;
+  color: var(--muted);
+  font-size: 11px;
+}
+.palette-group[open] summary {
+  color: var(--ink);
+}
+.palette-exercises {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+.palette-group:not([open]) > .palette-exercises {
+  display: none;
+}
+.palette-exercise {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  cursor: grab;
+}
+.palette-exercise:active {
+  cursor: grabbing;
+}
+.palette-exercise > div {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.palette-exercise strong {
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.palette-exercise small {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.palette-grip {
+  flex: none;
+  color: var(--muted);
+}
+.palette-exercise .icon-button {
+  flex: none;
+  width: 44px;
+  padding: 8px;
+}
+.palette-toggle {
+  display: none;
+}
+.routine-drop-block {
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.block-drop-hint {
+  padding: 14px;
+  margin: 0 0 14px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+.routine-empty-drop {
+  border: 2px dashed var(--line);
+  border-radius: 16px;
+  padding: 30px 20px;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.routine-drop-block.is-drop-target,
+.routine-empty-drop.is-drop-target {
+  border-color: #669d13;
+  box-shadow: 0 0 0 3px var(--accent);
+  background: #fafff3;
+}
+.is-drop-target .block-drop-hint {
+  background: var(--accent-soft);
+  color: var(--ink);
+  border-color: var(--accent);
+}
+@media (max-width: 1199px) {
+  .routine-composer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .exercise-palette {
+    position: static;
+  }
+  .palette-toggle {
+    display: flex;
+    width: 100%;
+    justify-content: flex-start;
+    border: 0;
+    border-radius: 15px;
+    padding: 14px;
+    gap: 8px;
+    text-align: left;
+  }
+  .palette-toggle > svg:last-child {
+    margin-left: auto;
+    flex: none;
+  }
+  .palette-toggle[aria-expanded="true"] > svg:last-child {
+    transform: rotate(180deg);
+  }
+  .palette-content {
+    display: none;
+  }
+  .palette-content.is-open {
+    display: flex;
+    max-height: 620px;
+  }
+  .palette-heading {
+    display: none;
+  }
+  .palette-groups {
+    max-height: 300px;
+  }
+  .palette-exercise strong {
+    font-size: 14px;
+  }
+  .palette-grip {
+    display: none;
+  }
+  .block-drop-hint {
+    display: none;
+  }
+}
+@media print {
+  .exercise-palette,
+  .block-drop-hint,
+  .routine-empty-drop {
+    display: none;
+  }
+  .routine-composer {
+    display: block;
+  }
+}
+
+.palette-feedback {
+  margin: 0;
+  padding: 10px;
+  background: var(--accent-soft);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
