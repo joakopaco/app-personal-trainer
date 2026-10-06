@@ -40,8 +40,11 @@ test("remote and local values are compared and only an explicit resolution overw
     );
     expect(remote.status).toBe("applied");
     await page.unroute("http://127.0.0.1:54341/**");
-    await page.getByRole("button", { name: "Reintentar guardado" }).click();
-    await expect(page.getByText(/Valor confirmado: 42/)).toBeVisible();
+    // The background worker retries after connectivity returns. Its next tick
+    // can replace the retry button with the conflict review before a click.
+    await expect(page.getByText(/Valor confirmado: 42/)).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByText(/Valor local: 44/)).toBeVisible();
     const before = await a.client
       .from("session_sets")
