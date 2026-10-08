@@ -188,9 +188,9 @@ function initialResults(s: GymSession): GymResult[] {
         s.results.find((r) => r.positionId === e.id) || {
           positionId: e.id,
           skipped: false,
-          sets: Array.from({ length: e.prescription.sets || 1 }, () => ({
-            weight: e.prescription.weight,
-            reps: e.prescription.reps,
+          sets: Array.from({ length: e.prescription.sets || 1 }, (_, n) => ({
+            weight: (e.prescription.progression?.[n] ?? e.prescription).weight,
+            reps: (e.prescription.progression?.[n] ?? e.prescription).reps,
             durationSec: e.prescription.durationSec,
             confirmed: false,
           })),

@@ -1,3 +1,4 @@
+import { LoadingState } from "../../components/LoadingState";
 import { DateInput } from "../../components/DateInput";
 import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -221,7 +222,7 @@ export function Today() {
             </label>
           </div>
         </div>
-        {agenda.loading && <p role="status">Cargando agenda…</p>}
+        {agenda.loading && <LoadingState label="Cargando agenda…" />}
         {agenda.error && (
           <div className="error" role="alert">
             {agenda.error}{" "}

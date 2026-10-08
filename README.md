@@ -2,7 +2,7 @@
 
 # Pulso · Herramienta para personal trainers
 
-MVP web implementado con React/TypeScript, Supabase Auth/Postgres y cola local en IndexedDB. El uso diario prioriza celular; la computadora permite preparar rutinas, plantillas y revisar progreso. Solo los entrenadores tienen cuenta; cada uno ve sus propios alumnos.
+Aplicación web implementada con React/TypeScript, Supabase Auth/Postgres y cola local en IndexedDB. El uso diario prioriza celular; la computadora permite preparar rutinas, plantillas y revisar progreso. En personal trainer, cada entrenador tiene una cuenta y sus alumnos son fichas privadas. La modalidad gimnasio agrega cuentas administradas de gimnasio y entrenado; ver [operación de gimnasio](docs/ops/gym-accounts.md).
 
 ## Ejecutar la app nueva en local
 
@@ -16,12 +16,12 @@ npm run dev
 Requiere Node 24 y Docker Desktop. Abrir **http://127.0.0.1:5173**. Las dos cuentas ficticias están en `.local/accounts.json` (archivo privado, ignorado por Git). `local:setup` rota sus contraseñas si se repite. La nueva app no importa la demo automáticamente.
 
 - Hoy: agenda, inasistencia sin reprogramar, cancelación y entrenamiento espontáneo; acceso rápido a alumnos entrenando.
-- Entrenamiento: peso/reps/series/descansos inline, alcance de ajuste elegible, series observadas, corrección con motivo y cierre explícito. Varios alumnos mantienen sus valores independientes.
-- Rutinas: cuatro semanas, días y bloques, copias independientes, borradores incompletos, publicación versionada y comparación de cambios. El mes nuevo continúa la última rutina cuando corresponde.
+- Entrenamiento: series visibles con peso, repeticiones y confirmación por fila; ajustes del ejercicio, descansos legibles, temporizador compacto, corrección con motivo y cierre explícito. Varios alumnos mantienen sus valores independientes.
+- Rutinas: cuatro semanas, días de la agenda del alumno, plantillas de hasta seis días y copia a semanas elegidas. Series de 1–4, repeticiones de 4/6/8/10/12 y descansos de 30/60/180/300 segundos. Progresión opcional con peso y repeticiones por serie; descanso macro exclusivamente de bloque. Los valores antiguos se conservan. Borradores incompletos, publicación versionada y comparación de cambios mantienen separada la rutina vigente.
 - Biblioteca: catálogo en español organizado por grupo muscular, búsqueda, favoritos y ejercicios propios. Sin imágenes ni animaciones por decisión del producto.
 - Historial: resultados cerrados, valores anteriores/nuevos, filtros, volumen, series por músculo y CSV. Los registros v6 se conservan como agregados antiguos.
 - Ajustes: perfil, edición de nombre y cambio de contraseña actual. Email de solo lectura hasta habilitar correo verificado.
-- Centro de sincronización: reintentos, conflictos, recuperación de entrenamiento de otro mes, exportación e importación explícita v6. Accesible desde Hoy → Datos y sincronización y desde el aviso de cambios pendientes. Salir o actualizar se bloquea mientras haya pendientes.
+- Guardado y recuperación: estados locales y de servidor diferenciados, reintentos idempotentes, recuperación de conflictos dentro del flujo y borradores recuperables entre pestañas. La navegación protege cambios que todavía no pudieron guardarse; se puede descargar una copia de recuperación. La actualización de la PWA espera un punto sin pendientes.
 
 **Guardado:** primero se confirma una transacción local; después la app indica sincronización cuando el servidor confirma. Recargar offline conserva los comandos ya guardados. La caché no reemplaza un backup: borrar datos del navegador puede perder cambios que todavía no llegaron al servidor. El acceso offline requiere preparación previa y se limita a 24 h desde la verificación.
 
@@ -44,7 +44,7 @@ E2E requiere la instancia local y las cuentas generadas; utiliza datos ficticios
 
 [Verificación del MVP](docs/verification-mvp.md) distingue evidencia local y pendientes externos. [Despliegue](docs/ops/deploy.md), [respaldo y restauración](docs/ops/backup-restore.md), [incidentes](docs/ops/incident-response.md), [privacidad](docs/ops/privacy.md), [piloto](docs/ops/pilot.md) y [Android/iOS](docs/mobile-readiness.md).
 
-No hay publicación en Vercel ni Supabase remoto: el usuario indicó avanzar primero en local. SMTP real, backups externos, dispositivos físicos y la semana de piloto son pasos posteriores. La app no debe presentarse como un servicio productivo con recuperación garantizada antes de completarlos.
+El piloto está publicado en Vercel y conectado a Supabase cloud. Docker se usa exclusivamente para pruebas locales con datos ficticios; no es una dependencia de la app publicada. SMTP real, respaldos externos, dispositivos físicos y la semana de piloto conservan sus verificaciones operativas pendientes. No se debe confundir una batería local aprobada con recuperación productiva garantizada.
 
 Arquitectura: `apps/web` contiene la interfaz y adaptadores; `packages/domain` las reglas/contratos; `packages/sync` la persistencia/cola; `supabase/migrations` el esquema y las operaciones autorizadas. [Plan original](docs/PLAN-MVP.md) y [decisiones de implementación](docs/implementation-decisions.md).
 

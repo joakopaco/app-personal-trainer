@@ -1,5 +1,5 @@
 import type { RoutineDocument } from "@pulso/domain/routines";
-import { formatRestMinutes } from "../../components/rest-minutes";
+import { formatRestDuration } from "../../components/rest-minutes";
 import { Brand } from "../../components/Brand";
 export function RoutinePrint({
   document,
@@ -48,9 +48,8 @@ export function RoutinePrint({
                     Descanso macro:{" "}
                     {block.macroRest === null
                       ? "sin definir"
-                      : formatRestMinutes(block.macroRest) + " min"}{" "}
-                    entre{" "}
-                    {block.macroTarget === "series" ? "series" : "bloques"}.
+                      : formatRestDuration(block.macroRest)}{" "}
+                    al terminar el bloque.
                   </p>
                   <table>
                     <thead>
@@ -69,22 +68,35 @@ export function RoutinePrint({
                             {e.name}
                             {e.warmup && <small> · Calentamiento</small>}
                           </td>
-                          <td>{e.prescription.sets ?? "—"}</td>
+                          <td>
+                            {e.prescription.sets ?? "—"}
+                            {e.prescription.progression && " · progresión"}
+                          </td>
                           <td>
                             {e.type === "load_reps"
-                              ? (e.prescription.weight ?? "—") + " kg"
+                              ? e.prescription.progression
+                                ? e.prescription.progression
+                                    .map(
+                                      (s, n) =>
+                                        `${n + 1}: ${s.weight ?? "—"} kg`,
+                                    )
+                                    .join(" / ")
+                                : (e.prescription.weight ?? "—") + " kg"
                               : "—"}
                           </td>
                           <td>
                             {e.type === "time"
                               ? (e.prescription.durationSec ?? "—") + " s"
-                              : (e.prescription.reps ?? "—")}
+                              : e.prescription.progression
+                                ? e.prescription.progression
+                                    .map((s, n) => `${n + 1}: ${s.reps ?? "—"}`)
+                                    .join(" / ")
+                                : (e.prescription.reps ?? "—")}
                           </td>
                           <td>
                             {e.prescription.microRest === null
                               ? "—"
-                              : formatRestMinutes(e.prescription.microRest) +
-                                " min"}
+                              : formatRestDuration(e.prescription.microRest)}
                           </td>
                         </tr>
                       ))}

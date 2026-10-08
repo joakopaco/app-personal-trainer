@@ -7,6 +7,15 @@ export function formatRestMinutes(seconds: number | null): string {
   return seconds === null ? "" : String(seconds / 60);
 }
 
+/** Read-only presentation; draft minute parsing/serialization stays unchanged. */
+export function formatRestDuration(seconds: number | null): string {
+  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return "—";
+  const minutes = Math.floor(seconds / 60),
+    remainder = seconds % 60;
+  if (!minutes) return `${remainder} s`;
+  return `${minutes} min${remainder ? ` ${remainder} s` : ""}`;
+}
+
 export function parseRestMinutes(raw: string): ReturnType<typeof parseNumber> {
   if (raw === "") return { ok: true, value: null };
   const normalized = raw.replace(",", ".");

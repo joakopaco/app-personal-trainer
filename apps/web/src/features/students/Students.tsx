@@ -1,3 +1,4 @@
+import { LoadingState } from "../../components/LoadingState";
 import { StudentHeader } from "./StudentHeader";
 import { RoutineArchive } from "../history/RoutineArchive";
 import { ExportRoutine } from "../routines/ExportRoutine";
@@ -142,7 +143,7 @@ export function StudentProfile() {
   const [error, setError] = useState(""),
     [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false);
-  if (!data) return <p>Cargando alumno…</p>;
+  if (!data) return <LoadingState label="Cargando alumno…" />;
   const s = data.student,
     routine = data.routine?.document,
     schedule = data.schedule;

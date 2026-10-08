@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { LoadingState } from "../../components/LoadingState";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Pencil, Trash2, Undo2 } from "lucide-react";
 import { liveQuery } from "dexie";
@@ -22,12 +23,22 @@ import {
   templatePath,
   type TemplateDraft,
 } from "./template-drafts";
+import { DraftStorage } from "./draft-storage";
+import { useDraftNavigation } from "./use-draft-navigation";
 import "./routine-editor.css";
 
 export function TemplateEditor() {
+  const { id } = useParams();
+  return <TemplateEditorContent key={id} />;
+}
+function TemplateEditorContent() {
   const { id } = useParams(),
     { db } = useData(),
     navigate = useNavigate();
+  const storage = useMemo(
+    () => new DraftStorage(db, templateDraftKey(id!)),
+    [db, id],
+  );
   const [doc, setDoc] = useState<RoutineDocument | null>(null);
   const [revision, setRevision] = useState(0),
     [editing, setEditing] = useState(false);
@@ -42,6 +53,7 @@ export function TemplateEditor() {
   const rawValues = useRef<Record<string, string>>({}),
     rawInvalid = useRef(new Set<string>());
   const writes = useRef<Promise<unknown>>(Promise.resolve());
+  const editVersion = useRef(0);
   const [writing, setWriting] = useState(false);
   const [confirmation, setConfirmation] = useState<"discard" | "delete" | null>(
     null,
@@ -61,30 +73,21 @@ export function TemplateEditor() {
   useEffect(() => {
     let active = true;
     setLoaded(false);
+    setDoc(null);
+    setDirty(false);
+    setConflict(false);
+    setMessage("");
+    rawValues.current = {};
+    rawInvalid.current.clear();
     setError("");
     void (async () => {
       try {
-        const local = (await db.meta.get(templateDraftKey(id!)))?.value as
-          TemplateDraft | undefined;
+        const local = await storage.read<TemplateDraft>();
         const pending = (await db.meta.get("library-pending"))?.value as
           LibraryCommand | undefined;
-        const { data, error: loadError } = await cloud()
-          .from("routine_templates")
-          .select("id,document,revision")
-          .eq("id", id!)
-          .maybeSingle();
+        const initialEdits = editVersion.current;
         if (!active) return;
-        if (
-          !data &&
-          pending &&
-          pending.id === id &&
-          pending.kind === "template_delete"
-        ) {
-          // A lost acknowledgement must still be retryable after the row is gone.
-          setDoc(null);
-          setRevision(pending.expectedRevision ?? 0);
-          return;
-        }
+        if (pending?.id === id) setPendingOperation(pending);
         if (local) {
           rawValues.current = Object.fromEntries(
             Object.entries(local.rawValues).map(([key, value]) => [
@@ -109,6 +112,28 @@ export function TemplateEditor() {
           setDoc(local.document);
           setEditing(true);
           setDirty(true);
+          setRevision(local.revision);
+          setLoaded(true);
+        }
+        const { data, error: loadError } = await cloud()
+          .from("routine_templates")
+          .select("id,document,revision")
+          .eq("id", id!)
+          .maybeSingle();
+        if (!active) return;
+        if (editVersion.current !== initialEdits) return;
+        if (
+          !data &&
+          pending &&
+          pending.id === id &&
+          pending.kind === "template_delete"
+        ) {
+          // A lost acknowledgement must still be retryable after the row is gone.
+          setDoc(null);
+          setRevision(pending.expectedRevision ?? 0);
+          return;
+        }
+        if (local) {
           // An uncertain save may already have been confirmed on another screen.
           const same =
             data && sameRoutineContent(data.document, local.document);
@@ -117,10 +142,11 @@ export function TemplateEditor() {
           );
           setConflict(
             Boolean(
-              data &&
-              !same &&
-              data.revision !== local.revision &&
-              pending?.id !== id,
+              (!loadError && !data && local.revision > 0) ||
+              (data &&
+                !same &&
+                data.revision !== local.revision &&
+                pending?.id !== id),
             ),
           );
           if (loadError)
@@ -149,33 +175,15 @@ export function TemplateEditor() {
       active = false;
     };
   }, [db, id, reload]);
-  useEffect(() => {
-    const leave = (event: BeforeUnloadEvent) => {
-      if (localFailed || writing || busy) {
-        event.preventDefault();
-        event.returnValue = "";
-      }
-    };
-    const link = (event: MouseEvent) => {
-      if (
-        (localFailed || writing || busy) &&
-        (event.target as Element).closest("a[href]")
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-        setError(
-          "Esperá a que se guarden los cambios. Si hubo un error, volvé a intentar guardar antes de salir.",
-        );
-      }
-    };
-    window.addEventListener("beforeunload", leave);
-    document.addEventListener("click", link, true);
-    return () => {
-      window.removeEventListener("beforeunload", leave);
-      document.removeEventListener("click", link, true);
-    };
-  }, [localFailed, writing, busy]);
+  const { guard, allowNavigation } = useDraftNavigation(
+    localFailed || writing || busy,
+    () =>
+      setError(
+        "Esperá a que se guarden los cambios. Si hubo un error, reintentá antes de salir.",
+      ),
+  );
   function change(next: RoutineDocument) {
+    editVersion.current += 1;
     const valid = new Set(
       next.weeks.flatMap((w) =>
         w.flatMap((d) =>
@@ -206,9 +214,7 @@ export function TemplateEditor() {
         ]),
       ),
     };
-    const current = writes.current
-      .catch(() => undefined)
-      .then(() => db.meta.put({ key: templateDraftKey(id!), value: draft }));
+    const current = storage.write(draft);
     writes.current = current;
     void current.then(
       () => {
@@ -217,37 +223,50 @@ export function TemplateEditor() {
           setLocalFailed(false);
         }
       },
-      () => {
+      (cause) => {
+        if (writes.current !== current) return;
         setWriting(false);
         setLocalFailed(true);
+        if (/otra pestaña/.test((cause as Error).message)) setConflict(true);
         setError(
-          "No se pudo conservar el borrador en este dispositivo. Volvé a intentar guardar.",
+          "No se pudo conservar el borrador en este dispositivo. " +
+            (cause as Error).message,
         );
       },
     );
   }
   async function save() {
     if (!doc) return;
+    let acknowledged = false;
     setBusy(true);
     setError("");
     setMessage("");
     try {
       if (rawInvalid.current.size)
         throw Error("Completá o corregí los campos antes de guardar.");
+      if (doc.weeks.some((week) => week.length > 6))
+        throw Error(
+          "Las plantillas admiten hasta 6 días. Revisá la distribución antes de guardar.",
+        );
       const issues = validateRoutine(doc);
       if (issues.length) throw Error(issues[0]);
       // Capture the latest document, including a retry after a failed local write.
       change(doc);
       await writes.current;
-      const saved = await saveLibrary(db, {
-        workspaceId: db.scope.workspaceId,
-        operationId: crypto.randomUUID(),
-        id,
-        expectedRevision: revision,
-        kind: "template",
-        payload: { document: doc },
-      });
-      await db.meta.delete(templateDraftKey(id!));
+      const saved = await saveLibrary(
+        db,
+        pendingSave
+          ? pendingOperation!
+          : {
+              workspaceId: db.scope.workspaceId,
+              operationId: crypto.randomUUID(),
+              id,
+              expectedRevision: revision,
+              kind: "template",
+              payload: { document: doc },
+            },
+      );
+      acknowledged = true;
       setDoc(saved.document);
       setRevision(saved.revision);
       setDirty(false);
@@ -255,18 +274,31 @@ export function TemplateEditor() {
       setConflict(false);
       rawValues.current = {};
       rawInvalid.current.clear();
+      setPendingOperation(undefined);
+      await storage.remove();
       setMessage("Plantilla guardada en tu catálogo.");
     } catch (e) {
       setError((e as Error).message);
-      const pending = (await db.meta.get("library-pending"))?.value as
-        LibraryCommand | undefined;
-      if (pending?.id !== id) {
-        const { data } = await cloud()
-          .from("routine_templates")
-          .select("revision")
-          .eq("id", id!)
-          .maybeSingle();
-        if (data && data.revision !== revision) setConflict(true);
+      if (acknowledged) {
+        setLocalFailed(true);
+        setError(
+          "La plantilla se guardó en el catálogo. Falta limpiar la copia local; reintentá el guardado local.",
+        );
+        return;
+      }
+      try {
+        const pending = (await db.meta.get("library-pending"))?.value as
+          LibraryCommand | undefined;
+        if (pending?.id !== id) {
+          const { data } = await cloud()
+            .from("routine_templates")
+            .select("revision")
+            .eq("id", id!)
+            .maybeSingle();
+          if (data && data.revision !== revision) setConflict(true);
+        }
+      } catch {
+        /* Keep the original save failure visible. */
       }
     } finally {
       setBusy(false);
@@ -284,8 +316,9 @@ export function TemplateEditor() {
           throw Error(
             "Primero reintentá la operación pendiente para confirmar qué quedó guardado.",
           );
-        await db.meta.delete(templateDraftKey(id!));
       });
+      await storage.remove();
+      allowNavigation();
       navigate("/rutinas", { replace: true });
     } catch (e) {
       setError((e as Error).message);
@@ -299,6 +332,7 @@ export function TemplateEditor() {
     setError("");
     try {
       await writes.current.catch(() => undefined);
+      if (!pendingDelete) await storage.assertCurrent();
       await saveLibrary(
         db,
         pendingDelete
@@ -312,7 +346,8 @@ export function TemplateEditor() {
               payload: { name: doc?.name || "Rutina" },
             },
       );
-      await db.meta.delete(templateDraftKey(id!));
+      await storage.remove();
+      allowNavigation();
       navigate("/rutinas", { replace: true });
     } catch (e) {
       setError((e as Error).message);
@@ -323,6 +358,7 @@ export function TemplateEditor() {
   }
   return (
     <div className="routine-workspace">
+      {guard}
       <Link className="routine-back" to="/rutinas">
         <ArrowLeft size={18} aria-hidden="true" />
         Volver al catálogo
@@ -386,6 +422,26 @@ export function TemplateEditor() {
           )}
         </div>
       )}
+      {localFailed && (
+        <button
+          className="button secondary"
+          disabled={writing || busy}
+          onClick={async () => {
+            if (!doc) return;
+            if (dirty) change(doc);
+            else
+              try {
+                await storage.remove();
+                setLocalFailed(false);
+                setError("");
+              } catch (cause) {
+                setError((cause as Error).message);
+              }
+          }}
+        >
+          Reintentar guardado local
+        </button>
+      )}
       {message && (
         <p role="status" className="notice">
           {message}
@@ -424,18 +480,27 @@ export function TemplateEditor() {
             disabled={busy}
             onClick={async () => {
               if (!doc) return;
-              if (rawInvalid.current.size) {
-                setError("Corregí los campos antes de crear otra plantilla.");
-                return;
-              }
               setBusy(true);
               try {
-                await writes.current;
-                const copyId = await createTemplateDraft(db, {
-                  ...doc,
-                  name: doc.name.slice(0, 110) + " (copia)",
-                });
-                await db.meta.delete(templateDraftKey(id!));
+                await writes.current.catch(() => undefined);
+                const copyId = await createTemplateDraft(
+                  db,
+                  {
+                    ...doc,
+                    name: doc.name.slice(0, 110) + " (copia)",
+                  },
+                  Object.fromEntries(
+                    Object.entries(rawValues.current).map(([key, value]) => [
+                      key,
+                      isRestField(key.split(":").at(-1) as NumericField)
+                        ? storeRestRaw(value)
+                        : value,
+                    ]),
+                  ),
+                );
+                // Another tab may own the old draft now; keep that version intact.
+                if (!localFailed) await storage.remove();
+                allowNavigation();
                 navigate(templatePath(copyId));
               } catch {
                 setError("No se pudo conservar la copia. Reintentá.");
@@ -448,7 +513,7 @@ export function TemplateEditor() {
           </button>
         </section>
       )}
-      {!loaded && <p role="status">Cargando plantilla…</p>}
+      {!loaded && <LoadingState label="Cargando plantilla…" />}
       {loaded &&
         doc &&
         (editing ? (

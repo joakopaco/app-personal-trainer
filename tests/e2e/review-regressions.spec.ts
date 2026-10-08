@@ -25,11 +25,9 @@ test("unregistered annotations remain editable in the training screen", async ({
   try {
     await login(page);
     await page.goto("/entrenar/" + a.studentId);
-    await page.getByRole("button", { name: /Detalle de series/ }).click();
     await page.getByLabel("Peso serie 2", { exact: true }).fill("27,5");
     await page.getByRole("link", { name: "Hoy", exact: true }).click();
     await page.goto("/entrenar/" + a.studentId);
-    await page.getByRole("button", { name: /Detalle de series/ }).click();
     await expect(page.getByLabel("Peso serie 2", { exact: true })).toHaveValue(
       "27,5",
     );
@@ -115,14 +113,14 @@ test("a template is selected at creation and later draft edits survive reload", 
     await page
       .getByRole("button", { name: "Crear rutina", exact: true })
       .click();
-    await expect(page.getByLabel("Nombre del día")).toHaveValue("Día 1");
+    await expect(page.getByRole("button", {name:"Día 1", exact:true})).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: "+ Día", exact: true }).click();
     await page.getByRole("button", { name: "Día 2", exact: true }).click();
-    await expect(page.getByLabel("Nombre del día")).toHaveValue("Día 2");
+    await expect(page.getByRole("button", {name:"Día 2", exact:true})).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByLabel("Punto de partida")).toHaveCount(0);
     await page.reload();
     await page.getByRole("button", { name: "Día 2", exact: true }).click();
-    await expect(page.getByLabel("Nombre del día")).toHaveValue("Día 2");
+    await expect(page.getByRole("button", {name:"Día 2", exact:true})).toHaveAttribute("aria-pressed", "true");
   } finally {
     await dropFixture(a.studentId);
     await adminClient().from("routine_templates").delete().eq("id", id);

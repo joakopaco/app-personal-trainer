@@ -166,7 +166,7 @@ export function RestClock({
           onClick={() => save(initial)}
         >
           <RotateCcw size={18} aria-hidden="true" />
-          Reiniciar
+          <span className="rest-reset-label">Reiniciar</span>
         </button>
         <button
           className="button secondary"

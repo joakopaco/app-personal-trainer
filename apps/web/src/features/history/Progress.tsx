@@ -1,3 +1,4 @@
+import { LoadingState } from "../../components/LoadingState";
 import { DateInput } from "../../components/DateInput";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { cloud } from "../../adapters/supabase";
@@ -569,7 +570,7 @@ export function Progress({
             {selected && !truncated ? selected.name : "Cada avance empieza acá"}
           </h2>
           {loading ? (
-            <p role="status">Cargando todas las sesiones del período…</p>
+            <LoadingState label="Cargando todas las sesiones del período…" />
           ) : truncated ? (
             <p>Acotá el período para ver el gráfico.</p>
           ) : error ? (

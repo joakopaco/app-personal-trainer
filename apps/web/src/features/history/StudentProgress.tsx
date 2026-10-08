@@ -1,3 +1,4 @@
+import { LoadingState } from "../../components/LoadingState";
 import { useParams } from "react-router-dom";
 import { useData } from "../../app/DataProvider";
 import { StudentHeader } from "../students/StudentHeader";
@@ -8,7 +9,7 @@ export function StudentProgress() {
   const { id } = useParams();
   const { rows } = useData();
   const row = rows.find((r) => r.studentId === id);
-  if (!row) return <p role="status">Cargando alumno…</p>;
+  if (!row) return <LoadingState label="Cargando alumno…" />;
   const student = row.projection.student;
   return (
     <div className="student-page">

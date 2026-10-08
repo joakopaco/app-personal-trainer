@@ -1,6 +1,7 @@
+import { LoadingState } from "./components/LoadingState";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { isPlatformPortal } from "./adapters/supabase";
 // Keep each lazy import in its own loader so the production build attaches
@@ -15,12 +16,18 @@ const CustomerApp = lazy(() =>
 );
 const App = isPlatformPortal ? PlatformApp : CustomerApp;
 import "./app/styles.css";
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <Suspense fallback={<p role="status">Cargando…</p>}>
+const router = createBrowserRouter([
+  {
+    path: "*",
+    element: (
+      <Suspense fallback={<LoadingState label="Cargando…" fullScreen />}>
         <App />
       </Suspense>
-    </BrowserRouter>
+    ),
+  },
+]);
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <RouterProvider router={router} />
   </React.StrictMode>,
 );

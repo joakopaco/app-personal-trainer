@@ -1,3 +1,4 @@
+import { LoadingState } from "../../components/LoadingState";
 import { createContext, useContext, useEffect, useState } from "react";
 import {
   NavLink,
@@ -98,11 +99,7 @@ export function GymPortal() {
       </main>
     );
   if (!access)
-    return (
-      <main>
-        <p role="status">Preparando tu gimnasio…</p>
-      </main>
-    );
+    return <LoadingState label="Preparando tu gimnasio…" fullScreen />;
   if (access.mustChangePassword)
     return (
       <main className="gym-gate">

@@ -23,7 +23,6 @@ test("mobile live correction, accessible dialog and desktop history render witho
       path: ".local/screens/training-mobile.png",
       fullPage: true,
     });
-    await page.getByRole("button", { name: /Detalle de series/ }).click();
     await page
       .getByRole("button", { name: "Registrar serie 1", exact: true })
       .click();
@@ -154,12 +153,10 @@ test("unfinished individual series survives leaving the student and a reload", a
     await page.getByRole("button", { name: "Ingresar", exact: true }).click();
     await expect(page.getByRole("navigation")).toBeVisible();
     await page.goto("/entrenar/" + a.studentId);
-    await page.getByRole("button", { name: /Detalle de series/ }).click();
     await page.getByLabel("Peso serie 1", { exact: true }).fill("27,5");
     await page.getByLabel("Reps serie 1", { exact: true }).fill("9");
     await page.getByRole("link", { name: "Hoy", exact: true }).click();
     await page.goto("/entrenar/" + a.studentId);
-    await page.getByRole("button", { name: /Detalle de series/ }).click();
     await expect(page.getByLabel("Peso serie 1", { exact: true })).toHaveValue(
       "27,5",
     );
@@ -167,7 +164,6 @@ test("unfinished individual series survives leaving the student and a reload", a
       "9",
     );
     await page.reload();
-    await page.getByRole("button", { name: /Detalle de series/ }).click();
     await expect(page.getByLabel("Peso serie 1", { exact: true })).toHaveValue(
       "27,5",
     );

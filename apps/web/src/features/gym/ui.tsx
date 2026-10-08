@@ -1,3 +1,4 @@
+import { LoadingState } from "../../components/LoadingState";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, X, Copy, Check } from "lucide-react";
@@ -47,7 +48,7 @@ export function LoadState({
   retry: () => void;
 }) {
   return loading ? (
-    <p role="status">Cargando tu espacio…</p>
+    <LoadingState label="Cargando tu espacio…" />
   ) : error ? (
     <div className="card stack">
       <p role="alert" className="error">

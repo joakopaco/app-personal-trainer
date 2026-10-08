@@ -6,6 +6,16 @@ export const prescriptionSchema = z.object({
   reps: z.number().int().min(1).max(500).nullable(),
   durationSec: z.number().int().min(1).max(86400).nullable(),
   microRest: rest,
+  progression: z
+    .array(
+      z.object({
+        weight: z.number().min(0).max(1000).multipleOf(0.01).nullable(),
+        reps: z.number().int().min(1).max(500).nullable(),
+      }),
+    )
+    .min(1)
+    .max(4)
+    .optional(),
 });
 export const exerciseTypeSchema = z.enum(["load_reps", "reps", "time"]);
 export const positionSchema = z.object({
@@ -88,14 +98,36 @@ export function validateRoutine(doc: unknown, publish = false): string[] {
       if (publish && !positions.length)
         errors.push(`${day.name}: agregá ejercicios`);
       for (const p of positions) {
+        const progression = p.prescription.progression;
+        if (
+          progression &&
+          (p.type === "time" || progression.length !== p.prescription.sets)
+        )
+          errors.push(
+            `${p.name}: la progresión debe tener una fila por serie y usar repeticiones`,
+          );
+        if (
+          publish &&
+          progression?.some(
+            (s) =>
+              s.reps === null || (p.type === "load_reps" && s.weight === null),
+          )
+        )
+          errors.push(
+            `${p.name}: completá el peso y las repeticiones de cada serie`,
+          );
         if (exerciseLineages.has(p.lineageId))
           errors.push("Posición repetida en el día");
         exerciseLineages.add(p.lineageId);
         if (
           publish &&
           (p.prescription.sets === null ||
-            (p.type !== "time" && p.prescription.reps === null) ||
-            (p.type === "load_reps" && p.prescription.weight === null) ||
+            (!progression &&
+              p.type !== "time" &&
+              p.prescription.reps === null) ||
+            (!progression &&
+              p.type === "load_reps" &&
+              p.prescription.weight === null) ||
             (p.type === "time" && p.prescription.durationSec === null))
         )
           errors.push(`${p.name}: completá los valores`);

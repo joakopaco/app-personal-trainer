@@ -36,11 +36,12 @@ test("trainer can build a block routine and train from the mobile UI", async ({
       .getByRole("button", { name: "Sentadilla con barra", exact: true })
       .click();
     await page.getByLabel("Peso kg").fill("22,5");
-    await page.getByLabel("Series", { exact: true }).fill("3");
-    await page.getByLabel("Repeticiones", { exact: true }).fill("10");
+    await page.getByLabel("Series", { exact: true }).selectOption("3");
+    await page.getByLabel("Repeticiones", { exact: true }).selectOption("10");
     await page
-      .getByRole("button", { name: "Copiar semana a las siguientes" })
+      .getByRole("button", { name: /Copiar semana 1 a/ })
       .click();
+    await page.getByRole("button", { name: "Copiar a 3 semanas", exact: true }).click();
     await page
       .getByRole("button", { name: "Guardar borrador", exact: true })
       .click();
@@ -63,6 +64,7 @@ test("trainer can build a block routine and train from the mobile UI", async ({
     await expect(
       page.getByRole("heading", { name: "Sentadilla con barra" }),
     ).toBeVisible();
+    await page.getByText("Ajustes del ejercicio", { exact: true }).click();
     await page.getByLabel("Peso kg").fill("25");
     await page.getByLabel("Peso kg").blur();
     await expect(page.getByText("Guardado", { exact: true })).toBeVisible();

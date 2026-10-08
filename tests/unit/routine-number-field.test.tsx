@@ -42,7 +42,9 @@ test("saved routines show exercise prescriptions and rest minutes for the select
   doc.weeks[1][0].blocks[0].exercises[0].name = "Remo";
   render(<RoutineSummary document={doc} />);
   expect(screen.getByText("Sentadilla")).toBeTruthy();
-  expect(screen.getByText(/Descanso 1.5 min entre series/)).toBeTruthy();
+  expect(
+    screen.getByText(/Descanso 1 min 30 s al terminar el bloque/),
+  ).toBeTruthy();
   expect(screen.getByText("1 min")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Semana 2" }));
   expect(screen.getByText("Remo")).toBeTruthy();

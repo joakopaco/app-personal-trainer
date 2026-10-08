@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { cloud } from "../../adapters/supabase";
 import { useData } from "../../app/DataProvider";
 import {
-  blankRoutine,
-  cloneRoutineDocument,
   type RoutineDocument,
 } from "@pulso/domain/routines";
 import { loadAllPages } from "../history/history-progress-model";
@@ -12,6 +10,8 @@ import {
   routineDate,
   type RoutineRevision,
 } from "../history/routine-history-model";
+
+import { routineForSchedule, scheduledDays, weekdayNames } from "@pulso/domain/routine-schedule";
 
 type Source = { id: string; name: string; document: RoutineDocument };
 export function TemplateTools({
@@ -33,6 +33,7 @@ export function TemplateTools({
   const [archives, setArchives] = useState<Source[]>([]);
   const [selected, setSelected] = useState(initialSource);
   const [name, setName] = useState("Nueva rutina");
+  const weekdays = scheduledDays(current?.schedule?.weekdays);
   const [days, setDays] = useState(current?.schedule?.weekdays.length || 1);
   const [replace, setReplace] = useState(false);
   const [error, setError] = useState("");
@@ -197,7 +198,8 @@ export function TemplateTools({
           onChange={(e) => setName(e.target.value)}
         />
       </label>
-      {!selected && (
+      {weekdays.length > 0 && <div className="scheduled-days"><strong>Días de su agenda</strong><div className="row">{weekdays.map(n => <span className="badge" key={n}>{weekdayNames[n-1]}</span>)}</div><small>Se preparan estos días en las cuatro semanas.</small></div>}
+      {!selected && !weekdays.length && (
         <label className="field">
           Cantidad de días por semana
           <select
@@ -206,7 +208,7 @@ export function TemplateTools({
             disabled={busy}
             onChange={(e) => setDays(Number(e.target.value))}
           >
-            {Array.from({ length: 7 }, (_, i) => (
+            {Array.from({ length: 6 }, (_, i) => (
               <option key={i} value={i + 1}>
                 {i + 1}
               </option>
@@ -251,17 +253,7 @@ export function TemplateTools({
             setBusy(true);
             setError("");
             try {
-              const next = source
-                ? cloneRoutineDocument(source.document)
-                : blankRoutine();
-              if (!source)
-                next.weeks = next.weeks.map(() =>
-                  Array.from({ length: days }, (_, i) => ({
-                    id: crypto.randomUUID(),
-                    name: `Día ${i + 1}`,
-                    blocks: [],
-                  })),
-                );
+              const next = routineForSchedule(source?.document, weekdays, days);
               next.name = name.trim();
               await onApply(next);
             } catch (e) {
