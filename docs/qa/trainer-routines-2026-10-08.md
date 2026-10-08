@@ -26,6 +26,7 @@ Se revisó el video aportado de Strong y sus [pantallas oficiales](https://www.s
 - Fallo de sincronización posterior al guardado local que podía bloquear una serie ya registrada; recuperación explícita de anotaciones JSON inválidas.
 - Diferencias entre proyección local y SQL con objetivos nulos; rechazo de ajustes de descanso cuando la progresión tenía valores generales vacíos; preservación de series observadas e historia inmutable.
 - Desborde en Safari móvil de un selector con un descanso antiguo largo.
+- Desplazamiento de la posición restaurada al volver a entrenar: el texto inicial del estado de guardado cambiaba la altura del encabezado móvil. La restauración espera a que esa lectura termine; se conserva la comprobación con tolerancia menor a dos píxeles.
 
 ## Evidencia
 
@@ -46,7 +47,7 @@ Las pruebas cubren cuenta ajena, publicación por revisión, pérdida de respues
 
 ## Operación
 
-Aplicar las tres migraciones incrementales de esta entrega antes de exponer el frontend nuevo. No reiniciar ni cargar fixtures en Supabase cloud. Las migraciones mantienen las validaciones de resultados observados, permisos privados e historial. El frontend anterior sigue leyendo sus prescripciones sin progresión.
+Las tres migraciones incrementales se aplicaron en Supabase cloud antes de exponer el frontend nuevo: `20261008023954`, `20261008024724` y `20261008030446`. Se verificaron el historial remoto, la conservación de objetivos al ajustar descansos y los permisos del helper. No se reinició la base ni se cargaron fixtures en cloud. Las migraciones mantienen las validaciones de resultados observados, permisos privados e historial. El frontend anterior sigue leyendo sus prescripciones sin progresión.
 
 La migración antigua `private_admin_portal` se renombró localmente de `20261005121930` a `20261005124032`, que es su versión ya registrada en cloud. Se comprobó equivalencia de SQL mediante SHA-256 normalizado y solo se reparó el historial local; no se volvió a ejecutar esa migración en producción.
 

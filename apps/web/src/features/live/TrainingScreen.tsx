@@ -35,12 +35,14 @@ export function TrainingScreen() {
   const data = useData();
   const row = data.rows.find((r) => r.studentId === id),
     session = row?.projection.sessions[0];
-  useSessionPosition(data.db, session?.id);
   const [saveView, setSaveView] = useState<{
     queue: PendingCommand[];
     rawInputs: RawInput[];
     loaded: boolean;
   }>({ queue: [], rawInputs: [], loaded: false });
+  // Resolve the save indicator before restoring scroll: its loading text can
+  // wrap on phones and shrink the header after the browser has restored it.
+  useSessionPosition(data.db, session?.id, saveView.loaded);
   const { queue, rawInputs } = saveView;
   const rawCount = rawInputs.length;
   const [volatileFields, setVolatileFields] = useState<

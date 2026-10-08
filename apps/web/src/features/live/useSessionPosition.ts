@@ -3,11 +3,12 @@ import type { LocalStore } from "@pulso/sync/local-db";
 export function useSessionPosition(
   db: LocalStore,
   sessionId: string | undefined,
+  ready = true,
 ) {
   // Capture the outgoing scroll position before React removes the long session
   // DOM. A passive cleanup sees the position clamped by the next, shorter page.
   useLayoutEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || !ready) return;
     let active = true,
       restored = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -38,5 +39,5 @@ export function useSessionPosition(
       if (restored)
         void db.meta.put({ key, value: window.scrollY }).catch(() => {});
     };
-  }, [db, sessionId]);
+  }, [db, sessionId, ready]);
 }

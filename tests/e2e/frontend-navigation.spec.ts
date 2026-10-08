@@ -33,7 +33,7 @@ test("mobile navigation opens pages at the top and restores a live session's pos
     await page.getByRole("link", { name: "Hoy", exact: true }).click();
     await page.locator(`a[href="/entrenar/${fixture.studentId}"]`).click();
     await expect(page.getByLabel("Peso kg", { exact: true })).toHaveValue("20");
-    // Series are initially collapsed again; the browser clamps to available height.
+    // The browser clamps the restored position to available height.
     await expect
       .poll(() => page.evaluate(() => window.scrollY))
       .toBeGreaterThan(100);
