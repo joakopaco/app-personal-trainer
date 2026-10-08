@@ -13,7 +13,7 @@
 - [x] Editor: weekday defaults, six-day cap including duplicate action, preset selects (series 1–4; reps 4/6/8/10/12; rests 30/60/180/300 seconds), progression checkbox with per-set weight/reps rows, macro exclusively on block. Preserve compatible old values without offering them for new values.
 - [x] Routine reading and gym use: scannable exercise cards, set tables, selected day navigation, progression in printable routine and training, usable phone spacing and touch targets. Verify supplied reference and official Strong docs.
 - [x] Verification: unit, types, build, database, affected end-to-end flows, desktop/mobile browser walkthrough; fix findings and record exact limitations. Independent final review.
-- [ ] Delivery: commit tested work and update existing Pulso Space pages with changes, evidence, deployment status and remaining external limitations.
+- [x] Delivery: commit tested work and update existing Pulso Space pages with changes, evidence, deployment status and remaining external limitations.
 
 ## Review focus
 
@@ -24,3 +24,5 @@ Lost server response must not create duplicate commands; failed IndexedDB writes
 Initial checkout clean on main. Work proceeds on codex/trainer-routines-reliability. Autonomous design and implementation explicitly authorized by user; no approval gate. Using a focused draft implementation subagent while primary implements shared prescription/editor integration, followed by independent review.
 
 User follow-up: prioritize trainer live logging ergonomics, keep Strong as presentation reference only, show durations in seconds or minutes/seconds, use12 instead of15, redesign week/day controls and branded loading. Implemented and reviewed. Verification:119 unit,43 legacy,80 database,96 E2E,5 PWA passed; WebKit overflow fixed and targeted narrow-screen suite passed. See docs/qa/trainer-routines-2026-10-08.md.
+
+Delivery: PR #1 merged as e4ff552 after full CI passed on 6813467. All three migrations applied and verified in Supabase cloud. Production Vercel ready; published editor/menu/presets reviewed on desktop and phone width. Five existing Space pages updated. The final mobile scroll issue found by CI was corrected and independently reviewed, then verified by five Chromium and three WebKit repetitions before the successful full CI run. Final documentation records exact evidence and external limitations.

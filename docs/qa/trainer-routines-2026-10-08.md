@@ -52,3 +52,11 @@ Las tres migraciones incrementales se aplicaron en Supabase cloud antes de expon
 La migración antigua `private_admin_portal` se renombró localmente de `20261005121930` a `20261005124032`, que es su versión ya registrada en cloud. Se comprobó equivalencia de SQL mediante SHA-256 normalizado y solo se reparó el historial local; no se volvió a ejecutar esa migración en producción.
 
 La validación de emulación no reemplaza el uso en Android/iPhone físicos ni una clase real. Continúan los pendientes operativos anteriores sobre correo y respaldos externos. No se afirma ausencia universal de fallos ni se equiparan pruebas locales con una auditoría de datos productivos.
+
+## Entrega publicada
+
+- Código final `6813467`, integrado en `main` mediante `e4ff552` y [PR #1](https://github.com/joakopaco/app-personal-trainer/pull/1).
+- [GitHub Actions completo aprobado](https://github.com/joakopaco/app-personal-trainer/actions/runs/37723116104): tipos, unitarias/legacy, base de datos, build, 96 E2E y 5 PWA. La ejecución inicial de PR encontró el desplazamiento móvil documentado arriba; el arreglo pasó cinco repeticiones Chromium y tres WebKit antes de la ejecución final aprobada, con tolerancia menor a dos píxeles.
+- Vercel confirmó Ready / Production para el merge. Se revisaron Hoy, catálogo, borrador existente, editor, presets y menú de copia semanal en [la web publicada](https://app-personal-trainer-one.vercel.app), en escritorio y móvil, sin errores de consola. Las operaciones de escritura y el registro de sesiones se probaron con datos ficticios en el entorno aislado.
+- La revisión de seguridad de Supabase posterior a las migraciones conserva los avisos anteriores; no se añadieron avisos por este cambio. Preview de Vercel no tiene variables de Supabase y permanece sin backend de pruebas; producción sí tiene su configuración verificada.
+- Actualizadas las cinco páginas existentes del [Space Pulso Personal Trainer](https://chatgpt.com/space/page_6ac696b4e8d08191867b876863326ddb): portada, producto, arquitectura, decisiones y verificación.
