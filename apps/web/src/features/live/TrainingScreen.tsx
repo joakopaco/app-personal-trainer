@@ -1,9 +1,14 @@
+import "./training.css";
+import { useDraftNavigation } from "../routines/use-draft-navigation";
+import { download } from "../../components/download";
 import { RestTimer } from "./RestTimer";
 import { TrainingRecovery } from "./TrainingRecovery";
 import { UnfinishedAnnotations } from "./UnfinishedAnnotations";
 import {
   displayNumber,
   formatRestMinutes,
+  formatRestDuration,
+  parseRestMinutes,
   isRestField,
   parseDisplayedNumber,
   restoreRestRaw,
@@ -16,8 +21,8 @@ import { ExerciseArt } from "../catalog/ExerciseLibrary";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { liveQuery } from "dexie";
-import type { PendingCommand } from "@pulso/sync/local-db";
-import { ArrowLeft, Check, ChevronDown } from "lucide-react";
+import type { PendingCommand, RawInput } from "@pulso/sync/local-db";
+import { ArrowLeft, Check, ChevronDown, MoreHorizontal } from "lucide-react";
 import type { SessionItem, TrainingSession } from "@pulso/domain/contracts";
 import {
   parseNumber,
@@ -33,10 +38,11 @@ export function TrainingScreen() {
   useSessionPosition(data.db, session?.id);
   const [saveView, setSaveView] = useState<{
     queue: PendingCommand[];
-    rawCount: number;
+    rawInputs: RawInput[];
     loaded: boolean;
-  }>({ queue: [], rawCount: 0, loaded: false });
-  const { queue, rawCount } = saveView;
+  }>({ queue: [], rawInputs: [], loaded: false });
+  const { queue, rawInputs } = saveView;
+  const rawCount = rawInputs.length;
   const [volatileFields, setVolatileFields] = useState<
     Record<string, "writing" | "failed">
   >({});
@@ -59,39 +65,21 @@ export function TrainingScreen() {
   useEffect(() => {
     const sub = liveQuery(() =>
       data.db.transaction("r", data.db.rawInputs, data.db.outbox, async () => ({
-        rawCount: await data.db.rawInputs
+        rawInputs: await data.db.rawInputs
           .where("studentId")
           .equals(id!)
-          .count(),
+          .toArray(),
         queue: await data.db.listPending(id!),
         loaded: true,
       })),
     ).subscribe(setSaveView);
     return () => sub.unsubscribe();
   }, [data.db, id]);
-  useEffect(() => {
-    const leave = (e: BeforeUnloadEvent) => {
-      if (hasVolatile) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    const link = (e: MouseEvent) => {
-      if (hasFailed && (e.target as Element).closest("a[href]")) {
-        e.preventDefault();
-        e.stopPropagation();
-        setError(
-          "Hay un valor sin guardar. Reintentá su edición antes de cambiar de pantalla.",
-        );
-      }
-    };
-    window.addEventListener("beforeunload", leave);
-    document.addEventListener("click", link, true);
-    return () => {
-      window.removeEventListener("beforeunload", leave);
-      document.removeEventListener("click", link, true);
-    };
-  }, [hasVolatile, hasFailed]);
+  const { guard } = useDraftNavigation(hasVolatile, () =>
+    setError(
+      "Hay un valor sin guardar. Reintentá su edición antes de cambiar de pantalla.",
+    ),
+  );
   if (!row) return <p>Cargando alumno…</p>;
   if (!session)
     return (
@@ -263,25 +251,47 @@ export function TrainingScreen() {
           </select>
         </label>
       </details>
+      {guard}
       <RestTimer key={session.id} session={session} />
       <div className="stack">
         {[...new Set(session.items.map((i) => i.block_id))].map((blockId) => {
           const items = session.items.filter((i) => i.block_id === blockId);
+          // Older builds stored a block rest draft under each exercise. Surface every
+          // outstanding annotation through the single block control, one at a time.
+          const macroItem =
+            items.find((item) =>
+              rawInputs.some(
+                (raw) =>
+                  raw.sessionId === session.id &&
+                  raw.itemId === item.id &&
+                  raw.field === "macroRest",
+              ),
+            ) ?? items[0];
           return (
             <details className="training-block" open key={blockId}>
               <summary>
                 <span>{items[0].block_name}</span>
                 <small>
                   {items.length}{" "}
-                  {items.length === 1 ? "ejercicio" : "ejercicios"} · Macro:{" "}
-                  {items[0].macro_rest === null
-                    ? "—"
-                    : formatRestMinutes(items[0].macro_rest)}{" "}
-                  min entre{" "}
-                  {items[0].macro_target === "series" ? "series" : "bloques"}
+                  {items.length === 1 ? "ejercicio" : "ejercicios"}
                 </small>
                 <ChevronDown size={18} />
               </summary>
+              <div className="training-block-rest">
+                <LiveInput
+                  key={macroItem.id}
+                  field="macroRest"
+                  label="Descanso del bloque"
+                  value={macroItem.macro_rest}
+                  item={macroItem}
+                  session={session}
+                  scope={scope}
+                  onFieldState={onFieldState}
+                  studentId={id!}
+                  disabled={closing || !!conflict}
+                  onError={setError}
+                />
+              </div>
               <div className="stack">
                 {items.map((item) => (
                   <ExerciseRow
@@ -382,7 +392,7 @@ function ExerciseRow({
   onError: (s: string) => void;
 }) {
   const data = useData();
-  const [detail, setDetail] = useState(false);
+
   async function stage(
     kind: "skip_item" | "record_set",
     payload: Record<string, unknown>,
@@ -427,90 +437,116 @@ function ExerciseRow({
           No se realizó
         </label>
       </div>
-      <div className="live-fields">
-        {(
-          [
-            "sets",
-            ...(item.type === "time"
-              ? ["durationSec"]
-              : item.type === "load_reps"
-                ? ["weight", "reps"]
-                : ["reps"]),
-            "microRest",
-            "macroRest",
-          ] as NumericName[]
-        ).map((field) => (
-          <LiveInput
-            key={field}
-            field={field}
-            label={
-              {
-                weight: "Peso kg",
-                sets: "Series",
-                reps: "Repeticiones",
-                durationSec: "Duración (s)",
-                microRest: "Descanso micro (min)",
-                macroRest: "Descanso macro (min)",
-              }[field]
-            }
-            value={
-              field === "macroRest" ? item.macro_rest : item.prescription[field]
-            }
-            item={item}
-            session={session}
-            scope={scope}
-            onFieldState={onFieldState}
-            studentId={studentId}
-            disabled={disabled || item.skipped}
-            onError={onError}
-          />
-        ))}
+      {item.prescription.progression && (
+        <p className="progression-badge">
+          Progresión · {item.sets.length} series con objetivos propios
+        </p>
+      )}
+      <div className="training-exercise-tools">
+        <LiveInput
+          field="microRest"
+          label="Descanso entre series"
+          value={item.prescription.microRest}
+          item={item}
+          session={session}
+          scope={scope}
+          onFieldState={onFieldState}
+          studentId={studentId}
+          disabled={disabled || item.skipped}
+          onError={onError}
+        />
+        <span className="training-series-count">
+          {item.sets.filter((s) => s.state === "done").length}/
+          {item.sets.length} series
+        </span>
       </div>
-      <details className="exercise-guide">
-        <summary>Referencia del ejercicio</summary>
-        <ExerciseArt exerciseId={item.exercise_id} />
-      </details>
-      <button
-        className="button secondary small"
-        aria-expanded={detail}
-        onClick={() => setDetail(!detail)}
-      >
-        {detail ? "Ocultar" : "Detalle de series"} ·{" "}
-        {item.sets.filter((s) => s.state === "done").length}/{item.sets.length}
-      </button>
-      {detail && (
-        <div className="set-list">
-          <p className="muted">
-            Registrar una serie conserva su ejecución. Para cambiarla después
-            usá la corrección con motivo, disponible también durante la sesión.
-          </p>
-          {item.sets.map((set) => (
-            <div key={set.id}>
-              <SetEditor
-                set={set}
-                type={item.type}
-                disabled={disabled || item.skipped}
+      <div className="training-set-heading" aria-hidden="true">
+        <span>Serie</span>
+        <span>{item.type === "load_reps" ? "Kg" : "Carga"}</span>
+        <span>{item.type === "time" ? "Segundos" : "Reps"}</span>
+        <span>Hecho</span>
+      </div>
+      <div className="set-list">
+        {item.sets.map((set) => (
+          <div key={set.id}>
+            <SetEditor
+              set={set}
+              type={item.type}
+              disabled={disabled || item.skipped}
+              studentId={studentId}
+              sessionId={session.id}
+              itemId={item.id}
+              onFieldState={onFieldState}
+            />
+            {!disabled && (
+              <CorrectSet
                 studentId={studentId}
                 sessionId={session.id}
-                itemId={item.id}
-                onFieldState={onFieldState}
+                item={item}
+                set={set}
               />
-              {!disabled && (
-                <CorrectSet
-                  studentId={studentId}
-                  sessionId={session.id}
-                  item={item}
-                  set={set}
-                />
-              )}
-            </div>
-          ))}
+            )}
+          </div>
+        ))}
+      </div>
+      <details className="training-adjustments">
+        <summary>
+          Ajustes del ejercicio <ChevronDown size={16} />
+        </summary>
+        <p className="muted">
+          Cambiar el objetivo actualiza las series pendientes. Las registradas
+          conservan sus resultados.
+        </p>
+        <div className="live-fields">
+          {(
+            [
+              "sets",
+              ...(item.type === "time"
+                ? ["durationSec"]
+                : item.type === "load_reps"
+                  ? ["weight", "reps"]
+                  : ["reps"]),
+            ] as NumericName[]
+          )
+            .filter(() => !item.prescription.progression)
+            .map((field) => (
+              <LiveInput
+                key={field}
+                field={field}
+                label={
+                  {
+                    weight: "Peso kg",
+                    sets: "Series",
+                    reps: "Repeticiones",
+                    durationSec: "Duración (s)",
+                    microRest: "Descanso entre series",
+                    macroRest: "Descanso del bloque",
+                  }[field]
+                }
+                value={
+                  field === "macroRest"
+                    ? item.macro_rest
+                    : item.prescription[field]
+                }
+                item={item}
+                session={session}
+                scope={scope}
+                onFieldState={onFieldState}
+                studentId={studentId}
+                disabled={disabled || item.skipped}
+                onError={onError}
+              />
+            ))}
         </div>
-      )}
+        <details className="exercise-guide">
+          <summary>Referencia del ejercicio</summary>
+          <ExerciseArt exerciseId={item.exercise_id} />
+        </details>
+      </details>
     </article>
   );
 }
-function SetEditor({
+export function SetEditor({
   set,
   type,
   disabled,
@@ -536,21 +572,41 @@ function SetEditor({
   const [values, setValues] = useState(defaults),
     [error, setError] = useState(""),
     [loaded, setLoaded] = useState(false),
+    [loadError, setLoadError] = useState(false),
+    [unreadableDraft, setUnreadableDraft] = useState<RawInput | null>(null),
+    [reload, setReload] = useState(0),
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false);
   const latest = useRef(values),
     write = useRef<Promise<unknown>>(Promise.resolve()),
     base = useRef(set),
     changed = useRef(false);
+  const writeGeneration = useRef(0);
   const rawId = sessionId + ":" + set.id + ":set-draft";
   useEffect(() => {
     let active = true;
+    setLoaded(false);
+    setLoadError(false);
+    setUnreadableDraft(null);
     void data.db.rawInputs
       .get(rawId)
       .then((saved) => {
         if (!active) return;
         if (saved) {
-          const v = JSON.parse(saved.raw);
+          let v: typeof values;
+          try {
+            v = JSON.parse(saved.raw);
+            if (
+              !v ||
+              typeof v.weight !== "string" ||
+              typeof v.reps !== "string" ||
+              typeof v.duration !== "string"
+            )
+              throw Error("Invalid stored set draft");
+          } catch (cause) {
+            setUnreadableDraft(saved);
+            throw cause;
+          }
           latest.current = v;
           setValues(v);
           base.current = saved.baseValue as typeof set;
@@ -558,14 +614,18 @@ function SetEditor({
           setDirty(true);
         }
         setLoaded(true);
+        setError("");
       })
       .catch(() => {
-        if (active) setError("No se pudo recuperar el borrador de esta serie.");
+        if (active) {
+          setLoadError(true);
+          setError("No se pudo recuperar el borrador de esta serie.");
+        }
       });
     return () => {
       active = false;
     };
-  }, [data.db, rawId]);
+  }, [data.db, rawId, reload]);
   useEffect(() => {
     if (!changed.current) {
       const v = defaults();
@@ -575,6 +635,8 @@ function SetEditor({
     }
   }, [set.weight, set.reps, set.duration_sec, set.state]);
   function change(field: keyof typeof values, text: string) {
+    if (!loaded) return;
+    const generation = ++writeGeneration.current;
     const next = { ...latest.current, [field]: text };
     latest.current = next;
     setValues(next);
@@ -594,18 +656,24 @@ function SetEditor({
           raw: JSON.stringify(next),
           baseValue: base.current,
         });
-        onFieldState(rawId, null);
+        if (generation === writeGeneration.current) {
+          onFieldState(rawId, null);
+          setError("");
+        }
       })
       .catch(() => {
-        onFieldState(rawId, "failed");
-        setError(
-          "No se pudo guardar esta serie en el dispositivo. Reintentá la edición.",
-        );
+        if (generation === writeGeneration.current) {
+          onFieldState(rawId, "failed");
+          setError(
+            "No se pudo guardar esta serie en el dispositivo. Reintentá la edición.",
+          );
+        }
         throw Error("Guardado pendiente");
       });
     void write.current.catch(() => {});
   }
   async function discard() {
+    setBusy(true);
     try {
       await write.current.catch(() => {});
       const saved = await data.db.rawInputs.get(rawId);
@@ -626,6 +694,29 @@ function SetEditor({
       onFieldState(rawId, null);
     } catch {
       setError("No se pudo descartar el borrador.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function recoverUnreadableDraft() {
+    if (
+      !unreadableDraft ||
+      !confirm(
+        "Se descargará una copia de la anotación antes de descartarla. ¿Continuar?",
+      )
+    )
+      return;
+    setBusy(true);
+    try {
+      download("pulso-anotacion-pendiente.json", unreadableDraft);
+      await data.db.discardRaw(unreadableDraft);
+      setReload((n) => n + 1);
+    } catch {
+      setError(
+        "No se pudo descartar la anotación. Se conserva para reintentar.",
+      );
+    } finally {
+      setBusy(false);
     }
   }
   async function save(state: "done" | "skipped") {
@@ -672,8 +763,10 @@ function SetEditor({
       changed.current = false;
       setDirty(false);
       setError("");
-      await data.sync();
       onFieldState(rawId, null);
+      // The observation is durable in the local outbox. A later sync failure
+      // belongs to the screen's queue status, not to this now-completed editor.
+      void data.sync().catch(() => {});
     } catch (e) {
       onFieldState(rawId, "failed");
       setError((e as Error).message);
@@ -684,7 +777,7 @@ function SetEditor({
   if (set.state !== "pending")
     return (
       <div className="set-row">
-        <strong>Serie {set.ordinal}</strong>
+        <strong aria-label={"Serie " + set.ordinal}>{set.ordinal}</strong>
         <span>
           {set.state === "skipped" ? (
             "Sin resultado"
@@ -702,10 +795,15 @@ function SetEditor({
     );
   return (
     <div className="set-row set-editor">
-      <strong>Serie {set.ordinal}</strong>
+      <strong aria-label={"Serie " + set.ordinal}>{set.ordinal}</strong>
+      {type !== "load_reps" && (
+        <span className="set-bodyweight">
+          {type === "reps" ? "Corporal" : "—"}
+        </span>
+      )}
       {type === "load_reps" && (
         <label className="set-value">
-          Peso (kg)
+          <span className="sr-only">Peso (kg)</span>
           <input
             aria-label={"Peso serie " + set.ordinal}
             inputMode="decimal"
@@ -716,7 +814,9 @@ function SetEditor({
         </label>
       )}
       <label className="set-value">
-        {type === "time" ? "Tiempo (s)" : "Reps"}
+        <span className="sr-only">
+          {type === "time" ? "Tiempo (s)" : "Reps"}
+        </span>
         <input
           aria-label={
             (type === "time" ? "Segundos" : "Reps") + " serie " + set.ordinal
@@ -737,13 +837,18 @@ function SetEditor({
       >
         <Check size={16} />
       </button>
-      <button
-        className="link-button"
-        disabled={disabled || !loaded || busy}
-        onClick={() => void save("skipped")}
-      >
-        Omitir
-      </button>
+      <details className="set-options">
+        <summary aria-label={"Opciones de serie " + set.ordinal}>
+          <MoreHorizontal size={18} aria-hidden="true" />
+        </summary>
+        <button
+          className="link-button"
+          disabled={disabled || !loaded || busy}
+          onClick={() => void save("skipped")}
+        >
+          Omitir serie {set.ordinal}
+        </button>
+      </details>
       {dirty && (
         <>
           <small>Edición pendiente; falta registrar la serie.</small>
@@ -757,10 +862,28 @@ function SetEditor({
         </>
       )}
       {error && <span role="alert">{error}</span>}
+      {loadError && (
+        <button
+          className="link-button"
+          disabled={busy}
+          onClick={() => setReload((n) => n + 1)}
+        >
+          Reintentar carga de serie {set.ordinal}
+        </button>
+      )}
+      {unreadableDraft && (
+        <button
+          className="link-button"
+          disabled={busy}
+          onClick={() => void recoverUnreadableDraft()}
+        >
+          Exportar y descartar anotación de serie {set.ordinal}
+        </button>
+      )}
     </div>
   );
 }
-function LiveInput({
+export function LiveInput({
   onFieldState,
   scope,
   field,
@@ -785,28 +908,47 @@ function LiveInput({
 }) {
   const data = useData(),
     [raw, setRaw] = useState(displayNumber(field, value)),
-    [state, setState] = useState("");
+    [state, setState] = useState(""),
+    [loaded, setLoaded] = useState(false),
+    [loadError, setLoadError] = useState(false),
+    [reload, setReload] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null),
     focused = useRef(false),
     latest = useRef(raw),
     write = useRef<Promise<unknown>>(Promise.resolve()),
     active = useRef(true);
+  const writeGeneration = useRef(0);
   const rawId = session.id + ":" + item.id + ":" + field;
   useEffect(() => {
+    let current = true;
     active.current = true;
-    void data.db.rawInputs.get(rawId).then((saved) => {
-      if (saved && active.current) {
-        const text = isRestField(field) ? restoreRestRaw(saved.raw) : saved.raw;
-        setRaw(text);
-        latest.current = text;
-        setState("Pendiente de confirmar");
-      }
-    });
+    setLoaded(false);
+    setLoadError(false);
+    void data.db.rawInputs
+      .get(rawId)
+      .then((saved) => {
+        if (!current) return;
+        if (saved) {
+          const text = isRestField(field)
+            ? restoreRestRaw(saved.raw)
+            : saved.raw;
+          setRaw(text);
+          latest.current = text;
+          setState("Pendiente de confirmar");
+        } else setState("");
+        setLoaded(true);
+      })
+      .catch(() => {
+        if (!current) return;
+        setLoadError(true);
+        setState("No se pudo recuperar la anotación guardada.");
+      });
     return () => {
+      current = false;
       active.current = false;
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [rawId, data.db]);
+  }, [rawId, data.db, reload]);
   useEffect(() => {
     if (!focused.current && !state) {
       const text = displayNumber(field, value);
@@ -815,6 +957,7 @@ function LiveInput({
     }
   }, [value]);
   async function commit(text: string) {
+    if (!loaded) return;
     await write.current;
     const result = parseDisplayedNumber(field, text);
     if (!result.ok) {
@@ -853,6 +996,8 @@ function LiveInput({
     }
   }
   function change(text: string) {
+    if (!loaded) return;
+    const generation = ++writeGeneration.current;
     setRaw(text);
     latest.current = text;
     setState("Guardando en este dispositivo");
@@ -869,45 +1014,89 @@ function LiveInput({
           raw: isRestField(field) ? storeRestRaw(text) : text,
           scope,
         });
-        onFieldState(rawId, null);
-        if (active.current && latest.current === text)
-          setState("Guardado local");
+        if (generation === writeGeneration.current) {
+          onFieldState(rawId, null);
+          if (active.current) setState("Guardado local");
+        }
       })
       .catch(() => {
-        onFieldState(rawId, "failed");
-        if (active.current) setState("No se pudo guardar");
-        onError(
-          "No se pudo guardar este campo en el dispositivo. Conservá el valor y reintentá.",
-        );
+        if (generation === writeGeneration.current) {
+          onFieldState(rawId, "failed");
+          if (active.current) setState("No se pudo guardar");
+          onError(
+            "No se pudo guardar este campo en el dispositivo. Conservá el valor y reintentá.",
+          );
+        }
       });
     timer.current = setTimeout(() => void commit(text), 300);
   }
   return (
-    <label className={"field live-field-" + field}>
-      {label}
-      <input
-        aria-label={label}
-        inputMode={
-          field === "weight" || isRestField(field) ? "decimal" : "numeric"
-        }
-        value={raw}
-        disabled={disabled}
-        onFocus={(e) => {
-          focused.current = true;
-          e.target.select();
-        }}
-        onChange={(e) => change(e.target.value)}
-        onBlur={() => {
-          focused.current = false;
-          if (timer.current) clearTimeout(timer.current);
-          void commit(latest.current);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") e.currentTarget.blur();
-        }}
-      />
-      <small className="field-hint">{state}</small>
-    </label>
+    <>
+      <label className={"field live-field-" + field}>
+        {label}
+        {isRestField(field) ? (
+          <select
+            aria-label={label}
+            value={raw}
+            disabled={disabled || !loaded}
+            onChange={(event) => change(event.target.value)}
+            onBlur={() => {
+              if (timer.current) clearTimeout(timer.current);
+              void commit(latest.current);
+            }}
+          >
+            <option value="">Sin definir</option>
+            {raw !== "" && !["0.5", "1", "3", "5"].includes(raw) && (
+              <option value={raw}>
+                {parseRestMinutes(raw).ok
+                  ? formatRestDuration(
+                      (
+                        parseRestMinutes(raw) as {
+                          ok: true;
+                          value: number | null;
+                        }
+                      ).value,
+                    )
+                  : "Anotación pendiente: " + raw}
+              </option>
+            )}
+            {[30, 60, 180, 300].map((seconds) => (
+              <option key={seconds} value={formatRestMinutes(seconds)}>
+                {formatRestDuration(seconds)}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            aria-label={label}
+            inputMode={
+              field === "weight" || isRestField(field) ? "decimal" : "numeric"
+            }
+            value={raw}
+            disabled={disabled || !loaded}
+            onFocus={(e) => {
+              focused.current = true;
+              e.target.select();
+            }}
+            onChange={(e) => change(e.target.value)}
+            onBlur={() => {
+              focused.current = false;
+              if (timer.current) clearTimeout(timer.current);
+              void commit(latest.current);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+            }}
+          />
+        )}
+        <small className="field-hint">{state}</small>
+      </label>
+      {loadError && (
+        <button className="link-button" onClick={() => setReload((n) => n + 1)}>
+          Reintentar carga de {label.toLowerCase()}
+        </button>
+      )}
+    </>
   );
 }
 function PreviousResult({

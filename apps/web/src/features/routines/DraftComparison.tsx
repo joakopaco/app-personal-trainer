@@ -5,7 +5,7 @@ import {
   conflictValue,
 } from "@pulso/domain/routine-diff";
 import type { RoutineDocument } from "@pulso/domain/routines";
-import { formatRestMinutes } from "../../components/rest-minutes";
+import { formatRestDuration } from "../../components/rest-minutes";
 export function DraftComparison({
   base,
   local,
@@ -26,7 +26,7 @@ export function DraftComparison({
     result = mergeRoutine(base, local, remote, choices);
   function displayedValue(path: string, value: unknown) {
     return /(?:microRest|macroRest)$/.test(path) && typeof value === "number"
-      ? formatRestMinutes(value) + " min"
+      ? formatRestDuration(value)
       : conflictValue(value);
   }
   return (

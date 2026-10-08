@@ -19,7 +19,6 @@ test("mobile navigation opens pages at the top and restores a live session's pos
     ).toBeVisible();
     await page.goto("/entrenar/" + fixture.studentId);
     await expect(page.getByLabel("Peso kg", { exact: true })).toHaveValue("20");
-    await page.getByRole("button", { name: /Detalle de series/ }).click();
     await page
       .getByRole("button", { name: "Finalizar entrenamiento", exact: true })
       .scrollIntoViewIfNeeded();

@@ -1,3 +1,4 @@
+import { LoadingState } from "../components/LoadingState";
 import { lazy, Suspense, type ComponentType } from "react";
 import { useParams, Routes, Route, Navigate } from "react-router-dom";
 import { AppUpdates } from "../components/AppUpdates";
@@ -83,15 +84,13 @@ function LegacyRoutine() {
 function Protected() {
   const auth = useAuth();
   if (auth.loading)
-    return (
-      <main>
-        <p role="status">Preparando tu espacio…</p>
-      </main>
-    );
+    return <LoadingState label="Preparando tu espacio…" fullScreen />;
   if (!auth.session) return <Login />;
   if (auth.gymAccount)
     return (
-      <Suspense fallback={<p role="status">Preparando tu gimnasio…</p>}>
+      <Suspense
+        fallback={<LoadingState label="Preparando tu gimnasio…" fullScreen />}
+      >
         <GymPortal key={auth.session.user.id} />
       </Suspense>
     );
@@ -111,7 +110,7 @@ function Protected() {
       <AppShell accountActions={<SignOutButton />}>
         <AppUpdates />
         <SaveNotice />
-        <Suspense fallback={<p role="status">Cargando…</p>}>
+        <Suspense fallback={<LoadingState label="Cargando…" />}>
           <Routes>
             <Route path="/hoy" element={<Today />} />
             <Route path="/alumnos" element={<StudentList />} />

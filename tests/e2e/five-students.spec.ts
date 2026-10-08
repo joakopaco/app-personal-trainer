@@ -21,6 +21,7 @@ test("five simultaneous students keep their own weight while switching immediate
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(
         students[n].snapshot.student.name,
       );
+    await page.getByText("Ajustes del ejercicio", { exact: true }).click();
       await page.getByLabel("Peso kg").fill(String(21 + n * 5));
       if (n < 4)
         await page

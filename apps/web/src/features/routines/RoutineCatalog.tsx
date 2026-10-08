@@ -1,3 +1,4 @@
+import { LoadingState } from "../../components/LoadingState";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowUpRight, ClipboardList, Plus } from "lucide-react";
@@ -128,7 +129,7 @@ export function RoutineCatalog() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </label>
-      {loading && <p role="status">Cargando catálogo…</p>}
+      {loading && <LoadingState label="Cargando catálogo…" />}
       <div className="template-grid">
         {items.map((entry) => (
           <Link

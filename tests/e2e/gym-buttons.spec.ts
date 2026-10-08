@@ -228,12 +228,13 @@ for (const width of [320, 768, 1440])
       await page
         .getByRole("button", { name: "Sentadilla con barra", exact: true })
         .click();
-      await page.getByLabel("Series", { exact: true }).fill("3");
+      await page.getByLabel("Series", { exact: true }).selectOption("3");
       await page.getByLabel("Peso kg", { exact: true }).fill("20");
-      await page.getByLabel("Repeticiones", { exact: true }).fill("8");
+      await page.getByLabel("Repeticiones", { exact: true }).selectOption("8");
       await page
-        .getByRole("button", { name: "Copiar semana a las siguientes" })
+        .getByRole("button", { name: /Copiar semana 1 a/ })
         .click();
+      await page.getByRole("button", { name: "Copiar a 3 semanas", exact: true }).click();
       await capture(page, `own-editor-${width}`);
       await page
         .getByRole("button", { name: "Guardar borrador", exact: true })

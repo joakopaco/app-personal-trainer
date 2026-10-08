@@ -47,11 +47,11 @@ test("catalog creates and edits standalone templates, preserves incomplete field
     await page
       .getByRole("button", { name: "Sentadilla con barra", exact: true })
       .click();
-    await page.getByLabel("Descanso macro (min)").fill("1,5");
-    await page.getByLabel("Series", { exact: true }).fill("3");
+    await page.getByLabel("Descanso del bloque").selectOption("180");
+    await page.getByLabel("Series", { exact: true }).selectOption("3");
     await page.getByLabel("Peso kg", { exact: true }).fill("abc");
-    await page.getByLabel("Repeticiones", { exact: true }).fill("10");
-    await page.getByLabel("Descanso micro (min)").fill("0,");
+    await page.getByLabel("Repeticiones", { exact: true }).selectOption("10");
+    await page.getByLabel("Descanso", { exact: true }).selectOption("");
     await expect(
       page.getByText("Borrador guardado en este dispositivo", { exact: true }),
     ).toBeVisible();
@@ -59,20 +59,21 @@ test("catalog creates and edits standalone templates, preserves incomplete field
     await expect(page.getByLabel("Peso kg", { exact: true })).toHaveValue(
       "abc",
     );
-    await expect(page.getByLabel("Descanso micro (min)")).toHaveValue("0,");
+    await expect(page.getByLabel("Descanso", { exact: true })).toHaveValue("");
     await page
       .getByRole("button", { name: "Guardar plantilla", exact: true })
       .click();
     await expect(page.getByRole("alert")).toContainText("campos");
     await page.getByLabel("Peso kg", { exact: true }).fill("25");
-    await page.getByLabel("Descanso micro (min)").fill("0,5");
+    await page.getByLabel("Descanso", { exact: true }).selectOption("30");
     await page.screenshot({
       path: ".local/routine-catalog/editor-mobile.png",
       fullPage: true,
     });
     await page
-      .getByRole("button", { name: "Copiar semana a las siguientes" })
+      .getByRole("button", { name: /Copiar semana 1 a/ })
       .click();
+    await page.getByRole("button", { name: "Copiar a 3 semanas", exact: true }).click();
     await page
       .getByRole("button", { name: "Guardar plantilla", exact: true })
       .click();
@@ -85,7 +86,7 @@ test("catalog creates and edits standalone templates, preserves incomplete field
       .eq("id", id)
       .single();
     expect(first.error).toBeNull();
-    expect(first.data.document.weeks[0][0].blocks[0].macroRest).toBe(90);
+    expect(first.data.document.weeks[0][0].blocks[0].macroRest).toBe(180);
     expect(
       first.data.document.weeks[3][0].blocks[0].exercises[0].prescription
         .microRest,

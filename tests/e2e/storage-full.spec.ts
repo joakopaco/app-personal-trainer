@@ -25,6 +25,7 @@ test("a failed raw-input write never presents the edited screen as synchronized"
         return original.apply(this, args);
       };
     });
+    await page.getByText("Ajustes del ejercicio", { exact: true }).click();
     await page.getByLabel("Peso kg", { exact: true }).fill("99");
     await page.getByLabel("Peso kg", { exact: true }).blur();
     await expect(page.getByRole("alert")).toContainText("No se pudo guardar");

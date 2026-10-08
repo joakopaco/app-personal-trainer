@@ -1,3 +1,4 @@
+import { LoadingState } from "../../components/LoadingState";
 import { DateInput } from "../../components/DateInput";
 import { auditChanges, eventNames } from "@pulso/domain/audit-display";
 import { useEffect, useState } from "react";
@@ -75,7 +76,7 @@ export function History() {
       active = false;
     };
   }, [id, from, to, offset, retry]);
-  if (!row) return <p role="status">Cargando alumno…</p>;
+  if (!row) return <LoadingState label="Cargando alumno…" />;
   const today = new Date(),
     since = new Date();
   since.setDate(today.getDate() - 34);
@@ -137,7 +138,7 @@ export function History() {
             />
           </label>
         </div>
-        {loading && <p role="status">Cargando cambios…</p>}
+        {loading && <LoadingState label="Cargando cambios…" />}
         {error && (
           <div className="stack">
             <p className="error" role="alert">

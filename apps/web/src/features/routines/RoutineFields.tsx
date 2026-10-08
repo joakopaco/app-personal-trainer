@@ -1,19 +1,36 @@
 import { ExercisePalette } from "./ExercisePalette";
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { Plus, ArrowUp, ArrowDown, Trash2, Copy } from "lucide-react";
+import {
+  Plus,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Trash2,
+  Copy,
+  Pencil,
+  ChevronDown,
+  CalendarDays,
+  Check,
+  X,
+} from "lucide-react";
 import {
   cloneRoutineDocument,
   type RoutineDocument,
   type Block,
-  type Position,
+  type RoutineDay,
 } from "@pulso/domain/routines";
 import {
   catalog,
   searchExercises,
   type ExerciseDefinition,
 } from "@pulso/domain/catalog";
-import { RoutineNumberField as NumericField } from "../../components/RoutineNumberField";
-import { parseDisplayedNumber } from "../../components/rest-minutes";
+import {
+  PrescriptionFields,
+  PresetField,
+  restOptions,
+  restLabel,
+} from "./PrescriptionFields";
 import { cloud } from "../../adapters/supabase";
 
 export function RoutineFields({
@@ -23,6 +40,7 @@ export function RoutineFields({
   rawValues,
   rawInvalid,
   trainerCatalog = true,
+  scheduledWeekdays,
 }: {
   doc: RoutineDocument;
   change: (doc: RoutineDocument) => void;
@@ -30,14 +48,87 @@ export function RoutineFields({
   rawValues: RefObject<Record<string, string>>;
   rawInvalid: RefObject<Set<string>>;
   trainerCatalog?: boolean;
+  scheduledWeekdays?: number[];
 }) {
   const [week, setWeek] = useState(0),
     [day, setDay] = useState(0);
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copyTargets, setCopyTargets] = useState<number[]>([]);
+  const [renaming, setRenaming] = useState(false);
+  const [dayName, setDayName] = useState("");
+  const [organizeMessage, setOrganizeMessage] = useState("");
+  const copyRegion = useRef<HTMLDivElement>(null);
+  const copyTrigger = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!copyOpen) return;
+    copyRegion.current
+      ?.querySelector<HTMLInputElement>('input[type="checkbox"]')
+      ?.focus();
+    const outside = (event: PointerEvent) => {
+      if (!copyRegion.current?.contains(event.target as Node))
+        setCopyOpen(false);
+    };
+    document.addEventListener("pointerdown", outside);
+    return () => document.removeEventListener("pointerdown", outside);
+  }, [copyOpen]);
+  function copyRawInputs(source: RoutineDay, copied: RoutineDay) {
+    const snapshot = { ...rawValues.current };
+    const ids = new Map<string, string>();
+    source.blocks.forEach((block, i) => {
+      ids.set(block.id, copied.blocks[i].id);
+      block.exercises.forEach((exercise, j) =>
+        ids.set(exercise.id, copied.blocks[i].exercises[j].id),
+      );
+    });
+    for (const [key, value] of Object.entries(snapshot)) {
+      const [id, ...suffix] = key.split(":");
+      if (!ids.has(id)) continue;
+      const nextKey = [ids.get(id), ...suffix].join(":");
+      rawValues.current[nextKey] = value;
+      if (rawInvalid.current.has(key)) rawInvalid.current.add(nextKey);
+    }
+  }
+  function copyWeek() {
+    if (!copyTargets.length || busy) return;
+    mutate((next) => {
+      const source = next.weeks[week];
+      for (const target of copyTargets) {
+        const copied = cloneRoutineDocument({
+          ...next,
+          weeks: [source, source, source, source],
+        }).weeks[0];
+        copied.forEach((copiedDay, di) => {
+          copiedDay.blocks.forEach((block, bi) =>
+            block.exercises.forEach((exercise, ei) => {
+              exercise.lineageId =
+                source[di].blocks[bi].exercises[ei].lineageId;
+            }),
+          );
+          copyRawInputs(source[di], copiedDay);
+        });
+        next.weeks[target] = copied;
+      }
+    });
+    setOrganizeMessage(
+      `Semana ${week + 1} copiada a ${copyTargets.map((n) => n + 1).join(", ")}.`,
+    );
+    setCopyOpen(false);
+    copyTrigger.current?.focus();
+  }
+  function renameDay() {
+    if (!dayName.trim()) return;
+    mutate((next) => {
+      next.weeks[week][day].name = dayName.trim();
+    });
+    setRenaming(false);
+  }
   const [searchBlock, setSearchBlock] = useState<string | null>(null),
     [query, setQuery] = useState("");
   function mutate(fn: (copy: RoutineDocument) => void) {
     const next = structuredClone(doc);
     fn(next);
+    for (const w of next.weeks)
+      for (const d of w) for (const b of d.blocks) b.macroTarget = "blocks";
     change(next);
   }
   const [ownExercises, setOwnExercises] = useState<ExerciseDefinition[]>([]);
@@ -77,7 +168,7 @@ export function RoutineFields({
           name: "Bloque 1",
           type: "main",
           macroRest: null,
-          macroTarget: "series",
+          macroTarget: "blocks",
           exercises: [],
         });
       const b = blocks.find((b) => b.id === destination)!;
@@ -91,10 +182,10 @@ export function RoutineFields({
         warmup: b.type !== "main",
         prescription: {
           weight: null,
-          sets: null,
-          reps: null,
+          sets: 3,
+          reps: exercise.type === "time" ? null : 10,
           durationSec: null,
-          microRest: null,
+          microRest: 60,
         },
       });
     });
@@ -108,7 +199,9 @@ export function RoutineFields({
     setSearchBlock(null);
     setQuery("");
   }
-  const selected = doc.weeks[week][day];
+  const selected = doc.weeks[week][day] ?? doc.weeks[week][0];
+  const scheduled = !!scheduledWeekdays?.length;
+  const atDayLimit = doc.weeks[week].length >= 6;
   const destination = selected.blocks.some((b) => b.id === targetBlock)
     ? targetBlock
     : (selected.blocks[0]?.id ?? "");
@@ -157,7 +250,7 @@ export function RoutineFields({
           }}
         />
         <div className="routine-canvas">
-          <div className="card stack">
+          <div className="card stack routine-program-settings">
             <label className="field">
               Nombre de la rutina
               <input
@@ -175,133 +268,309 @@ export function RoutineFields({
                 {doc.weeks.map((_, i) => (
                   <button
                     className={"button " + (week === i ? "" : "secondary")}
+                    aria-pressed={week === i}
                     key={i}
                     onClick={() => {
                       setWeek(i);
                       setDay(0);
+                      setCopyOpen(false);
+                      setRenaming(false);
+                      setOrganizeMessage("");
                     }}
                   >
                     Semana {i + 1}
                   </button>
                 ))}
               </div>
-              <button
-                className="link-button"
-                onClick={() => {
-                  mutate((d) => {
-                    for (let i = week + 1; i < 4; i++) {
-                      const copied = cloneRoutineDocument({
-                        ...d,
-                        weeks: [
-                          d.weeks[week],
-                          d.weeks[week],
-                          d.weeks[week],
-                          d.weeks[week],
-                        ],
-                      });
-                      d.weeks[i] = copied.weeks[0];
-                      for (let j = 0; j < d.weeks[i].length; j++)
-                        for (let k = 0; k < d.weeks[i][j].blocks.length; k++)
-                          for (
-                            let n = 0;
-                            n < d.weeks[i][j].blocks[k].exercises.length;
-                            n++
-                          )
-                            d.weeks[i][j].blocks[k].exercises[n].lineageId =
-                              d.weeks[week][j].blocks[k].exercises[n].lineageId;
-                    }
-                  });
+              <div
+                className="routine-week-copy"
+                ref={copyRegion}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape" && copyOpen) {
+                    event.stopPropagation();
+                    setCopyOpen(false);
+                    copyTrigger.current?.focus();
+                  }
                 }}
               >
-                Copiar semana a las siguientes
-              </button>
+                <button
+                  ref={copyTrigger}
+                  className="routine-manage-button routine-week-copy-trigger"
+                  aria-expanded={copyOpen}
+                  aria-controls="routine-week-copy-panel"
+                  aria-haspopup="dialog"
+                  onClick={() => {
+                    if (!copyOpen)
+                      setCopyTargets(
+                        doc.weeks.map((_, i) => i).filter((i) => i > week),
+                      );
+                    setCopyOpen(!copyOpen);
+                  }}
+                >
+                  <Copy size={16} aria-hidden="true" />
+                  <span>Copiar semana {week + 1} a…</span>
+                  <ChevronDown size={16} aria-hidden="true" />
+                </button>
+                {copyOpen && (
+                  <section
+                    id="routine-week-copy-panel"
+                    className="routine-week-copy-panel"
+                    role="dialog"
+                    aria-label={`Copiar semana ${week + 1}`}
+                  >
+                    <div className="routine-week-copy-heading">
+                      <strong>Copiar semana {week + 1}</strong>
+                      <span>Elegí las semanas de destino</span>
+                    </div>
+                    <div className="routine-week-copy-options">
+                      {doc.weeks.map(
+                        (_, i) =>
+                          i !== week && (
+                            <label
+                              key={i}
+                              className={
+                                copyTargets.includes(i) ? "is-selected" : ""
+                              }
+                            >
+                              <input
+                                type="checkbox"
+                                checked={copyTargets.includes(i)}
+                                onChange={(event) =>
+                                  setCopyTargets((previous) =>
+                                    event.target.checked
+                                      ? [...previous, i].sort()
+                                      : previous.filter((n) => n !== i),
+                                  )
+                                }
+                              />
+                              <CalendarDays size={17} aria-hidden="true" />
+                              <span>Semana {i + 1}</span>
+                            </label>
+                          ),
+                      )}
+                    </div>
+                    <p>
+                      Se reemplazarán los días y ejercicios de las semanas
+                      elegidas. La semana {week + 1} se conserva.
+                    </p>
+                    <div className="routine-week-copy-footer">
+                      <button
+                        className="routine-manage-button"
+                        onClick={() => {
+                          setCopyOpen(false);
+                          copyTrigger.current?.focus();
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        className="button"
+                        disabled={!copyTargets.length}
+                        onClick={copyWeek}
+                      >
+                        {copyTargets.length
+                          ? `Copiar a ${copyTargets.length} ${copyTargets.length === 1 ? "semana" : "semanas"}`
+                          : "Elegí una semana"}
+                      </button>
+                    </div>
+                  </section>
+                )}
+              </div>
             </div>
             <div className="routine-tabs" aria-label="Días">
               {doc.weeks[week].map((d, i) => (
                 <button
                   className={"button " + (day === i ? "" : "secondary")}
+                  aria-pressed={day === i}
                   key={d.id}
-                  onClick={() => setDay(i)}
+                  onClick={() => {
+                    setDay(i);
+                    setRenaming(false);
+                  }}
                 >
                   {d.name}
                 </button>
               ))}
-              <button
-                className="link-button"
-                onClick={() =>
-                  mutate((d) => {
-                    d.weeks[week].push({
-                      id: crypto.randomUUID(),
-                      name: "Día " + (d.weeks[week].length + 1),
-                      blocks: [],
-                    });
-                  })
-                }
-              >
-                + Día
-              </button>
-            </div>
-            <details className="routine-day-tools">
-              <summary>Organizar día</summary>
-              <div className="row">
+              {!scheduled && (
                 <button
                   className="link-button"
-                  onClick={() =>
-                    mutate((d) => {
-                      if (d.weeks[week].length >= 14) return;
-                      const copy = cloneRoutineDocument({
-                        ...d,
-                        weeks: [[selected], [selected], [selected], [selected]],
-                      }).weeks[0][0];
-                      copy.name = selected.name + " (copia)";
-                      d.weeks[week].splice(day + 1, 0, copy);
-                    })
-                  }
-                >
-                  Duplicar día
-                </button>
-                <button
-                  className="link-button"
-                  disabled={day === 0}
+                  disabled={atDayLimit}
                   onClick={() => {
                     mutate((d) => {
-                      [d.weeks[week][day - 1], d.weeks[week][day]] = [
-                        d.weeks[week][day],
-                        d.weeks[week][day - 1],
-                      ];
-                    });
-                    setDay(day - 1);
-                  }}
-                >
-                  Mover día antes
-                </button>
-                <button
-                  className="link-button"
-                  disabled={doc.weeks[week].length === 1}
-                  onClick={() => {
-                    if (confirm("¿Eliminar este día del borrador?")) {
-                      mutate((d) => {
-                        d.weeks[week].splice(day, 1);
+                      if (d.weeks[week].length >= 6) return;
+                      d.weeks[week].push({
+                        id: crypto.randomUUID(),
+                        name: "Día " + (d.weeks[week].length + 1),
+                        blocks: [],
                       });
-                      setDay(Math.max(0, day - 1));
-                    }
+                    });
+                    if (!atDayLimit) setDay(doc.weeks[week].length);
+                    setRenaming(false);
                   }}
                 >
-                  Eliminar día
+                  + Día
                 </button>
+              )}
+            </div>
+            {scheduled ? (
+              <p className="muted schedule-days-note routine-day-toolbar-schedule">
+                <CalendarDays size={15} aria-hidden="true" /> Días de su agenda
+                · {selected.name}
+                <span>La asistencia se cambia en el perfil del alumno.</span>
+              </p>
+            ) : (
+              <div
+                className="routine-day-toolbar"
+                aria-label="Acciones del día"
+              >
+                <div className="routine-day-toolbar-title">
+                  <span>DÍA SELECCIONADO</span>
+                  <strong>{selected.name}</strong>
+                </div>
+                <div className="routine-day-toolbar-actions">
+                  <button
+                    className="routine-manage-button"
+                    aria-label="Renombrar día"
+                    aria-expanded={renaming}
+                    onClick={() => {
+                      setDayName(selected.name);
+                      setRenaming(!renaming);
+                    }}
+                  >
+                    <Pencil size={15} aria-hidden="true" />
+                    Renombrar
+                  </button>
+                  <button
+                    className="routine-manage-button"
+                    aria-label="Duplicar día"
+                    onClick={() => {
+                      mutate((d) => {
+                        if (d.weeks[week].length >= 6) return;
+                        const copy = cloneRoutineDocument({
+                          ...d,
+                          weeks: [
+                            [selected],
+                            [selected],
+                            [selected],
+                            [selected],
+                          ],
+                        }).weeks[0][0];
+                        copy.name = selected.name.slice(0, 72) + " (copia)";
+                        copyRawInputs(selected, copy);
+                        d.weeks[week].splice(day + 1, 0, copy);
+                      });
+                      if (!atDayLimit) setDay(day + 1);
+                      setRenaming(false);
+                    }}
+                    disabled={atDayLimit}
+                  >
+                    <Copy size={15} aria-hidden="true" />
+                    Duplicar
+                  </button>
+                  <button
+                    className="routine-manage-button"
+                    aria-label="Mover día antes"
+                    disabled={day === 0}
+                    onClick={() => {
+                      mutate((d) => {
+                        [d.weeks[week][day - 1], d.weeks[week][day]] = [
+                          d.weeks[week][day],
+                          d.weeks[week][day - 1],
+                        ];
+                      });
+                      setDay(day - 1);
+                    }}
+                  >
+                    <ArrowLeft size={15} aria-hidden="true" />
+                    Antes
+                  </button>
+                  <button
+                    className="routine-manage-button"
+                    aria-label="Mover día después"
+                    disabled={day === doc.weeks[week].length - 1}
+                    onClick={() => {
+                      mutate((d) => {
+                        [d.weeks[week][day], d.weeks[week][day + 1]] = [
+                          d.weeks[week][day + 1],
+                          d.weeks[week][day],
+                        ];
+                      });
+                      setDay(day + 1);
+                    }}
+                  >
+                    <ArrowRight size={15} aria-hidden="true" />
+                    Después
+                  </button>
+                  <button
+                    className="routine-manage-button is-danger"
+                    aria-label="Eliminar día"
+                    disabled={doc.weeks[week].length === 1}
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `¿Eliminar «${selected.name}» y sus bloques de la semana ${week + 1}?`,
+                        )
+                      ) {
+                        mutate((d) => {
+                          d.weeks[week].splice(day, 1);
+                        });
+                        setDay(Math.max(0, day - 1));
+                        setRenaming(false);
+                      }
+                    }}
+                  >
+                    <Trash2 size={15} aria-hidden="true" />
+                    Eliminar
+                  </button>
+                </div>
+                {renaming && (
+                  <div className="routine-day-rename">
+                    <label className="field">
+                      Nombre del día
+                      <input
+                        maxLength={80}
+                        autoFocus
+                        value={dayName}
+                        onChange={(event) => setDayName(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            renameDay();
+                          }
+                          if (event.key === "Escape") setRenaming(false);
+                        }}
+                      />
+                    </label>
+                    <button
+                      className="button"
+                      aria-label="Guardar nombre"
+                      disabled={!dayName.trim()}
+                      onClick={renameDay}
+                    >
+                      <Check size={16} aria-hidden="true" />
+                      Guardar
+                    </button>
+                    <button
+                      className="routine-manage-button"
+                      aria-label="Cancelar cambio de nombre"
+                      onClick={() => setRenaming(false)}
+                    >
+                      <X size={16} aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
+                {atDayLimit && (
+                  <small className="routine-day-toolbar-limit">
+                    Máximo de 6 días por semana.
+                  </small>
+                )}
               </div>
-            </details>
-            <label className="field">
-              Nombre del día
-              <input
-                value={selected.name}
-                onChange={(e) =>
-                  mutate((d) => {
-                    d.weeks[week][day].name = e.target.value;
-                  })
-                }
-              />
-            </label>
+            )}
+            {organizeMessage && (
+              <p className="routine-week-copy-feedback" role="status">
+                {organizeMessage}
+              </p>
+            )}
           </div>
           {!selected.blocks.length && (
             <div
@@ -331,6 +600,7 @@ export function RoutineFields({
                   <label className="field">
                     Bloque {bi + 1}
                     <input
+                      maxLength={80}
                       value={block.name}
                       onChange={(e) =>
                         mutate((d) => {
@@ -418,43 +688,24 @@ export function RoutineFields({
                       <option value="mobility">Movilidad</option>
                     </select>
                   </label>
-                  <NumericField
-                    label="Descanso macro (min)"
-                    field="macroRest"
+                  <PresetField
+                    label="Descanso del bloque"
                     value={block.macroRest}
-                    rawValue={rawValues.current[block.id + ":macroRest"]}
-                    onRaw={(raw) => {
-                      const key = block.id + ":macroRest";
-                      rawValues.current[key] = raw;
-                      if (
-                        raw !== "" &&
-                        !parseDisplayedNumber("macroRest", raw).ok
-                      )
-                        rawInvalid.current.add(key);
-                      else rawInvalid.current.delete(key);
-                      change(doc);
-                    }}
-                    onChange={(v) =>
+                    options={restOptions}
+                    format={restLabel}
+                    pendingRaw={rawValues.current[block.id + ":macroRest"]}
+                    onChange={(value) =>
                       mutate((d) => {
-                        d.weeks[week][day].blocks[bi].macroRest = v;
+                        delete rawValues.current[block.id + ":macroRest"];
+                        rawInvalid.current.delete(block.id + ":macroRest");
+                        d.weeks[week][day].blocks[bi].macroRest = value;
+                        d.weeks[week][day].blocks[bi].macroTarget = "blocks";
                       })
                     }
                   />
-                  <label className="field">
-                    Aplicar macro
-                    <select
-                      value={block.macroTarget}
-                      onChange={(e) =>
-                        mutate((d) => {
-                          d.weeks[week][day].blocks[bi].macroTarget = e.target
-                            .value as Block["macroTarget"];
-                        })
-                      }
-                    >
-                      <option value="series">Entre series</option>
-                      <option value="blocks">Entre bloques</option>
-                    </select>
-                  </label>
+                  <p className="block-rest-note">
+                    Al terminar este bloque, antes del siguiente.
+                  </p>
                 </div>
                 {block.exercises.map((exercise, ei) => (
                   <div className="exercise-editor" key={exercise.id}>
@@ -506,55 +757,19 @@ export function RoutineFields({
                         </button>
                       </div>
                     </div>
-                    <div className="fields">
-                      {(
-                        [
-                          "sets",
-                          ...(exercise.type === "time"
-                            ? ["durationSec"]
-                            : exercise.type === "load_reps"
-                              ? ["weight", "reps"]
-                              : ["reps"]),
-                          "microRest",
-                        ] as const
-                      ).map((field) => {
-                        const f = field as keyof Position["prescription"];
-                        const labels = {
-                          weight: "Peso kg",
-                          sets: "Series",
-                          reps: "Repeticiones",
-                          durationSec: "Duración (s)",
-                          microRest: "Descanso micro (min)",
-                        };
-                        return (
-                          <NumericField
-                            key={f}
-                            field={f}
-                            label={labels[f]}
-                            value={exercise.prescription[f]}
-                            rawValue={rawValues.current[exercise.id + ":" + f]}
-                            onRaw={(raw) => {
-                              const key = exercise.id + ":" + f;
-                              rawValues.current[key] = raw;
-                              if (
-                                raw !== "" &&
-                                !parseDisplayedNumber(f, raw).ok
-                              )
-                                rawInvalid.current.add(key);
-                              else rawInvalid.current.delete(key);
-                              change(doc);
-                            }}
-                            onChange={(v) =>
-                              mutate((d) => {
-                                d.weeks[week][day].blocks[bi].exercises[
-                                  ei
-                                ].prescription[f] = v;
-                              })
-                            }
-                          />
-                        );
-                      })}
-                    </div>
+                    <PrescriptionFields
+                      exercise={exercise}
+                      rawValues={rawValues}
+                      rawInvalid={rawInvalid}
+                      onRawChange={() => change(doc)}
+                      change={(prescription) =>
+                        mutate((d) => {
+                          d.weeks[week][day].blocks[bi].exercises[
+                            ei
+                          ].prescription = prescription;
+                        })
+                      }
+                    />
                   </div>
                 ))}
                 <p className="block-drop-hint" aria-hidden="true">
@@ -581,7 +796,7 @@ export function RoutineFields({
                   name: "Bloque " + (selected.blocks.length + 1),
                   type: "main",
                   macroRest: null,
-                  macroTarget: "series",
+                  macroTarget: "blocks",
                   exercises: [],
                 }),
               )

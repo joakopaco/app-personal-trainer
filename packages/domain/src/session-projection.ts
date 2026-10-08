@@ -5,6 +5,10 @@ import type {
   SessionItem,
 } from "./contracts";
 import type { Prescription } from "./routines";
+function validateProgressionSetCount(sets: number | null) {
+  if (sets === null || !Number.isInteger(sets) || sets < 1 || sets > 4)
+    throw Error("La progresi\u00f3n admite entre 1 y 4 series.");
+}
 export function projectCommand(
   input: StudentSnapshot,
   c: CommandEnvelope,
@@ -44,8 +48,9 @@ export function projectCommand(
             ordinal: index + 1,
             state: "pending" as const,
             source: "pending" as const,
-            weight: e.prescription.weight,
-            reps: e.prescription.reps,
+            weight: (e.prescription.progression?.[index] ?? e.prescription)
+              .weight,
+            reps: (e.prescription.progression?.[index] ?? e.prescription).reps,
             duration_sec: e.prescription.durationSec,
           })),
         };
@@ -84,6 +89,20 @@ export function projectCommand(
       }
     } else {
       const next = { ...item.prescription, [field]: value };
+      if (next.progression) {
+        if (field === "sets") validateProgressionSetCount(next.sets);
+        if (field === "sets")
+          next.progression = Array.from(
+            { length: next.sets! },
+            (_, n) =>
+              next.progression?.[n] ?? { weight: next.weight, reps: next.reps },
+          );
+        if (field === "weight" || field === "reps")
+          next.progression = next.progression.map((s) => ({
+            ...s,
+            [field]: value,
+          }));
+      }
       if (
         item.sets.some((s) => s.ordinal > next.sets! && s.state !== "pending")
       )
@@ -105,8 +124,8 @@ export function projectCommand(
           item.sets.push(set);
         }
         if (set.state === "pending") {
-          set.weight = next.weight;
-          set.reps = next.reps;
+          set.weight = (next.progression?.[n - 1] ?? next).weight;
+          set.reps = (next.progression?.[n - 1] ?? next).reps;
           set.duration_sec = next.durationSec;
         }
       }
@@ -122,11 +141,30 @@ export function projectCommand(
                 if (field === "macroRest") block.macroRest = value;
                 else if (field === "macroTarget")
                   block.macroTarget = p.value as "series" | "blocks";
-                else
+                else {
                   e.prescription = {
                     ...e.prescription,
                     [field]: value,
                   } as Prescription;
+                  if (e.prescription.progression) {
+                    const rx = e.prescription;
+                    if (field === "sets") validateProgressionSetCount(rx.sets);
+                    if (field === "sets")
+                      rx.progression = Array.from(
+                        { length: rx.sets! },
+                        (_, n) =>
+                          rx.progression?.[n] ?? {
+                            weight: rx.weight,
+                            reps: rx.reps,
+                          },
+                      );
+                    if (field === "weight" || field === "reps")
+                      rx.progression = rx.progression!.map((s) => ({
+                        ...s,
+                        [field]: value,
+                      }));
+                  }
+                }
               }
     }
   }

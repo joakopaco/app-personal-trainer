@@ -3,7 +3,11 @@ import { liveQuery } from "dexie";
 import type { RawInput } from "@pulso/sync/local-db";
 import { useData } from "../../app/DataProvider";
 import { download } from "../../components/download";
-import { restoreRestRaw } from "../../components/rest-minutes";
+import {
+  restoreRestRaw,
+  parseRestMinutes,
+  formatRestDuration,
+} from "../../components/rest-minutes";
 export function UnfinishedAnnotations({ studentId }: { studentId: string }) {
   const { db, rows } = useData();
   const [inputs, setInputs] = useState<RawInput[]>([]),
@@ -23,8 +27,8 @@ export function UnfinishedAnnotations({ studentId }: { studentId: string }) {
     reps: "Repeticiones",
     sets: "Series",
     durationSec: "Duración (s)",
-    microRest: "Descanso micro (min)",
-    macroRest: "Descanso macro (min)",
+    microRest: "Descanso entre series",
+    macroRest: "Descanso del bloque",
     setDraft: "Detalle de serie",
   };
   function value(input: RawInput) {
@@ -45,11 +49,12 @@ export function UnfinishedAnnotations({ studentId }: { studentId: string }) {
         return input.raw;
       }
     }
-    return (
-      (input.field === "microRest" || input.field === "macroRest"
-        ? restoreRestRaw(input.raw)
-        : input.raw) || "Campo vacío"
-    );
+    if (input.field === "microRest" || input.field === "macroRest") {
+      const restored = restoreRestRaw(input.raw);
+      const parsed = parseRestMinutes(restored);
+      return parsed.ok ? formatRestDuration(parsed.value) : restored;
+    }
+    return input.raw || "Campo vacío";
   }
   return (
     <>

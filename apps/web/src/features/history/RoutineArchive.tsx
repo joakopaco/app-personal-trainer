@@ -1,8 +1,9 @@
+import { LoadingState } from "../../components/LoadingState";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { type RoutineDocument } from "@pulso/domain/routines";
 import { cloud } from "../../adapters/supabase";
-import { formatRestMinutes } from "../../components/rest-minutes";
+import { formatRestDuration } from "../../components/rest-minutes";
 import { loadAllPages } from "./history-progress-model";
 import "./history.css";
 import { ExportRoutine } from "../routines/ExportRoutine";
@@ -74,7 +75,7 @@ export function ArchivedRoutine({ document }: { document: RoutineDocument }) {
                   Pausa macro:{" "}
                   {block.macroRest === null
                     ? "Sin indicar"
-                    : formatRestMinutes(block.macroRest) + " min"}{" "}
+                    : formatRestDuration(block.macroRest)}{" "}
                   · Entre{" "}
                   {block.macroTarget === "series" ? "series" : "bloques"}
                 </p>
@@ -147,9 +148,9 @@ export function ArchivedRoutine({ document }: { document: RoutineDocument }) {
                               </span>
                               {exercise.prescription.microRest === null
                                 ? "—"
-                                : formatRestMinutes(
+                                : formatRestDuration(
                                     exercise.prescription.microRest,
-                                  ) + " min"}
+                                  )}
                             </td>
                           </tr>
                         ))}
@@ -239,7 +240,7 @@ export function RoutineArchive({
         </p>
       )}
       {loading ? (
-        <p role="status">Cargando rutinas…</p>
+        <LoadingState label="Cargando rutinas…" />
       ) : error ? (
         <div className="stack">
           <p className="error" role="alert">

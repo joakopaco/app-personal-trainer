@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { LoadingState } from "../../components/LoadingState";
+import { useEffect, useRef, useState } from "react";
 import {
   Link,
   Navigate,
@@ -13,6 +14,8 @@ import { cloud } from "../../adapters/supabase";
 import { StudentHeader } from "../students/StudentHeader";
 import { RoutineSummary } from "./RoutineSummary";
 import { ExportRoutine } from "./ExportRoutine";
+import { DraftStorage } from "./draft-storage";
+import type { CommandEnvelope } from "@pulso/domain/contracts";
 import "./routine-editor.css";
 
 export function ActiveRoutine() {
@@ -29,6 +32,10 @@ export function ActiveRoutine() {
     setError("");
     try {
       const local = await db.meta.get("draft:" + id);
+      if (local) {
+        navigate(`/alumnos/${id}/borradores`, { state: { pending: true } });
+        return;
+      }
       const saved = await cloud()
         .from("routine_drafts")
         .select("id")
@@ -49,7 +56,7 @@ export function ActiveRoutine() {
     return (
       <Navigate replace to={`/alumnos/${id}/borradores/editar?${params}`} />
     );
-  if (!data) return <p role="status">Cargando rutina…</p>;
+  if (!data) return <LoadingState label="Cargando rutina…" />;
   return (
     <div className="student-page routine-workspace">
       <StudentHeader data={data} />
@@ -112,12 +119,14 @@ export function DiscardStudentDraft({
   revision,
   onDiscard,
   beforeDiscard,
+  disabled = false,
 }: {
   studentId: string;
   draftId: string;
   revision: number;
   onDiscard: () => void;
   beforeDiscard?: () => Promise<unknown>;
+  disabled?: boolean;
 }) {
   const { db } = useData();
   const [confirm, setConfirm] = useState(false);
@@ -127,12 +136,17 @@ export function DiscardStudentDraft({
     revision: number;
     name: string;
   } | null>(null);
+  const reviewedLocal = useRef<string | undefined>(undefined);
   async function review() {
     setConfirm(true);
     setBusy(true);
     setError("");
     setReviewed(null);
     try {
+      await beforeDiscard?.();
+      reviewedLocal.current = JSON.stringify(
+        (await db.meta.get("draft:" + studentId))?.value,
+      );
       const result = await cloud()
         .from("routine_drafts")
         .select("revision,document")
@@ -155,6 +169,18 @@ export function DiscardStudentDraft({
     setError("");
     try {
       await beforeDiscard?.();
+      const pending = (await db.meta.get("admin:" + studentId))?.value as
+        CommandEnvelope | undefined;
+      if (pending)
+        throw Error(
+          "Primero reintentá la operación pendiente antes de descartar.",
+        );
+      const storage = new DraftStorage(db, "draft:" + studentId);
+      const local = await storage.read<{ draftId: string }>();
+      if (JSON.stringify(local) !== reviewedLocal.current)
+        throw Error(
+          "El borrador local cambió. Revisá nuevamente antes de descartarlo.",
+        );
       // Even a locally edited draft can have a saved cloud copy.
       const result = await cloud().rpc("discard_student_draft", {
         workspace_id: db.scope.workspaceId,
@@ -163,11 +189,7 @@ export function DiscardStudentDraft({
         expected_revision: reviewed!.revision,
       });
       if (result.error) throw result.error;
-      await db.transaction("rw", db.meta, async () => {
-        const local = await db.meta.get("draft:" + studentId);
-        if ((local?.value as { draftId?: string })?.draftId === draftId)
-          await db.meta.delete("draft:" + studentId);
-      });
+      if (!local || local.draftId === draftId) await storage.remove();
       setConfirm(false);
       onDiscard();
     } catch (e) {
@@ -178,7 +200,7 @@ export function DiscardStudentDraft({
   }
   return (
     <>
-      <button className="button secondary" onClick={review}>
+      <button className="button secondary" disabled={disabled} onClick={review}>
         Descartar borrador
       </button>
       {confirm && (
@@ -254,11 +276,28 @@ export function StudentDrafts() {
   const [version, setVersion] = useState(0);
   useEffect(() => {
     let active = true;
+    setDrafts([]);
+    setLoaded(false);
+    setError("");
     void (async () => {
       try {
         const local = (await db.meta.get("draft:" + id))?.value as
           | { doc: RoutineDocument; draftId: string; draftRevision: number }
           | undefined;
+        const localItems: DraftItem[] = local
+          ? [
+              {
+                id: local.draftId,
+                document: local.doc,
+                revision: local.draftRevision,
+                local: true,
+              },
+            ]
+          : [];
+        if (active) {
+          setDrafts(localItems);
+          setLoaded(true);
+        }
         const result = await cloud()
           .from("routine_drafts")
           .select("id,document,revision")
@@ -293,7 +332,7 @@ export function StudentDrafts() {
       active = false;
     };
   }, [db, id, version]);
-  if (!data) return <p role="status">Cargando alumno…</p>;
+  if (!data) return <LoadingState label="Cargando alumno…" />;
   return (
     <div className="student-page routine-workspace">
       <StudentHeader data={data} />
@@ -329,7 +368,7 @@ export function StudentDrafts() {
           </button>
         </p>
       )}
-      {!loaded && <p role="status">Cargando borradores…</p>}
+      {!loaded && <LoadingState label="Cargando borradores…" />}
       {loaded && !error && !drafts.length && (
         <section className="card empty">
           <h3>No hay borradores pendientes</h3>
