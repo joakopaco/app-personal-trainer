@@ -45,17 +45,15 @@ test("calendar opens top right, shows real visits, future schedules and remote m
       expect(result.status).toBe("applied");
       revision = result.revision;
     }
-    const { error } = await adminClient()
-      .from("visits")
-      .insert({
-        id: randomUUID(),
-        workspace_id: a.workspaceId,
-        student_id: a.studentId,
-        date: today,
-        time: "16:00",
-        source: "extra",
-        status: "cancelled",
-      });
+    const { error } = await adminClient().from("visits").insert({
+      id: randomUUID(),
+      workspace_id: a.workspaceId,
+      student_id: a.studentId,
+      date: today,
+      time: "16:00",
+      source: "extra",
+      status: "cancelled",
+    });
     expect(error).toBeNull();
     await page.goto("/login");
     await page.getByLabel("Email", { exact: true }).fill(accounts[0].email);
@@ -107,7 +105,12 @@ test("calendar opens top right, shows real visits, future schedules and remote m
       .filter({ has: page.locator("span", { hasText: /^15$/ }) });
     await dayButton.click();
     const roster = dialog.getByRole("region", { name: "Alumnos del día" });
-    await expect(roster.getByRole("link", { name, exact: true })).toBeVisible();
+    await expect(
+      roster
+        .locator("li")
+        .filter({ hasText: "09:45" })
+        .getByRole("link", { name, exact: true }),
+    ).toBeVisible();
     await expect(roster.getByText("09:45")).toBeVisible();
     await dialog.getByRole("button", { name: "Ver agenda del día" }).click();
     await expect(page.getByLabel("Fecha de agenda")).toHaveValue(

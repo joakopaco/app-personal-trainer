@@ -29,7 +29,34 @@ const schedule: StudentSnapshot["schedule"] = {
 const entry = (
   date: string,
   status: CalendarEntry["status"],
-): CalendarEntry => ({ id: date, date, time: "09:00", student, status });
+): CalendarEntry => ({
+  id: date,
+  date,
+  time: "09:00",
+  source: "scheduled",
+  student,
+  status,
+});
+
+test("an extra appointment does not cancel the habitual schedule, while actual matching turns are not duplicated", () => {
+  const extra = { ...entry("2026-11-02", "cancelled"), source: "extra" };
+  const snapshots = [{ student, schedule }];
+  const forDay = (visits: CalendarEntry[]) =>
+    calendarEntries("2026-11", "2026-10-11", visits, snapshots).filter(
+      (v) => v.date === extra.date,
+    );
+  expect(forDay([extra]).map((v) => v.status)).toEqual([
+    "habitual",
+    "cancelled",
+  ]);
+  expect(forDay([{ ...extra, status: "pending" }])).toHaveLength(2);
+  expect(
+    forDay([{ ...extra, status: "pending", time: "08:00:00" }]),
+  ).toHaveLength(1);
+  expect(
+    forDay([{ ...extra, source: "rescheduled", status: "pending" }]),
+  ).toHaveLength(1);
+});
 
 test("calendar month boundaries support leap years and December navigation", () => {
   expect(monthDays("2028-02")).toHaveLength(29);

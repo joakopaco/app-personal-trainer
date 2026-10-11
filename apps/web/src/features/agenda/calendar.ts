@@ -20,6 +20,7 @@ export type CalendarEntry = {
   id: string;
   date: string;
   time: string;
+  source: string;
   student: Student;
   status: StudentSnapshot["visits"][number]["status"] | "habitual";
 };
@@ -51,12 +52,25 @@ export function calendarEntries(
       for (const date of monthDays(month)) {
         const weekday = new Date(date + "T12:00:00Z").getUTCDay() || 7;
         if (!schedule.weekdays.includes(weekday)) continue;
-        if (entries.some((v) => v.student.id === student.id && v.date === date))
+        const time = schedule.day_times[String(weekday)] ?? schedule.time;
+        if (
+          entries.some(
+            (v) =>
+              v.student.id === student.id &&
+              v.date === date &&
+              (v.source === "scheduled" ||
+                (v.source === "rescheduled" && v.status !== "cancelled") ||
+                (v.source === "extra" &&
+                  countsAsTurn(v) &&
+                  v.time.slice(0, 5) === time.slice(0, 5))),
+          )
+        )
           continue;
         entries.push({
           id: `habitual:${student.id}:${date}`,
           date,
-          time: schedule.day_times[String(weekday)] ?? schedule.time,
+          time,
+          source: "habitual",
           student,
           status: "habitual",
         });
