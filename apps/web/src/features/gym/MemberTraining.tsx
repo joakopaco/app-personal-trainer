@@ -10,12 +10,14 @@ import {
   Timer,
 } from "lucide-react";
 import { formatRestDuration } from "../../components/rest-minutes";
+import { parseNumber } from "@pulso/domain/numbers";
 import { ExerciseArt } from "../catalog/ExerciseLibrary";
 import { useDraftNavigation } from "../routines/use-draft-navigation";
 import {
   initialTrainingResults,
   recoverTrainingDraft,
   trainingSetError,
+  trainingInputKey,
   type TrainingRequest,
 } from "./training-state";
 import "./member-training.css";
@@ -235,7 +237,13 @@ export function MemberTraining() {
     </>
   );
 }
-type RestPreset = { seconds: number; label: string; token: number };
+type RestPreset = {
+  seconds: number;
+  label: string;
+  token: number;
+  target: string;
+};
+type SetIssue = { positionId: string; index: number; message: string };
 
 export function GymTrainingSession({ initial }: { initial: GymSession }) {
   const { access } = useGym(),
@@ -259,6 +267,7 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
     }
   });
   const [results, setResults] = useState(recovered.results),
+    [rawValues, setRawValues] = useState(recovered.rawValues),
     [revision, setRevision] = useState(recovered.revision),
     [dirty, setDirty] = useState(recovered.dirty),
     [busy, setBusy] = useState(false),
@@ -268,8 +277,19 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
     [resolve, setResolve] = useState(false),
     [conflict, setConflict] = useState(recovered.conflict),
     [pending, setPending] = useState<TrainingRequest | null>(recovered.pending),
-    [restPreset, setRestPreset] = useState<RestPreset | null>(null);
+    [restPreset, setRestPreset] = useState<RestPreset | null>(null),
+    [setIssue, setSetIssue] = useState<SetIssue | null>(null);
+  const invalidRow = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!setIssue) return;
+    // Let the dialog restore focus before revealing a rejected finalization's row.
+    const frame = requestAnimationFrame(() =>
+      invalidRow.current?.scrollIntoView?.({ block: "center" }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [setIssue]);
   const resultsRef = useRef(results),
+    rawValuesRef = useRef(rawValues),
     requestLock = useRef(false);
   const { guard, allowNavigation } = useDraftNavigation(
     (dirty || !!pending) && (!!storageError || busy || conflict),
@@ -326,7 +346,12 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
     try {
       localStorage.setItem(
         storageKey,
-        JSON.stringify({ results: next, revision: version, pending: request }),
+        JSON.stringify({
+          results: next,
+          rawValues: rawValuesRef.current,
+          revision: version,
+          pending: request,
+        }),
       );
       setStorageError("");
     } catch {
@@ -363,7 +388,45 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
     setResults(next);
     setDirty(true);
     setError("");
+    setSetIssue(null);
     persist(next);
+  }
+  function setProblem(
+    item: GymResult,
+    index: number,
+    type: string,
+    required = item.sets[index].confirmed,
+  ) {
+    for (const field of ["weight", "reps", "durationSec"] as const) {
+      const raw =
+        rawValuesRef.current[trainingInputKey(item.positionId, index, field)];
+      if (raw !== undefined && raw !== "" && !parseNumber(field, raw).ok) {
+        return `Revisá ${field === "weight" ? "el peso (kg, hasta 2 decimales)" : field === "reps" ? "las repeticiones (número entero)" : "el tiempo (segundos enteros)"}.`;
+      }
+    }
+    return trainingSetError(item.sets[index], type, required);
+  }
+  function editValue(
+    positionId: string,
+    index: number,
+    field: "weight" | "reps" | "durationSec",
+    raw: string,
+  ) {
+    if (requestLock.current || pending || conflict) return;
+    const nextRaw = {
+      ...rawValuesRef.current,
+      [trainingInputKey(positionId, index, field)]: raw,
+    };
+    rawValuesRef.current = nextRaw;
+    setRawValues(nextRaw);
+    const parsed = parseNumber(field, raw);
+    change((copy) => {
+      if (raw === "" || parsed.ok) {
+        copy.find((item) => item.positionId === positionId)!.sets[index][
+          field
+        ] = raw === "" ? null : parsed.ok ? parsed.value : null;
+      }
+    });
   }
   async function save(finish = false) {
     if (requestLock.current || conflict) return;
@@ -372,10 +435,15 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
         const exercise = initial.day.blocks
           .flatMap((block) => block.exercises)
           .find((exercise) => exercise.id === item.positionId)!;
-        for (const [index, set] of item.sets.entries()) {
-          const problem = trainingSetError(set, exercise.type);
+        for (let index = 0; index < item.sets.length; index++) {
+          const problem = setProblem(item, index, exercise.type);
           if (problem) {
-            setError(`${exercise.name}, serie ${index + 1}: ${problem}`);
+            setConfirm(false);
+            setSetIssue({
+              positionId: item.positionId,
+              index,
+              message: problem,
+            });
             return;
           }
         }
@@ -403,6 +471,8 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
       );
       setRevision(saved.revision);
       setDirty(false);
+      rawValuesRef.current = {};
+      setRawValues({});
       setPending(null);
       // Local cleanup failure must never turn a successful remote write into a retry.
       clearDraft(request.operationId);
@@ -426,10 +496,16 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
       setBusy(false);
     }
   }
-  function startRest(seconds: number | null, label: string) {
+  function startRest(seconds: number | null, label: string, target: string) {
     if (seconds === null || seconds <= 0) return;
-    setRestPreset({ seconds, label, token: Date.now() });
+    setRestPreset({ seconds, label, target, token: Date.now() });
   }
+  const restTimer = (
+    <GymRestTimer
+      storageKey={"pulso-gym-timer:" + access.userId + ":" + initial.id}
+      preset={restPreset}
+    />
+  );
   const disabled = busy || !!pending || conflict;
   const total = results
     .filter((item) => !item.skipped)
@@ -503,10 +579,7 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
           </button>
         </div>
       )}
-      <GymRestTimer
-        storageKey={"pulso-gym-timer:" + access.userId + ":" + initial.id}
-        preset={restPreset}
-      />
+      {!restPreset && restTimer}
       {initial.day.blocks.map((block) => (
         <section className="gym-training-block stack" key={block.id}>
           <div className="gym-heading-row">
@@ -524,7 +597,7 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
               <button
                 className="button secondary"
                 onClick={() =>
-                  startRest(block.macroRest, `Bloque · ${block.name}`)
+                  startRest(block.macroRest, `Bloque · ${block.name}`, block.id)
                 }
                 aria-label={`Iniciar descanso del bloque ${block.name}`}
               >
@@ -533,6 +606,7 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
               </button>
             )}
           </div>
+          {restPreset?.target === block.id && restTimer}
           {block.exercises.map((exercise) => {
             const index = results.findIndex(
                 (result) => result.positionId === exercise.id,
@@ -595,6 +669,7 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
                         startRest(
                           exercise.prescription.microRest,
                           `Entre series · ${exercise.name}`,
+                          exercise.id,
                         )
                       }
                     >
@@ -607,6 +682,7 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
                     {item.sets.length} series
                   </small>
                 </div>
+                {restPreset?.target === exercise.id && restTimer}
                 <fieldset disabled={disabled || item.skipped} className="stack">
                   <legend className="gym-training-sr">
                     Series de {exercise.name}
@@ -625,105 +701,131 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
                     </span>
                     <span>Hecha</span>
                   </div>
-                  {item.sets.map((set, n) => (
-                    <div
-                      key={n}
-                      className={
-                        "gym-member-set" +
-                        (!withWeight ? " is-single" : "") +
-                        (set.confirmed ? " is-confirmed" : "")
-                      }
-                    >
-                      <strong className="gym-member-set-number">{n + 1}</strong>
-                      {fields.map((field) => (
-                        <label className="gym-member-set-field" key={field}>
-                          <span className="gym-training-sr">
-                            {field === "weight"
-                              ? "Peso · kg"
-                              : field === "reps"
-                                ? "Repeticiones"
-                                : "Tiempo · s"}
-                          </span>
-                          <input
-                            type="number"
-                            inputMode={
-                              field === "weight" ? "decimal" : "numeric"
-                            }
-                            min={field === "weight" ? 0 : 1}
-                            max={
-                              field === "weight"
-                                ? 1000
-                                : field === "reps"
-                                  ? 500
-                                  : 86400
-                            }
-                            step={field === "weight" ? "0.01" : "1"}
-                            value={set[field] ?? ""}
-                            disabled={set.confirmed}
-                            aria-label={`${field === "weight" ? "Peso" : field === "reps" ? "Repeticiones" : "Tiempo"} serie ${n + 1} de ${exercise.name}`}
-                            onChange={(event) =>
-                              change((copy) => {
-                                copy[index].sets[n][field] =
-                                  event.target.value === ""
-                                    ? null
-                                    : Number(event.target.value);
-                              })
-                            }
-                          />
-                          {exercise.type === "time" &&
-                            set.durationSec !== null && (
-                              <small>
-                                {formatRestDuration(set.durationSec)}
-                              </small>
-                            )}
-                        </label>
-                      ))}
-                      <label
-                        className="gym-member-confirm"
-                        title={
-                          set.confirmed ? "Serie registrada" : "Confirmar serie"
+                  {item.sets.map((set, n) => {
+                    const issue =
+                      setIssue?.positionId === exercise.id &&
+                      setIssue.index === n
+                        ? setIssue
+                        : null;
+                    const errorId = `gym-set-error-${exercise.id}-${n}`;
+                    return (
+                      <div
+                        key={n}
+                        ref={issue ? invalidRow : undefined}
+                        className={
+                          "gym-member-set" +
+                          (!withWeight ? " is-single" : "") +
+                          (set.confirmed ? " is-confirmed" : "")
                         }
                       >
-                        <input
-                          type="checkbox"
-                          checked={set.confirmed}
-                          disabled={set.confirmed}
-                          aria-label={`Confirmar serie ${n + 1} de ${exercise.name}`}
-                          onChange={() => {
-                            const problem = trainingSetError(
-                              set,
-                              exercise.type,
-                              true,
-                            );
-                            if (problem) {
-                              setError(
-                                `${exercise.name}, serie ${n + 1}: ${problem}`,
-                              );
-                              return;
-                            }
-                            change((copy) => {
-                              copy[index].sets[n].confirmed = true;
-                            });
-                          }}
-                        />
-                        <Check size={22} aria-hidden="true" />
-                        <span className="gym-training-sr">Hecha</span>
-                      </label>
-                      {set.confirmed && (
-                        <button
-                          className="gym-member-correct"
-                          aria-label={`Corregir serie ${n + 1} de ${exercise.name}`}
-                          onClick={() =>
-                            change((copy) => {
-                              copy[index].sets[n].confirmed = false;
-                            })
+                        <strong className="gym-member-set-number">
+                          {n + 1}
+                        </strong>
+                        {fields.map((field) => (
+                          <label className="gym-member-set-field" key={field}>
+                            <span className="gym-training-sr">
+                              {field === "weight"
+                                ? "Peso · kg"
+                                : field === "reps"
+                                  ? "Repeticiones"
+                                  : "Tiempo · s"}
+                            </span>
+                            <input
+                              type="text"
+                              inputMode={
+                                field === "weight" ? "decimal" : "numeric"
+                              }
+                              autoComplete="off"
+                              value={
+                                rawValues[
+                                  trainingInputKey(exercise.id, n, field)
+                                ] ??
+                                set[field] ??
+                                ""
+                              }
+                              disabled={set.confirmed}
+                              aria-label={`${field === "weight" ? "Peso" : field === "reps" ? "Repeticiones" : "Tiempo"} serie ${n + 1} de ${exercise.name}`}
+                              aria-describedby={issue ? errorId : undefined}
+                              onFocus={(event) => event.target.select()}
+                              onChange={(event) =>
+                                editValue(
+                                  exercise.id,
+                                  n,
+                                  field,
+                                  event.target.value,
+                                )
+                              }
+                            />
+                            {exercise.type === "time" &&
+                              set.durationSec !== null && (
+                                <small>
+                                  {formatRestDuration(set.durationSec)}
+                                </small>
+                              )}
+                          </label>
+                        ))}
+                        <label
+                          className="gym-member-confirm"
+                          title={
+                            set.confirmed
+                              ? "Serie registrada"
+                              : "Confirmar serie"
                           }
                         >
-                          Corregir serie
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                          <input
+                            type="checkbox"
+                            checked={set.confirmed}
+                            disabled={set.confirmed}
+                            aria-label={`Confirmar serie ${n + 1} de ${exercise.name}`}
+                            aria-describedby={issue ? errorId : undefined}
+                            onChange={() => {
+                              const problem = setProblem(
+                                item,
+                                n,
+                                exercise.type,
+                                true,
+                              );
+                              if (problem) {
+                                setSetIssue({
+                                  positionId: exercise.id,
+                                  index: n,
+                                  message: problem,
+                                });
+                                return;
+                              }
+                              change((copy) => {
+                                copy[index].sets[n].confirmed = true;
+                              });
+                            }}
+                          />
+                          <Check size={22} aria-hidden="true" />
+                          <span className="gym-training-sr">Hecha</span>
+                        </label>
+                        {issue && (
+                          <p
+                            id={errorId}
+                            className="error gym-set-error"
+                            role="alert"
+                          >
+                            Serie {n + 1}: {issue.message}
+                          </p>
+                        )}
+                        {set.confirmed && (
+                          <button
+                            className="gym-member-correct"
+                            aria-label={`Corregir serie ${n + 1} de ${exercise.name}`}
+                            onClick={() =>
+                              change((copy) => {
+                                copy[index].sets[n].confirmed = false;
+                              })
+                            }
+                          >
+                            Corregir serie
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                   <button
                     className="button secondary gym-member-add"
                     disabled={item.sets.length >= 50}
@@ -802,6 +904,7 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
               // Export the displayed local values, even if another tab overwrote storage.
               let value = JSON.stringify({
                 results: resultsRef.current,
+                rawValues: rawValuesRef.current,
                 revision,
                 pending,
               });
@@ -848,11 +951,14 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
                 const next = initialTrainingResults(latest);
                 resultsRef.current = next;
                 setResults(next);
+                rawValuesRef.current = {};
+                setRawValues({});
                 setRevision(latest.revision);
                 setDirty(false);
                 setPending(null);
                 setConflict(false);
                 setResolve(false);
+                setSetIssue(null);
               } catch (e) {
                 setError(gymError(e));
               } finally {
@@ -930,6 +1036,10 @@ function GymRestClock({
   storageKey: string;
   preset: RestPreset | null;
 }) {
+  const clock = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (preset) clock.current?.scrollIntoView?.({ block: "nearest" });
+  }, [preset]);
   const [storage] = useState(() => {
     let value: unknown = preset
       ? { end: Date.now() + preset.seconds * 1000, paused: null, started: true }
@@ -954,12 +1064,12 @@ function GymRestClock({
     };
   });
   return (
-    <div className="gym-member-clock">
-      {preset && (
-        <p className="muted" role="status">
-          {preset.label} · {formatRestDuration(preset.seconds)}
-        </p>
-      )}
+    <div
+      className="gym-member-clock"
+      ref={clock}
+      role="group"
+      aria-label={preset?.label ?? "Descanso"}
+    >
       <RestClock session={{ id: storageKey }} storage={storage} />
     </div>
   );

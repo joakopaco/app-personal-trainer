@@ -1,5 +1,25 @@
 import { z } from "zod";
 import type { GymResult, GymSession } from "./api";
+import { parseNumber } from "@pulso/domain/numbers";
+
+export type TrainingRawValues = Record<string, string>;
+export function trainingInputKey(
+  positionId: string,
+  index: number,
+  field: string,
+) {
+  return `${positionId}:${index}:${field}`;
+}
+export function invalidTrainingText(values: TrainingRawValues) {
+  return Object.entries(values).some(([key, value]) => {
+    const field = key.split(":").at(-1);
+    return (
+      (field === "weight" || field === "reps" || field === "durationSec") &&
+      value !== "" &&
+      !parseNumber(field, value).ok
+    );
+  });
+}
 
 export type TrainingRequest = {
   operationId: string;
@@ -26,6 +46,7 @@ const resultSchema = z.array(
 const draftSchema = z.object({
   revision: z.number().int().nonnegative(),
   results: resultSchema,
+  rawValues: z.record(z.string(), z.string()).default({}),
   pending: z
     .object({
       operationId: z.uuid(),
@@ -95,6 +116,7 @@ export function sameTrainingResults(a: GymResult[], b: GymResult[]): boolean {
 export function recoverTrainingDraft(raw: string | null, session: GymSession) {
   const fresh = {
     results: initialTrainingResults(session),
+    rawValues: {} as TrainingRawValues,
     revision: session.revision,
     pending: null as TrainingRequest | null,
     dirty: false,
@@ -118,6 +140,7 @@ export function recoverTrainingDraft(raw: string | null, session: GymSession) {
       throw Error("Invalid draft");
     if (
       sameTrainingResults(saved.results, fresh.results) &&
+      !invalidTrainingText(saved.rawValues) &&
       (!saved.pending ||
         (session.revision > saved.revision &&
           saved.pending.kind === "save_session"))
@@ -128,6 +151,7 @@ export function recoverTrainingDraft(raw: string | null, session: GymSession) {
     return {
       ...fresh,
       results: saved.results,
+      rawValues: saved.rawValues,
       revision: saved.revision,
       dirty: true,
       conflict: true,
