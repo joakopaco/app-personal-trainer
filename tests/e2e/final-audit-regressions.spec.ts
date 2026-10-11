@@ -8,7 +8,7 @@ import { gymFixture, gymDocument } from "../fixtures/gym";
 
 test("mixed trainee exercises preserve incomplete entries, omit results and recover a lost finish response", async ({
   page,
-}) => {
+}, info) => {
   test.setTimeout(90000);
   const f = await gymFixture();
   const day = gymDocument().weeks[0][0];
@@ -80,8 +80,9 @@ test("mixed trainee exercises preserve incomplete entries, omit results and reco
     const reps = page.getByLabel("Repeticiones serie 1 de Flexiones", {
       exact: true,
     });
-    await reps.click();
-    await reps.pressSequentially("12");
+    if (info.project.use.hasTouch) await reps.tap();
+    else await reps.click();
+    await page.keyboard.type("12");
     await expect(reps).toHaveValue("12");
     await page
       .getByLabel("Confirmar serie 1 de Flexiones", { exact: true })
@@ -242,8 +243,16 @@ test("trainer set controls stay usable and pending edits explain how to finish",
     }
     await page.setViewportSize({ width: 320, height: 700 });
     await weight.click();
-    await weight.pressSequentially("27,5");
+    await page.keyboard.type("27,5");
     await expect(weight).toHaveValue("27,5");
+    // A second click must let the trainer place a caret for partial corrections.
+    await weight.click();
+    expect(
+      await weight.evaluate((node) => {
+        const input = node as HTMLInputElement;
+        return input.selectionStart === input.selectionEnd;
+      }),
+    ).toBe(true);
     await expect(
       page.getByText("Campo pendiente de confirmar", { exact: true }),
     ).toBeVisible();
