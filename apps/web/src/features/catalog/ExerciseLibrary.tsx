@@ -1,7 +1,7 @@
 import { saveLibrary, type LibraryCommand } from "../../adapters/library";
 import { liveQuery } from "dexie";
 import { Star, ImageOff } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   catalog,
   searchExercises,
@@ -9,9 +9,22 @@ import {
 } from "@pulso/domain/catalog";
 import { cloud } from "../../adapters/supabase";
 import { useData } from "../../app/DataProvider";
+import "./exercise-library.css";
 export function ExerciseLibrary() {
   const { db } = useData();
   const [pendingSave, setPendingSave] = useState<LibraryCommand>();
+  const [pendingLoaded, setPendingLoaded] = useState(false);
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [savingFavorite, setSavingFavorite] = useState<string>();
+  const [favoriteFeedback, setFavoriteFeedback] = useState<{
+    id: string;
+    text: string;
+  }>();
+  const savingRef = useRef(false);
+  const loadVersion = useRef(0);
   const [query, setQuery] = useState(""),
     [filter, setFilter] = useState(""),
     [saving, setSaving] = useState(false),
@@ -24,29 +37,117 @@ export function ExerciseLibrary() {
     [equipment, setEquipment] = useState(""),
     [type, setType] = useState<ExerciseDefinition["type"]>("load_reps"),
     [message, setMessage] = useState("");
-  async function refresh() {
-    const a = await cloud().from("custom_exercises").select("*");
-    const b = await cloud().from("exercise_favorites").select("exercise_id");
-    if (a.data) setOwn(a.data.map((e) => ({ ...e, aliases: [] })));
-    if (b.data) setFavorites(b.data.map((e) => e.exercise_id));
-  }
+  const refresh = useCallback(async () => {
+    const version = ++loadVersion.current;
+    setLoading(true);
+    setLoadError("");
+    const [exercises, savedFavorites] = await Promise.allSettled([
+      cloud()
+        .from("custom_exercises")
+        .select("*")
+        .eq("workspace_id", db.scope.workspaceId),
+      cloud()
+        .from("exercise_favorites")
+        .select("exercise_id")
+        .eq("workspace_id", db.scope.workspaceId),
+    ]);
+    if (version !== loadVersion.current) return;
+    const errors: string[] = [];
+    if (
+      exercises.status === "fulfilled" &&
+      !exercises.value.error &&
+      exercises.value.data
+    )
+      setOwn(exercises.value.data.map((e) => ({ ...e, aliases: [] })));
+    else errors.push("No se pudieron cargar tus ejercicios propios.");
+    if (
+      savedFavorites.status === "fulfilled" &&
+      !savedFavorites.value.error &&
+      savedFavorites.value.data
+    ) {
+      setFavorites(savedFavorites.value.data.map((e) => e.exercise_id));
+      setFavoritesLoaded(true);
+    } else
+      errors.push(
+        "No se pudieron cargar tus favoritos. Reintentá para ver el estado guardado.",
+      );
+    setLoadError(errors.join(" "));
+    setLoading(false);
+  }, [db]);
   useEffect(() => {
+    setFavoritesLoaded(false);
+    setFavorites([]);
+    setOwn([]);
     void refresh();
-  }, []);
+    return () => {
+      loadVersion.current++;
+    };
+  }, [refresh]);
   useEffect(() => {
+    setPendingLoaded(false);
     const sub = liveQuery(() => db.meta.get("library-pending")).subscribe(
       (entry) => {
         const command = entry?.value as LibraryCommand | undefined;
-        setPendingSave(
-          command && !command.kind.startsWith("template") ? command : undefined,
-        );
+        setPendingSave(command);
+        setPendingLoaded(true);
       },
     );
     return () => sub.unsubscribe();
   }, [db]);
+  async function saveChange(command: LibraryCommand) {
+    if (savingRef.current || loading) return false;
+    savingRef.current = true;
+    setSaving(true);
+    setMessage("");
+    const exerciseId =
+      command.kind === "favorite"
+        ? String(command.payload.exerciseId)
+        : undefined;
+    setSavingFavorite(exerciseId);
+    setFavoriteFeedback(undefined);
+    try {
+      await saveLibrary(db, command);
+      setPendingSave(undefined);
+      if (exerciseId) {
+        // The acknowledged write is authoritative; a second read can fail or
+        // return an older snapshot and must not undo the confirmed star.
+        setFavorites((current) =>
+          command.payload.enabled
+            ? [...new Set([...current, exerciseId])]
+            : current.filter((id) => id !== exerciseId),
+        );
+        const text = command.payload.enabled
+          ? "Agregado a favoritos."
+          : "Quitado de favoritos.";
+        setFavoriteFeedback({ id: exerciseId, text });
+        setMessage(text);
+      } else {
+        await refresh();
+        setMessage("Ejercicio guardado.");
+      }
+      return true;
+    } catch (error) {
+      const text = (error as Error).message;
+      setMessage(text);
+      if (exerciseId) setFavoriteFeedback({ id: exerciseId, text });
+      return false;
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+      setSavingFavorite(undefined);
+    }
+  }
+  const pendingFavoriteId =
+    pendingSave?.kind === "favorite"
+      ? String(pendingSave.payload.exerciseId)
+      : undefined;
+  const pendingTemplate = pendingSave?.kind.startsWith("template");
+  const blocked = saving || loading || !pendingLoaded || Boolean(pendingSave);
   const groups = [...new Set([...catalog, ...own].map((e) => e.group))];
   const results = searchExercises(query, [...own, ...catalog]).filter(
-    (e) => !filter || e.group === filter,
+    (e) =>
+      (!filter || e.group === filter) &&
+      (!onlyFavorites || favorites.includes(e.id)),
   );
   return (
     <>
@@ -76,6 +177,20 @@ export function ExerciseLibrary() {
           </select>
         </label>
         <button
+          className="button secondary favorites-filter"
+          aria-label="Solo favoritos"
+          aria-pressed={onlyFavorites}
+          disabled={!favoritesLoaded}
+          onClick={() => setOnlyFavorites(!onlyFavorites)}
+        >
+          <Star
+            size={18}
+            aria-hidden="true"
+            fill={onlyFavorites ? "currentColor" : "none"}
+          />
+          Solo favoritos ({favorites.length})
+        </button>
+        <button
           className="button"
           aria-expanded={form}
           onClick={() => setForm(!form)}
@@ -83,32 +198,53 @@ export function ExerciseLibrary() {
           Crear ejercicio propio
         </button>
       </div>
+      {loading && (
+        <p className="muted" role="status">
+          Cargando tus ejercicios y favoritos…
+        </p>
+      )}
+      {loadError && (
+        <div className="notice row" role="alert">
+          <span>{loadError}</span>
+          <button
+            className="button secondary"
+            disabled={saving || loading}
+            onClick={() => void refresh()}
+          >
+            Reintentar carga
+          </button>
+        </div>
+      )}
       {message && (
         <p className="notice" role="status">
           {message}
         </p>
       )}
-      {pendingSave && (
+      {pendingSave && !saving && (
         <div className="notice row">
-          <span>Hay un ejercicio o favorito pendiente de guardar.</span>
-          <button
-            className="button secondary"
-            disabled={saving}
-            onClick={async () => {
-              setSaving(true);
-              try {
-                await saveLibrary(db, pendingSave);
-                await refresh();
-                setMessage("Cambio guardado.");
-              } catch (e) {
-                setMessage((e as Error).message);
-              } finally {
-                setSaving(false);
-              }
-            }}
-          >
-            Reintentar guardado
-          </button>
+          <span>
+            {pendingTemplate
+              ? "Hay una plantilla pendiente de guardar. Reintentá desde su editor antes de cambiar favoritos."
+              : pendingFavoriteId
+                ? "Hay un cambio de favorito pendiente de confirmar."
+                : "Hay un ejercicio pendiente de guardar."}
+          </span>
+          {pendingTemplate ? (
+            <a
+              className="button secondary"
+              href={"/rutinas/plantillas/" + pendingSave.id}
+            >
+              Abrir plantilla pendiente
+            </a>
+          ) : (
+            <button
+              className="button secondary"
+              disabled={saving || loading}
+              onClick={() => void saveChange(pendingSave)}
+            >
+              Reintentar guardado
+            </button>
+          )}
         </div>
       )}
       {form && (
@@ -116,32 +252,25 @@ export function ExerciseLibrary() {
           className="card stack blocks"
           onSubmit={async (e) => {
             e.preventDefault();
-            if (saving) return;
-            setSaving(true);
-            setMessage("");
-            try {
-              await saveLibrary(db, {
-                workspaceId: db.scope.workspaceId,
-                operationId: crypto.randomUUID(),
-                id: crypto.randomUUID(),
-                expectedRevision: 0,
-                kind: "exercise",
-                payload: {
-                  name: name.trim(),
-                  group,
-                  equipment: equipment.trim() || "Sin material",
-                  type,
-                },
-              });
+            if (blocked) return;
+            const saved = await saveChange({
+              workspaceId: db.scope.workspaceId,
+              operationId: crypto.randomUUID(),
+              id: crypto.randomUUID(),
+              expectedRevision: 0,
+              kind: "exercise",
+              payload: {
+                name: name.trim(),
+                group,
+                equipment: equipment.trim() || "Sin material",
+                type,
+              },
+            });
+            if (saved) {
               setForm(false);
               setName("");
               setGroup("");
               setEquipment("");
-              await refresh();
-            } catch (e) {
-              setMessage((e as Error).message);
-            } finally {
-              setSaving(false);
             }
           }}
         >
@@ -196,7 +325,7 @@ export function ExerciseLibrary() {
             entrenamiento.
           </p>
           <div className="row">
-            <button className="button" disabled={saving}>
+            <button className="button" disabled={blocked}>
               {saving ? "Guardando…" : "Guardar ejercicio"}
             </button>
             <button
@@ -214,8 +343,16 @@ export function ExerciseLibrary() {
       </p>
       {!results.length && (
         <div className="card">
-          <h2>No encontramos ejercicios</h2>
-          <p>Probá con otro nombre o elegí otro grupo muscular.</p>
+          <h2>
+            {onlyFavorites
+              ? "No hay favoritos con estos filtros"
+              : "No encontramos ejercicios"}
+          </h2>
+          <p>
+            {onlyFavorites
+              ? "Marcá la estrella de un ejercicio para encontrarlo acá. También podés cambiar la búsqueda o el grupo muscular."
+              : "Probá con otro nombre o elegí otro grupo muscular."}
+          </p>
         </div>
       )}
       {groups
@@ -237,7 +374,7 @@ export function ExerciseLibrary() {
                     <p className="muted">
                       {e.group} · {e.equipment}
                     </p>
-                    <div className="row">
+                    <div className="row exercise-actions">
                       <button
                         className="button secondary"
                         onClick={() => setSelected(e)}
@@ -248,21 +385,24 @@ export function ExerciseLibrary() {
                         className="button secondary favorite-button"
                         aria-pressed={favorites.includes(e.id)}
                         aria-label={"Favorito " + e.name}
-                        onClick={async () => {
-                          try {
-                            await saveLibrary(db, {
-                              workspaceId: db.scope.workspaceId,
-                              operationId: crypto.randomUUID(),
-                              kind: "favorite",
-                              payload: {
-                                exerciseId: e.id,
-                                enabled: !favorites.includes(e.id),
-                              },
-                            });
-                            void refresh();
-                          } catch (e) {
-                            setMessage((e as Error).message);
-                          }
+                        title={
+                          favorites.includes(e.id)
+                            ? "Quitar de favoritos"
+                            : "Agregar a favoritos"
+                        }
+                        disabled={blocked || !favoritesLoaded}
+                        aria-busy={savingFavorite === e.id}
+                        onClick={() => {
+                          if (blocked || !favoritesLoaded) return;
+                          void saveChange({
+                            workspaceId: db.scope.workspaceId,
+                            operationId: crypto.randomUUID(),
+                            kind: "favorite",
+                            payload: {
+                              exerciseId: e.id,
+                              enabled: !favorites.includes(e.id),
+                            },
+                          });
                         }}
                       >
                         <Star
@@ -272,13 +412,27 @@ export function ExerciseLibrary() {
                             favorites.includes(e.id) ? "currentColor" : "none"
                           }
                         />
-                        <span className="sr-only">
-                          {favorites.includes(e.id)
-                            ? "Favorito"
-                            : "Agregar a favoritos"}
-                        </span>
+                        <span>Favorito</span>
                       </button>
                     </div>
+                    {pendingFavoriteId === e.id && !saving ? (
+                      <div className="favorite-feedback" role="status">
+                        <span>Cambio pendiente de confirmar.</span>
+                        <button
+                          className="link-button"
+                          disabled={loading}
+                          onClick={() => void saveChange(pendingSave!)}
+                        >
+                          Reintentar favorito
+                        </button>
+                      </div>
+                    ) : (
+                      favoriteFeedback?.id === e.id && (
+                        <p className="favorite-feedback" role="status">
+                          {favoriteFeedback.text}
+                        </p>
+                      )
+                    )}
                   </article>
                 ))}
             </div>

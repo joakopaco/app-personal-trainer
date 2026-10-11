@@ -25,13 +25,11 @@ test("a failed raw-input write never presents the edited screen as synchronized"
         return original.apply(this, args);
       };
     });
-    await page.getByText("Ajustes del ejercicio", { exact: true }).click();
+    await page.getByText("Editar objetivos", { exact: true }).click();
     await page.getByLabel("Peso kg", { exact: true }).fill("99");
     await page.getByLabel("Peso kg", { exact: true }).blur();
     await expect(page.getByRole("alert")).toContainText("No se pudo guardar");
-    await expect(page.getByText("Guardado", { exact: true })).toHaveCount(
-      0,
-    );
+    await expect(page.getByText("Guardado", { exact: true })).toHaveCount(0);
     await expect(
       page.getByRole("button", {
         name: "Finalizar entrenamiento",

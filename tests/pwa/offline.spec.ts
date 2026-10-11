@@ -21,7 +21,7 @@ test("installed production shell starts fully offline and preserves training edi
     await page.goto("/entrenar/" + a.studentId);
     await expect(page.getByLabel("Peso kg")).toHaveValue("20");
     await context.setOffline(true);
-    await page.getByText("Ajustes del ejercicio", { exact: true }).click();
+    await page.getByText("Editar objetivos", { exact: true }).click();
     await page.getByLabel("Peso kg").fill("37,5");
     await page.getByLabel("Peso kg").blur();
     await expect(page.locator(".save-indicator")).toContainText(

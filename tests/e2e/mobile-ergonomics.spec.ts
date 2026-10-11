@@ -137,6 +137,20 @@ test("touch arrival flow and persistent visual rest timer", async ({
       name: "Temporizador de descanso",
     });
     await expect(timer.getByRole("timer")).toHaveText("1:00");
+    const timerSizes = await timer.getByRole("button").evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const box = button.getBoundingClientRect();
+        return { width: box.width, height: box.height };
+      }),
+    );
+    expect(timerSizes).toHaveLength(3);
+    expect(
+      timerSizes.every((size) => size.width >= 44 && size.height >= 44),
+    ).toBe(true);
+    expect(
+      Math.max(...timerSizes.map((s) => s.height)) -
+        Math.min(...timerSizes.map((s) => s.height)),
+    ).toBeLessThanOrEqual(1);
     await timer
       .getByRole("button", { name: "Iniciar descanso", exact: true })
       .tap();

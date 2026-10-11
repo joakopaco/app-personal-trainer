@@ -224,9 +224,9 @@
 }
 
 .student-navigation {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
   border-bottom: 1px solid var(--line);
   padding: 0 0 12px;
   margin: 8px 0 24px;
@@ -236,11 +236,14 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 46px;
-  padding: 12px 18px;
+  min-height: 52px;
+  min-width: 0;
+  padding: 12px 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
   border-radius: 10px;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 .student-navigation a:hover {
@@ -248,6 +251,7 @@
 }
 .student-navigation a.active {
   background: var(--accent);
+  border-color: var(--accent);
   color: var(--on-accent);
 }
 .student-navigation svg {
@@ -322,16 +326,19 @@
 .progress-export-actions small {
   color: var(--muted);
 }
-@media (max-width: 600px) {
+@media (max-width: 900px) {
   .student-navigation {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 4px;
   }
   .student-navigation a {
-    padding: 12px 8px;
-    font-size: 12px;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 64px;
+    padding: 8px 2px;
+    font-size: 11px;
   }
+}
+@media (max-width: 600px) {
   .student-archive-list > div {
     align-items: start;
     flex-direction: column;

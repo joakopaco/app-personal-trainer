@@ -33,7 +33,7 @@ export function RoutineSummary({ document }: { document: RoutineDocument }) {
             aria-pressed={selectedDay === index}
             onClick={() => setSelectedDay(index)}
           >
-            {day.name}
+            Día {index + 1}
           </button>
         ))}
       </nav>
@@ -42,8 +42,7 @@ export function RoutineSummary({ document }: { document: RoutineDocument }) {
           index === selectedDay && (
             <section className="card routine-summary-day" key={day.id}>
               <header>
-                <p className="eyebrow">DÍA {index + 1}</p>
-                <h2>{day.name}</h2>
+                <h2>Día {index + 1}</h2>
                 <p className="muted">
                   {day.blocks.length}{" "}
                   {day.blocks.length === 1 ? "bloque" : "bloques"} ·{" "}

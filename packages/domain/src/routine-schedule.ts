@@ -33,7 +33,7 @@ export function routineForSchedule(
     doc.weeks = doc.weeks.map((week) =>
       Array.from({ length: count }, (_, n) => ({
         id: source && week[n] ? week[n].id : crypto.randomUUID(),
-        name: schedule.length ? weekdayNames[schedule[n] - 1] : `Día ${n + 1}`,
+        name: `Día ${n + 1}`,
         blocks: source ? (week[n]?.blocks ?? []) : [],
       })),
     );

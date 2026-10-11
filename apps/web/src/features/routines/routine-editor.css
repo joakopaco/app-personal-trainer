@@ -220,13 +220,15 @@
   min-height: 44px;
 }
 .routine-week-tools {
-  display: grid;
-  gap: 8px;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
 }
-.routine-week-tools > .link-button {
-  justify-self: start;
-  padding-left: 0;
-  text-align: left;
+.routine-week-tools > .routine-tabs {
+  flex: 1 1 390px;
+  min-width: 0;
 }
 .routine-day-tools {
   border-top: 1px solid var(--line);
@@ -778,12 +780,10 @@
   border-color: #e0b1b1;
 }
 .routine-week-copy {
-  position: relative;
   flex-shrink: 0;
-  justify-self: end;
 }
 .routine-week-copy-trigger {
-  min-height: 42px;
+  min-height: 44px;
   background: #f7f9f3;
 }
 .routine-week-copy-trigger[aria-expanded="true"] {
@@ -911,24 +911,10 @@
   padding-left: 22px;
   font-size: 11px;
 }
-.routine-day-rename {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  width: 100%;
-  padding: 12px;
-  background: #f7f9f3;
-  border-radius: 12px;
-}
-.routine-day-rename .field {
-  flex: 1;
-  min-width: 0;
-}
-.routine-day-rename .button {
-  min-height: 40px;
-  padding: 9px 12px;
-}
 @media (max-width: 600px) {
+  .routine-week-tools {
+    gap: 6px;
+  }
   .routine-week-copy {
     width: 100%;
   }
@@ -952,10 +938,24 @@
     min-height: 44px;
     flex: 1 1 auto;
   }
-  .routine-day-rename {
-    flex-wrap: wrap;
-  }
-  .routine-day-rename .field {
-    flex-basis: 100%;
-  }
+}
+
+.routine-activation-checklist {
+  padding: 18px 20px;
+  border: 1px solid #d7b458;
+  border-radius: 14px;
+  background: #fffaf0;
+}
+.routine-activation-checklist h3 {
+  margin: 0 0 8px;
+}
+.routine-activation-checklist p {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.routine-activation-checklist ul {
+  margin: 12px 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
 }

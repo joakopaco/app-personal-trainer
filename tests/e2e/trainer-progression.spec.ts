@@ -232,7 +232,7 @@ test("scheduled days and per-set editing survive save and reload at phone width"
       .click();
     await expect(
       page.getByLabel("Días", { exact: true }).getByRole("button"),
-    ).toHaveText(["Lunes", "Miércoles", "Viernes"]);
+    ).toHaveText(["Día 1", "Día 2", "Día 3"]);
     await expect(
       page.getByRole("button", { name: "+ Día", exact: true }),
     ).toHaveCount(0);
