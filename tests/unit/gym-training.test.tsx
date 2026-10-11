@@ -291,6 +291,49 @@ test("exercise and block rests start their own prescribed duration", async () =>
     expect(screen.getByRole("timer").textContent).toBe("2:00"),
   );
 });
+
+test("decimal commas keep their text while typing and save the intended weight", async () => {
+  mocks.command.mockResolvedValue({ id: "session", revision: 1 });
+  const user = userEvent.setup();
+  show();
+  const input = screen.getByLabelText(
+    "Peso serie 1 de Sentadilla",
+  ) as HTMLInputElement;
+  await user.clear(input);
+  await user.type(input, "27,5");
+  expect(input.value).toBe("27,5");
+  await user.click(screen.getByLabelText("Confirmar serie 1 de Sentadilla"));
+  await user.click(
+    screen.getByRole("button", { name: "Guardar entrenamiento" }),
+  );
+  await waitFor(() => expect(mocks.command).toHaveBeenCalledTimes(1));
+  expect(mocks.command.mock.calls[0][1].results[0].sets[0].weight).toBe(27.5);
+});
+
+test("unfinished numeric text survives reload even when numeric results match the server", async () => {
+  const session = fixture();
+  session.results = initialTrainingResults(session);
+  const draft = {
+    results: session.results,
+    revision: session.revision,
+    pending: null,
+    rawValues: { "position:0:weight": "20," },
+  };
+  localStorage.setItem(key, JSON.stringify(draft));
+  const recovered = recoverTrainingDraft(JSON.stringify(draft), session);
+  expect(recovered.dirty).toBe(true);
+  expect(recovered.rawValues["position:0:weight"]).toBe("20,");
+  show(session);
+  expect(
+    (screen.getByLabelText("Peso serie 1 de Sentadilla") as HTMLInputElement)
+      .value,
+  ).toBe("20,");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Guardar entrenamiento" }),
+  );
+  expect(mocks.command).not.toHaveBeenCalled();
+  expect(screen.getByRole("alert").textContent).toContain("peso");
+});
 test("a cross-tab draft change preserves current values and requires reconciliation", async () => {
   show();
   fireEvent.change(screen.getByLabelText("Peso serie 1 de Sentadilla"), {

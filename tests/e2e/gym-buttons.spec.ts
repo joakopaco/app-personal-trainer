@@ -70,6 +70,9 @@ for (const width of [320, 768, 1440])
     try {
       await page.setViewportSize({ width, height: 900 });
       await login(0);
+      await expect(
+        page.getByRole("heading", { name: "Actividad reciente" }),
+      ).toBeVisible();
       await capture(page, `admin-home-${width}`);
       await page.getByRole("link", { name: "Entrenados", exact: true }).click();
       await page.getByLabel("Buscar entrenado").fill("no existe");
@@ -78,6 +81,9 @@ for (const width of [320, 768, 1440])
       ).toBeVisible();
       await page.getByLabel("Buscar entrenado").fill("Alex");
       await page.getByRole("link", { name: /Alex García/ }).click();
+      await expect(
+        page.getByRole("button", { name: "Editar ficha", exact: true }),
+      ).toBeVisible();
       await capture(page, `member-profile-${width}`);
       await page
         .getByRole("button", { name: "Editar ficha", exact: true })
@@ -199,6 +205,9 @@ for (const width of [320, 768, 1440])
       ).toBeVisible();
       await expect(page).toHaveURL(/\/$/);
       await login(1);
+      await expect(
+        page.getByRole("link", { name: "Explorar rutinas", exact: true }),
+      ).toBeVisible();
       await capture(page, `member-home-${width}`);
       await expect(page.getByText("Nota exclusiva del gimnasio")).toHaveCount(
         0,
@@ -231,10 +240,10 @@ for (const width of [320, 768, 1440])
       await page.getByLabel("Series", { exact: true }).selectOption("3");
       await page.getByLabel("Peso kg", { exact: true }).fill("20");
       await page.getByLabel("Repeticiones", { exact: true }).selectOption("8");
+      await page.getByRole("button", { name: /Copiar semana 1 a/ }).click();
       await page
-        .getByRole("button", { name: /Copiar semana 1 a/ })
+        .getByRole("button", { name: "Copiar a 3 semanas", exact: true })
         .click();
-      await page.getByRole("button", { name: "Copiar a 3 semanas", exact: true }).click();
       await capture(page, `own-editor-${width}`);
       await page
         .getByRole("button", { name: "Guardar borrador", exact: true })
@@ -296,6 +305,9 @@ for (const width of [320, 768, 1440])
         .getByRole("button", { name: "Volver", exact: true })
         .click();
       await page.getByRole("link", { name: "Mi cuenta", exact: true }).click();
+      await expect(
+        page.getByRole("heading", { name: "Mi perfil", exact: true }),
+      ).toBeVisible();
       await capture(page, `member-account-${width}`);
     } finally {
       await f.cleanup();
