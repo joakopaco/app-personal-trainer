@@ -18,11 +18,13 @@ import {
 } from "./RescheduleVisit";
 import { useAgendaVisits } from "./useAgendaVisits";
 import { PendingReschedules } from "./PendingReschedules";
+import { AgendaCalendar } from "./AgendaCalendar";
 export function Today() {
   const { rows, error, db, onlineCommand, makeCommand, sync } = useData();
   const navigate = useNavigate();
   const starting = useRef(false);
   const [search, setSearch] = useState("");
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [dayMenuOpen, setDayMenuOpen] = useState(false);
   const [adding, setAdding] = useState(false),
     [studentId, setStudentId] = useState(""),
@@ -111,7 +113,19 @@ export function Today() {
   const [confirmation, setConfirmation] = useState("");
   return (
     <>
-      <header className="page-heading">
+      <header className="page-heading today-heading">
+        <button
+          className="button secondary today-calendar-button"
+          onClick={(event) => {
+            // Safari does not focus buttons on pointer clicks. Give the shared
+            // dialog manager an explicit return target before opening.
+            event.currentTarget.focus();
+            setCalendarOpen(true);
+          }}
+        >
+          <CalendarDays size={18} aria-hidden="true" />
+          Calendario
+        </button>
         <div>
           <p className="eyebrow">
             {new Intl.DateTimeFormat("es-AR", {
@@ -140,6 +154,16 @@ export function Today() {
           Agregar ahora
         </button>
       </header>
+      {calendarOpen && (
+        <AgendaCalendar
+          initialDate={date}
+          onClose={() => setCalendarOpen(false)}
+          onOpenDay={(day) => {
+            setDate(day);
+            setCalendarOpen(false);
+          }}
+        />
+      )}
       {error && <p className="notice">{error}</p>}
       {failure && (
         <p role="alert" className="error">
