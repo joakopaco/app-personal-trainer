@@ -116,7 +116,12 @@ export function Today() {
       <header className="page-heading today-heading">
         <button
           className="button secondary today-calendar-button"
-          onClick={() => setCalendarOpen(true)}
+          onClick={(event) => {
+            // Safari does not focus buttons on pointer clicks. Give the shared
+            // dialog manager an explicit return target before opening.
+            event.currentTarget.focus();
+            setCalendarOpen(true);
+          }}
         >
           <CalendarDays size={18} aria-hidden="true" />
           Calendario
