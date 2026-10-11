@@ -27,9 +27,22 @@ import {
   type GymRoutine,
   type GymRevision,
 } from "./api";
-import { useGym } from "./GymPortal";
+import { useGym } from "./GymContext";
 import { Empty, LoadState, Modal, PageHeading } from "./ui";
 import "../routines/routine-editor.css";
+import "./gym-routine-editor.css";
+import {
+  GymRoutineDraftStorage,
+  GymDraftConflict,
+  parseGymRoutineDraft,
+  sameGymRoutineBase,
+  invalidRoutineInputs,
+  pruneRoutineInputs,
+  downloadGymRoutineDraft,
+  type GymRoutineDraft,
+  type PendingRoutineCommand,
+} from "./routine-draft";
+import { useDraftNavigation } from "../routines/use-draft-navigation";
 
 const sourceName = {
   catalog: "Del gimnasio",
@@ -110,6 +123,17 @@ export function GymRoutines() {
           </button>
         ))}
       </div>
+      <p className="muted gym-routine-context">
+        {admin
+          ? filter === "draft"
+            ? "Preparaciones pendientes de publicar, incluidas las personalizadas."
+            : "Rutinas reutilizables para los entrenados de tu gimnasio."
+          : filter === "own"
+            ? "Podés tener una rutina propia y adaptarla cuando quieras."
+            : filter === "personal"
+              ? "Rutinas que tu gimnasio preparó especialmente para vos."
+              : "Elegí una rutina del gimnasio para tu próximo entrenamiento."}
+      </p>
       <label className="field gym-search">
         Buscar rutina
         <input
@@ -142,6 +166,11 @@ export function GymRoutines() {
               </span>
             </div>
             <h2>{r.name}</h2>
+            {r.published_revision_id &&
+              r.has_draft &&
+              (admin || r.kind === "own") && (
+                <span className="badge">Cambios sin publicar</span>
+              )}
             <p className="muted">{dateLabel(r.updated_at)}</p>
             <div className="gym-actions">
               {r.published_revision_id && (
@@ -236,11 +265,13 @@ export function GymRoutines() {
           }
         >
           <p>
-            {filter === "own"
-              ? "Podés crear una rutina propia y editarla cuando lo necesites."
-              : filter === "personal"
-                ? "Tu gimnasio puede preparar una rutina especialmente para vos."
-                : "Las rutinas aparecerán acá cuando estén disponibles."}
+            {query
+              ? "Probá con otro nombre o borrá la búsqueda para ver todas las rutinas."
+              : filter === "own"
+                ? "Podés crear una rutina propia y editarla cuando lo necesites."
+                : filter === "personal"
+                  ? "Tu gimnasio puede preparar una rutina especialmente para vos."
+                  : "Las rutinas aparecerán acá cuando estén disponibles."}
           </p>
           {filter === "own" && !admin && !query && (
             <Link className="button" to={base + "/nueva"}>
@@ -321,158 +352,363 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
     base = admin ? "/gimnasio/rutinas" : "/mi-entrenamiento/rutinas";
   const key =
     "pulso-gym-editor:" + access.userId + ":" + id + ":" + (memberId || "");
+  const storage = useRef(new GymRoutineDraftStorage(key));
   const [doc, setDoc] = useState<RoutineDocument | null>(null),
     [saved, setSaved] = useState(""),
     [record, setRecord] = useState<
-      (GymRoutine & { draft: RoutineDocument | null }) | null
+      | (GymRoutine & {
+          draft: RoutineDocument | null;
+          document: RoutineDocument;
+        })
+      | null
     >(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
-    [pendingSave, setPendingSave] = useState<{
-      operationId: string;
-      payload: Record<string, unknown>;
+    [pending, setPending] = useState<PendingRoutineCommand | null>(null),
+    [confirm, setConfirm] = useState<"discard" | "retire" | null>(null),
+    [recovery, setRecovery] = useState<{
+      snapshot: GymRoutineDraft | null;
+      original: string;
     } | null>(null),
-    [confirm, setConfirm] = useState<"discard" | "retire" | null>(null);
+    [storageProblem, setStorageProblem] = useState(false),
+    [tabConflict, setTabConflict] = useState(false),
+    [loading, setLoading] = useState(true),
+    [serverUnavailable, setServerUnavailable] = useState(false),
+    [reload, setReload] = useState(0),
+    [localSaving, setLocalSaving] = useState(false);
+  const [exported, setExported] = useState(false);
   const [pickingTemplate, setPickingTemplate] = useState(false);
   const [templateVersion, setTemplateVersion] = useState(0);
+  const rawValues = useRef<Record<string, string>>({});
+  const rawInvalid = useRef(new Set<string>());
+  const latestWrite = useRef(0);
+  const inFlight = useRef(false);
   const targetMember = record?.member_id || memberId;
   const returnTo =
     admin && targetMember ? "/gimnasio/entrenados/" + targetMember : base;
-  const rawValues = useRef<Record<string, string>>({}),
-    rawInvalid = useRef(new Set<string>());
+  function restore(snapshot: GymRoutineDraft) {
+    rawValues.current = pruneRoutineInputs(
+      snapshot.document,
+      snapshot.rawValues,
+    );
+    rawInvalid.current = invalidRoutineInputs(rawValues.current);
+    setDoc(snapshot.document);
+    setPending(snapshot.pending);
+    setTemplateVersion((v) => v + 1);
+  }
   useEffect(() => {
     let live = true;
+    setLoading(true);
+    setError("");
     void (async () => {
+      let local: GymRoutineDraft | null = null;
       try {
-        let initial: RoutineDocument;
-        let r:
-          (NonNullable<typeof record> & { document: RoutineDocument }) | null =
-          null;
-        if (id === "nueva") {
-          initial = blankRoutine();
-          initial.name = admin ? "Nueva rutina" : "Mi rutina";
-        } else {
-          r = await rows<typeof record & { document: RoutineDocument }>(
-            cloud().rpc("gym_edit_routine", { routine_id: id }),
-          );
-          initial = r!.document;
+        let encoded: string | null = null;
+        let readError: unknown;
+        try {
+          encoded = await storage.current.read();
+        } catch (e) {
+          readError = e;
         }
-        if (!live) return;
-        setRecord(r);
-        setSaved(JSON.stringify(initial));
-        const local = localStorage.getItem(key);
-        if (local) {
+        if (encoded) {
           try {
-            const parsed = JSON.parse(local);
-            if (
-              (id === "nueva" ||
-                parsed.pendingSave ||
-                parsed.base === JSON.stringify(initial)) &&
-              validateRoutine(parsed.document).length === 0
-            ) {
-              initial = parsed.document;
-              setPendingSave(parsed.pendingSave || null);
-            } else
-              setMessage(
-                "Hay cambios de otra versión guardados en este dispositivo. Se muestra la versión del servidor.",
-              );
+            local = parseGymRoutineDraft(encoded);
           } catch {
-            setMessage("No pudimos recuperar la edición local.");
+            /* Preserve the original for export below. */
           }
         }
+        let current: NonNullable<typeof record> | null = null;
+        let initial = blankRoutine();
+        initial.name = admin ? "Nueva rutina" : "Mi rutina";
+        if (id !== "nueva") {
+          current = await rows<NonNullable<typeof record>>(
+            cloud().rpc("gym_edit_routine", { routine_id: id }),
+          );
+          initial = current.document;
+        }
+        if (!live) return;
+        setServerUnavailable(false);
+        setRecord(current);
+        setSaved(JSON.stringify(initial));
+        setRecovery(null);
+        setTabConflict(false);
+        setStorageProblem(false);
+        if (readError) storageError(readError);
+        rawValues.current = {};
+        rawInvalid.current.clear();
+        setPending(null);
         setDoc(initial);
+        setTemplateVersion((v) => v + 1);
+        if (encoded) {
+          try {
+            const snapshot = parseGymRoutineDraft(encoded);
+            if (
+              snapshot.pending ||
+              id === "nueva" ||
+              (sameGymRoutineBase(snapshot.base, initial) &&
+                (snapshot.baseRevision === undefined ||
+                  snapshot.baseRevision === current?.revision))
+            ) {
+              restore(snapshot);
+              setMessage(
+                snapshot.pending
+                  ? "Hay una operación pendiente de confirmar. Reintentala para conocer su resultado."
+                  : "Recuperamos la preparación de este dispositivo.",
+              );
+            } else {
+              setRecovery({ snapshot, original: encoded });
+              setMessage("");
+            }
+          } catch {
+            setRecovery({ snapshot: null, original: encoded });
+          }
+        }
       } catch (e) {
-        if (live) setError(gymError(e));
+        if (live) {
+          setError(gymError(e));
+          setServerUnavailable(true);
+          if (local) {
+            restore(local);
+            setSaved(local.base);
+            setRecord(null);
+            setRecovery(null);
+            setTabConflict(false);
+          } else setDoc(null);
+        }
+      } finally {
+        if (live) setLoading(false);
       }
     })();
     return () => {
       live = false;
     };
-  }, [id, key]);
-  const dirty = doc !== null && JSON.stringify(doc) !== saved;
+  }, [id, key, reload]);
   useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
-  function change(next: RoutineDocument) {
-    setDoc(next);
-    setMessage("");
-    try {
-      localStorage.setItem(
-        key,
-        JSON.stringify({ base: saved, document: next }),
-      );
-    } catch {
+    const changed = (event: StorageEvent) => {
+      if (
+        event.key === key ||
+        event.key === key + ":version" ||
+        event.key === null
+      ) {
+        setTabConflict(true);
+        setError(
+          "La preparación cambió en otra pestaña. Exportá tus cambios antes de cargar la versión guardada.",
+        );
+      }
+    };
+    window.addEventListener("storage", changed);
+    return () => window.removeEventListener("storage", changed);
+  }, [key]);
+  const dirty =
+    doc !== null &&
+    (JSON.stringify(doc) !== saved || rawInvalid.current.size > 0);
+  const frozen =
+    busy ||
+    loading ||
+    !!pending ||
+    !!recovery ||
+    tabConflict ||
+    serverUnavailable;
+  const navigation = useDraftNavigation(
+    localSaving || (!exported && (storageProblem || tabConflict)),
+    () =>
       setError(
-        "No se pudo guardar la edición en este dispositivo. Guardá el borrador antes de salir.",
-      );
+        "Antes de salir, reintentá el guardado en este dispositivo o exportá una copia de la preparación.",
+      ),
+  );
+  function snapshot(document = doc!, request = pending): GymRoutineDraft {
+    return {
+      base: saved,
+      baseRevision: record?.revision,
+      document,
+      rawValues: { ...rawValues.current },
+      pending: request,
+    };
+  }
+  function storageError(e: unknown) {
+    setStorageProblem(true);
+    if (e instanceof GymDraftConflict) setTabConflict(true);
+    setError(
+      e instanceof GymDraftConflict
+        ? e.message
+        : "No se pudo guardar la preparación en este dispositivo. Reintentá o exportá una copia antes de salir.",
+    );
+  }
+  async function persist(value: GymRoutineDraft) {
+    const version = ++latestWrite.current;
+    setLocalSaving(true);
+    try {
+      await storage.current.write(value);
+      if (version === latestWrite.current) setStorageProblem(false);
+      return true;
+    } catch (e) {
+      storageError(e);
+      return false;
+    } finally {
+      if (version === latestWrite.current) setLocalSaving(false);
     }
   }
-  async function save() {
-    if (!doc || busy) return;
-    if (rawInvalid.current.size || validateRoutine(doc).length) {
-      setError("Revisá los campos marcados antes de guardar.");
-      return;
+  function change(next: RoutineDocument) {
+    if (frozen) return;
+    setExported(false);
+    rawValues.current = pruneRoutineInputs(next, rawValues.current);
+    rawInvalid.current = invalidRoutineInputs(rawValues.current);
+    setDoc(next);
+    setMessage("");
+    setError("");
+    void persist(snapshot(next));
+  }
+  const validationErrors = doc ? validateRoutine(doc, true) : [];
+  const oversizedWeek = doc?.weeks.findIndex((week) => week.length > 6) ?? -1;
+  async function run(kind: PendingRoutineCommand["kind"]) {
+    if (!doc || inFlight.current || recovery || tabConflict) return;
+    if (!pending && serverUnavailable) return;
+    if (!pending && (kind === "save_routine" || kind === "publish_routine")) {
+      if (rawInvalid.current.size) {
+        setError("Revisá los valores numéricos marcados antes de continuar.");
+        return;
+      }
+      if (oversizedWeek >= 0) {
+        setError(
+          "Semana " +
+            (oversizedWeek + 1) +
+            ": organizá los ejercicios en un máximo de 6 días. Conservamos todos tus días para que puedas reorganizarlos.",
+        );
+        return;
+      }
+      const errors = validateRoutine(doc, kind === "publish_routine");
+      if (errors.length) {
+        setError(
+          errors[0].startsWith("name:")
+            ? "Escribí un nombre para la rutina."
+            : errors[0],
+        );
+        return;
+      }
     }
+    const request: PendingRoutineCommand = pending || {
+      operationId: crypto.randomUUID(),
+      kind,
+      payload:
+        kind === "save_routine"
+          ? id === "nueva"
+            ? {
+                kind: admin ? (memberId ? "personal" : "catalog") : "own",
+                memberId,
+                document: doc,
+              }
+            : { id, expectedRevision: record!.revision, document: doc }
+          : { id, expectedRevision: record!.revision },
+    };
+    inFlight.current = true;
     setBusy(true);
     setError("");
-    const request = pendingSave || {
-      operationId: crypto.randomUUID(),
-      payload:
-        id === "nueva"
-          ? {
-              kind: admin ? (memberId ? "personal" : "catalog") : "own",
-              memberId,
-              document: doc,
-            }
-          : { id, expectedRevision: record!.revision, document: doc },
-    };
     try {
-      // Retain the exact command until its outcome is known, including after reload.
-      localStorage.setItem(
-        key,
-        JSON.stringify({ base: saved, document: doc, pendingSave: request }),
-      );
-      setPendingSave(request);
+      // Persist the exact operation before sending, so a lost response is safely retryable.
+      if (!(await persist(snapshot(doc, request)))) return;
+      setPending(request);
       const result = await command(
-        "save_routine",
+        request.kind,
         request.payload,
         request.operationId,
       );
-      localStorage.removeItem(key);
-      setPendingSave(null);
+      try {
+        await storage.current.remove();
+      } catch (e) {
+        storageError(e);
+        return;
+      }
+      setPending(null);
+      setStorageProblem(false);
       setSaved(JSON.stringify(doc));
-      if (id === "nueva")
+      rawValues.current = {};
+      rawInvalid.current.clear();
+      setConfirm(null);
+      if (request.kind !== "save_routine") {
+        navigation.allowNavigation();
+        navigate(returnTo);
+      } else if (id === "nueva") {
+        navigation.allowNavigation();
         navigate(
           base + "/" + result.id + (memberId ? "?member=" + memberId : ""),
           { replace: true },
         );
-      else {
-        setRecord((r) => r && { ...r, draft: doc, revision: result.revision });
+      } else {
+        if (!record) setReload((v) => v + 1);
+        setRecord(
+          (r) =>
+            r && {
+              ...r,
+              draft: doc,
+              document: doc,
+              has_draft: true,
+              revision: result.revision,
+            },
+        );
         setMessage("Borrador guardado. Publicalo cuando esté listo.");
+        setTemplateVersion((v) => v + 1);
       }
     } catch (e) {
-      if (
-        ["22023", "40001", "42501", "23505"].includes(
-          (e as { code?: string }).code || "",
-        )
-      ) {
-        setPendingSave(null);
-        localStorage.setItem(
-          key,
-          JSON.stringify({ base: saved, document: doc }),
-        );
+      const code = (e as { code?: string }).code;
+      if (["22023", "40001", "42501", "23505"].includes(code || "")) {
+        setPending(null);
+        const persisted = await persist(snapshot(doc, null));
+        if ((code === "40001" || serverUnavailable) && persisted) {
+          setReload((v) => v + 1);
+          setMessage(
+            "El servidor tiene una versión más reciente. Elegí qué preparación querés revisar.",
+          );
+        }
       }
-      setError(gymError(e));
+      if (e instanceof GymDraftConflict) storageError(e);
+      else setError(gymError(e));
+      setConfirm(null);
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
+  async function chooseRecovery(local: boolean) {
+    if (!recovery || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      if (local && recovery.snapshot) {
+        // Rebase only after an explicit choice; the published version remains untouched.
+        const chosen = {
+          ...recovery.snapshot,
+          base: saved,
+          baseRevision: record?.revision,
+          pending: null,
+        };
+        await storage.current.write(chosen);
+        restore(chosen);
+        setMessage(
+          "Revisá tus cambios y guardá el borrador. La versión publicada se conserva hasta que publiques.",
+        );
+      } else {
+        await storage.current.remove();
+        setMessage("Se conserva la versión del servidor.");
+      }
+      setRecovery(null);
+    } catch (e) {
+      storageError(e);
     } finally {
       setBusy(false);
     }
   }
+  const pendingLabel =
+    pending?.kind === "publish_routine"
+      ? "Reintentar publicación"
+      : pending?.kind === "discard_routine"
+        ? "Reintentar descarte"
+        : pending?.kind === "retire_routine"
+          ? "Reintentar retiro"
+          : "Reintentar guardado";
   return (
     <>
+      {navigation.guard}
       <PageHeading
         back={returnTo}
         eyebrow={
@@ -492,40 +728,18 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
           <>
             <button
               className="button secondary"
-              disabled={
-                busy || !doc || (!dirty && id !== "nueva" && !pendingSave)
-              }
-              onClick={save}
+              disabled={frozen || (!dirty && id !== "nueva")}
+              onClick={() => run("save_routine")}
             >
-              Guardar borrador
+              {busy && pending?.kind === "save_routine"
+                ? "Guardando…"
+                : "Guardar borrador"}
             </button>
             {record && (
               <button
                 className="button"
-                disabled={busy || dirty || !!pendingSave || !record.draft}
-                onClick={async () => {
-                  if (!doc || rawInvalid.current.size) return;
-                  const errors = validateRoutine(doc, true);
-                  if (errors.length) {
-                    setError(
-                      "Completá todos los días y los valores de los ejercicios antes de publicar.",
-                    );
-                    return;
-                  }
-                  setBusy(true);
-                  try {
-                    await command("publish_routine", {
-                      id,
-                      expectedRevision: record.revision,
-                    });
-                    localStorage.removeItem(key);
-                    navigate(returnTo);
-                  } catch (e) {
-                    setError(gymError(e));
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
+                disabled={frozen || dirty || !record.draft}
+                onClick={() => run("publish_routine")}
               >
                 Publicar rutina
               </button>
@@ -543,14 +757,161 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
           {message}
         </p>
       )}
-      {pendingSave && !busy && (
-        <p className="notice">
-          La preparación sigue en este dispositivo. Pulsá Guardar borrador para
-          confirmar el guardado pendiente antes de seguir editando.
-        </p>
+      {loading && <p role="status">Cargando rutina…</p>}
+      {!loading && !doc && (
+        <button
+          className="button secondary"
+          onClick={() => setReload((v) => v + 1)}
+        >
+          Reintentar
+        </button>
       )}
-      {!doc && !error && <p role="status">Cargando rutina…</p>}
-      {admin && id === "nueva" && doc && (
+      {recovery && (
+        <section
+          className="card gym-draft-recovery"
+          aria-label="Recuperar preparación"
+        >
+          <h2>
+            {recovery.snapshot
+              ? "Tenés dos versiones de esta rutina"
+              : "Conservamos una preparación que no pudimos abrir"}
+          </h2>
+          <p>
+            {recovery.snapshot
+              ? "La versión del servidor cambió desde tu última edición. Podés revisar tus cambios locales o conservar la versión del servidor. Exportá una copia si querés guardar ambas."
+              : "Podés exportar el archivo local antes de continuar con la versión del servidor."}
+          </p>
+          <div className="gym-actions">
+            <button
+              className="button secondary"
+              disabled={busy}
+              onClick={() =>
+                downloadGymRoutineDraft(
+                  id,
+                  recovery.snapshot ?? recovery.original,
+                )
+              }
+            >
+              <Download size={16} /> Exportar copia local
+            </button>
+            {recovery.snapshot && (
+              <button
+                className="button"
+                disabled={busy}
+                onClick={() => chooseRecovery(true)}
+              >
+                Revisar mis cambios
+              </button>
+            )}
+            <button
+              className="button secondary"
+              disabled={busy}
+              onClick={() => chooseRecovery(false)}
+            >
+              Usar versión del servidor
+            </button>
+          </div>
+        </section>
+      )}
+      {(storageProblem || tabConflict || serverUnavailable) && doc && (
+        <section
+          className="card gym-draft-recovery"
+          aria-label="Conservar cambios"
+        >
+          <p>
+            Tu preparación sigue abierta. Conservá una copia antes de salir o
+            cargar otra versión.
+          </p>
+          <div className="gym-actions">
+            <button
+              className="button secondary"
+              onClick={() => {
+                downloadGymRoutineDraft(id, snapshot());
+                setExported(true);
+              }}
+            >
+              <Download size={16} /> Exportar mis cambios
+            </button>
+            {tabConflict || serverUnavailable ? (
+              <button
+                className="button secondary"
+                disabled={busy}
+                onClick={() => setReload((v) => v + 1)}
+              >
+                {serverUnavailable
+                  ? "Reintentar conexión"
+                  : "Cargar versión guardada"}
+              </button>
+            ) : (
+              <button
+                className="button secondary"
+                disabled={busy || localSaving}
+                onClick={() => void persist(snapshot())}
+              >
+                Reintentar guardado local
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+      {pending && !busy && !recovery && !tabConflict && (
+        <section
+          className="card gym-draft-recovery"
+          aria-label="Operación pendiente"
+        >
+          <p>
+            Falta confirmar el resultado. Reintentá la misma operación antes de
+            seguir editando; no se duplicará.
+          </p>
+          <button className="button" onClick={() => run(pending.kind)}>
+            {pendingLabel}
+          </button>
+        </section>
+      )}
+      {doc && !loading && !recovery && (
+        <div className="gym-routine-status" role="status">
+          <span>
+            {storageProblem || tabConflict
+              ? "Hay cambios que requieren tu atención"
+              : localSaving
+                ? "Guardando en este dispositivo…"
+                : pending
+                  ? "Operación pendiente de confirmar"
+                  : dirty
+                    ? "Preparación guardada en este dispositivo"
+                    : record?.draft
+                      ? "Borrador guardado"
+                      : "Sin cambios pendientes"}
+          </span>
+          {!pending && !storageProblem && (
+            <span>
+              {dirty
+                ? "Guardá el borrador para poder publicarlo."
+                : "4 semanas · Hasta 6 días por semana"}
+            </span>
+          )}
+        </div>
+      )}
+      {doc && !loading && !frozen && validationErrors.length > 0 && (
+        <details className="gym-publish-checklist">
+          <summary>
+            Para publicar: {validationErrors.length}{" "}
+            {validationErrors.length === 1
+              ? "detalle pendiente"
+              : "detalles pendientes"}
+          </summary>
+          <ul>
+            {validationErrors.map((issue, index) => (
+              <li key={index}>
+                {issue.startsWith("name:")
+                  ? "Escribí un nombre para la rutina."
+                  : issue}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {admin && id === "nueva" && doc && !loading && (
         <section className="card gym-template-start">
           <div>
             <h2>Punto de partida</h2>
@@ -561,7 +922,7 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
           </div>
           <button
             className="button secondary"
-            disabled={busy || !!pendingSave}
+            disabled={frozen}
             onClick={() => setPickingTemplate(true)}
           >
             <Copy size={18} /> Usar plantilla
@@ -585,13 +946,13 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
           }}
         />
       )}
-      {doc && (
+      {doc && !loading && (
         <div className="gym-editor routine-workspace">
           <RoutineFields
             key={templateVersion}
             doc={doc}
             change={change}
-            busy={busy || !!pendingSave}
+            busy={frozen}
             rawValues={rawValues}
             rawInvalid={rawInvalid}
             trainerCatalog={false}
@@ -602,7 +963,7 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
         {(record?.draft || dirty || id === "nueva") && (
           <button
             className="button secondary"
-            disabled={busy || !!pendingSave}
+            disabled={frozen}
             onClick={() => setConfirm("discard")}
           >
             Descartar borrador
@@ -611,7 +972,7 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
         {record?.published_revision_id && !record.retired && admin && (
           <button
             className="button secondary"
-            disabled={busy || !!pendingSave}
+            disabled={frozen}
             onClick={() => setConfirm("retire")}
           >
             Retirar rutina
@@ -646,22 +1007,24 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
               className="button danger"
               disabled={busy}
               onClick={async () => {
-                setBusy(true);
-                try {
-                  if (record)
-                    await command(
-                      confirm === "discard"
-                        ? "discard_routine"
-                        : "retire_routine",
-                      { id, expectedRevision: record.revision },
-                    );
-                  localStorage.removeItem(key);
-                  navigate(returnTo);
-                } catch (e) {
-                  setError(gymError(e));
-                  setConfirm(null);
-                } finally {
-                  setBusy(false);
+                if (record)
+                  await run(
+                    confirm === "discard"
+                      ? "discard_routine"
+                      : "retire_routine",
+                  );
+                else {
+                  setBusy(true);
+                  try {
+                    await storage.current.remove();
+                    navigation.allowNavigation();
+                    navigate(returnTo);
+                  } catch (e) {
+                    storageError(e);
+                    setConfirm(null);
+                  } finally {
+                    setBusy(false);
+                  }
                 }
               }}
             >
@@ -673,7 +1036,6 @@ function Editor({ id, memberId }: { id: string; memberId: string | null }) {
     </>
   );
 }
-
 function TemplatePicker({
   close,
   apply,
