@@ -324,7 +324,7 @@ export function Trend({
           {number(active.value)} {exercise.unit}
         </strong>
         {exercise.type === "load_reps" ? ` × ${active.reps} reps` : ""} ·{" "}
-        {active.sets} series ·{" "}
+        {active.sets} {active.sets === 1 ? "serie" : "series"} ·{" "}
         {active.source === "quick_confirmed"
           ? "Confirmación rápida"
           : "Registro individual"}
