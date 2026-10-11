@@ -91,7 +91,7 @@ test("saving a new routine retries a lost response without creating a second dra
       "Borrador recuperable",
     );
     await page
-      .getByRole("button", { name: "Guardar borrador", exact: true })
+      .getByRole("button", { name: "Reintentar guardado", exact: true })
       .click();
     await expect(page).not.toHaveURL(/\/nueva$/);
     const drafts = await f.accounts[0].client
@@ -157,6 +157,13 @@ test("training conflict can load saved results after explicitly discarding the l
       .getByRole("button", { name: "Usar versión guardada", exact: true })
       .click();
     await expect(weight).toHaveValue("15");
+    await expect(weight).toBeDisabled();
+    await page
+      .getByRole("button", {
+        name: "Corregir serie 1 de Sentadilla goblet",
+        exact: true,
+      })
+      .click();
     await expect(weight).toBeEnabled();
     await weight.fill("17");
     await page.getByRole("button", { name: "Guardar entrenamiento" }).click();

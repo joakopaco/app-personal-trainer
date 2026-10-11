@@ -10,6 +10,8 @@ export default defineConfig({
     "gym-buttons.spec.ts",
     "gym-account-controls.spec.ts",
     "gym-training-errors.spec.ts",
+    "gym-parity.spec.ts",
+    "gym-draft-recovery.spec.ts",
   ],
   projects: [
     { name: "gym-webkit", use: { ...devices["iPhone 13"] } },

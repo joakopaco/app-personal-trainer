@@ -6,6 +6,9 @@ import {
   Users,
   ClipboardList,
   Dumbbell,
+  Pencil,
+  TrendingUp,
+  ShieldCheck,
 } from "lucide-react";
 import { cloud } from "../../adapters/supabase";
 import {
@@ -22,7 +25,7 @@ import {
   type GymSession,
   type GymRevision,
 } from "./api";
-import { useGym } from "./GymPortal";
+import { useGym } from "./GymContext";
 import {
   CreateAccount,
   Credentials,
@@ -30,8 +33,6 @@ import {
   LoadState,
   Modal,
   PageHeading,
-  PasswordForm,
-  signOutGym,
 } from "./ui";
 import { cloneRoutineDocument } from "@pulso/domain/routines";
 
@@ -39,29 +40,50 @@ export function GymDashboard() {
   const { access } = useGym();
   const [create, setCreate] = useState(false);
   const data = useResource(async () => {
-    const [members, routines, sessions] = await Promise.all([
-      rows<GymAccount[]>(
+    const [activeMembers, publishedRoutines, sessions, openSessions] =
+      await Promise.all([
         cloud()
           .from("gym_accounts")
-          .select(accountColumns)
+          .select("user_id", { count: "exact", head: true })
           .eq("role", "member")
-          .order("name"),
-      ),
-      rows<GymRoutine[]>(
+          .eq("active", true),
         cloud()
           .from("gym_routines")
-          .select(routineColumns)
-          .eq("kind", "catalog"),
-      ),
-      rows<GymSession[]>(
+          .select("id", { count: "exact", head: true })
+          .eq("kind", "catalog")
+          .eq("retired", false)
+          .not("published_revision_id", "is", null),
+        rows<GymSession[]>(
+          cloud()
+            .from("gym_sessions")
+            .select("*")
+            .order("started_at", { ascending: false })
+            .limit(8),
+        ),
         cloud()
           .from("gym_sessions")
-          .select("*")
-          .order("started_at", { ascending: false })
-          .limit(8),
-      ),
-    ]);
-    return { members, routines, sessions };
+          .select("id", { count: "exact", head: true })
+          .eq("status", "open"),
+      ]);
+    if (openSessions.error) throw openSessions.error;
+    if (activeMembers.error) throw activeMembers.error;
+    if (publishedRoutines.error) throw publishedRoutines.error;
+    const memberIds = [...new Set(sessions.map((s) => s.member_id))];
+    const members = memberIds.length
+      ? await rows<GymAccount[]>(
+          cloud()
+            .from("gym_accounts")
+            .select(accountColumns)
+            .in("user_id", memberIds),
+        )
+      : [];
+    return {
+      members,
+      sessions,
+      memberCount: activeMembers.count ?? 0,
+      routineCount: publishedRoutines.count ?? 0,
+      openCount: openSessions.count ?? 0,
+    };
   }, access.gymId);
   return (
     <>
@@ -82,28 +104,18 @@ export function GymDashboard() {
           <div className="gym-stats">
             <Link className="card" to="/gimnasio/entrenados">
               <Users />
-              <strong>
-                {data.value.members.filter((m) => m.active).length}
-              </strong>
+              <strong>{data.value.memberCount}</strong>
               <span>Entrenados activos</span>
             </Link>
             <Link className="card" to="/gimnasio/rutinas">
               <ClipboardList />
-              <strong>
-                {
-                  data.value.routines.filter(
-                    (r) => r.published_revision_id && !r.retired,
-                  ).length
-                }
-              </strong>
+              <strong>{data.value.routineCount}</strong>
               <span>Rutinas publicadas</span>
             </Link>
             <div className="card">
               <Dumbbell />
-              <strong>
-                {data.value.sessions.filter((s) => s.status === "open").length}
-              </strong>
-              <span>En entrenamiento reciente</span>
+              <strong>{data.value.openCount}</strong>
+              <span>Entrenando ahora</span>
             </div>
           </div>
           <section className="card stack">
@@ -309,6 +321,7 @@ export function GymMemberProfile() {
         actions={
           m && (
             <button className="button secondary" onClick={() => setEdit(true)}>
+              <Pencil size={18} />
               Editar ficha
             </button>
           )
@@ -322,8 +335,25 @@ export function GymMemberProfile() {
       )}
       {m && data.value && (
         <>
+          <nav className="gym-profile-nav" aria-label="Ficha del entrenado">
+            <a className="button" href="#gym-member-info">
+              <Users size={18} />
+              Información
+            </a>
+            <a className="button secondary" href="#gym-member-routines">
+              <ClipboardList size={18} />
+              Rutinas
+            </a>
+            <Link
+              className="button secondary"
+              to={"/gimnasio/entrenados/" + id + "/progreso"}
+            >
+              <TrendingUp size={18} />
+              Progreso
+            </Link>
+          </nav>
           <div className="gym-profile-grid">
-            <aside className="card stack">
+            <aside className="card stack" id="gym-member-info">
               <h2>Información</h2>
               <dl className="gym-details">
                 <dt>Acceso</dt>
@@ -339,44 +369,43 @@ export function GymMemberProfile() {
                       : "Sin indicar"}
                 </dd>
               </dl>
-              <Link
-                className="button"
-                to={"/gimnasio/entrenados/" + id + "/progreso"}
-              >
-                Ver progreso <ArrowUpRight size={18} />
-              </Link>
               <h3>Notas privadas</h3>
               <p className="muted">
                 {data.value.notes || "Sin notas. Solo las ve el gimnasio."}
               </p>
-              <button
-                className="button secondary"
-                disabled={busy}
-                onClick={() => {
-                  setError("");
-                  setConfirm(true);
-                }}
-              >
-                {m.active ? "Suspender acceso" : "Reactivar acceso"}
-              </button>
-              <button
-                className="button secondary"
-                disabled={busy}
-                onClick={() =>
-                  perform(async () => {
-                    const r = await accountAction({
-                      action: "reset_password",
-                      userId: id,
-                    });
-                    setCredentials(r.temporaryPassword!);
-                  })
-                }
-              >
-                Restablecer contraseña
-              </button>
+              <div className="gym-account-actions stack">
+                <h3>
+                  <ShieldCheck size={16} /> Acceso a la cuenta
+                </h3>
+                <button
+                  className="button secondary"
+                  disabled={busy}
+                  onClick={() => {
+                    setError("");
+                    setConfirm(true);
+                  }}
+                >
+                  {m.active ? "Suspender acceso" : "Reactivar acceso"}
+                </button>
+                <button
+                  className="button secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    perform(async () => {
+                      const r = await accountAction({
+                        action: "reset_password",
+                        userId: id,
+                      });
+                      setCredentials(r.temporaryPassword!);
+                    })
+                  }
+                >
+                  Restablecer contraseña
+                </button>
+              </div>
             </aside>
             <div className="stack">
-              <section className="card stack">
+              <section className="card stack" id="gym-member-routines">
                 <div className="gym-heading-row">
                   <h2>Rutinas personalizadas</h2>
                   <div className="gym-actions">
@@ -668,72 +697,3 @@ export const activityLabel = (action: string) =>
     discard_routine: "Borrador descartado",
     retire_routine: "Rutina retirada",
   })[action] || "Cuenta actualizada";
-export function GymSettings() {
-  const { access, refresh } = useGym();
-  const [name, setName] = useState(access.gymName),
-    [busy, setBusy] = useState(false),
-    [message, setMessage] = useState("");
-  return (
-    <>
-      <PageHeading
-        eyebrow={access.gymName}
-        title={access.mode === "admin" ? "Ajustes" : "Mi cuenta"}
-      />
-      <div className="gym-settings stack">
-        <section className="card stack">
-          <h2>{access.name}</h2>
-          <p>{access.email}</p>
-          <span className="badge">
-            {access.mode === "admin"
-              ? "Administración del gimnasio"
-              : "Entrenado"}
-          </span>
-          {access.mode === "admin" && (
-            <form
-              className="stack"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setBusy(true);
-                try {
-                  await command("update_gym", { name });
-                  await refresh();
-                  setMessage("Nombre guardado.");
-                } catch (e) {
-                  setMessage(gymError(e));
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              <label className="field">
-                Nombre del gimnasio
-                <input
-                  required
-                  maxLength={120}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </label>
-              <button className="button secondary" disabled={busy}>
-                Guardar nombre
-              </button>
-            </form>
-          )}
-          {message && <p role="status">{message}</p>}
-        </section>
-        <section className="card">
-          <PasswordForm
-            email={access.email}
-            done={() => {
-              void refresh();
-              setMessage("Contraseña actualizada.");
-            }}
-          />
-        </section>
-        <button className="button secondary" onClick={signOutGym}>
-          Cerrar sesión
-        </button>
-      </div>
-    </>
-  );
-}

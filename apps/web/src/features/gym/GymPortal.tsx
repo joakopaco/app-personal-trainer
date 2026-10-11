@@ -1,5 +1,5 @@
 import { LoadingState } from "../../components/LoadingState";
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   NavLink,
   Navigate,
@@ -21,26 +21,14 @@ import { DialogFocus } from "../../components/DialogFocus";
 import { cloud } from "../../adapters/supabase";
 import { gymError, rows, type GymAccess } from "./api";
 import { PasswordForm, signOutGym } from "./ui";
-import {
-  GymDashboard,
-  GymMembers,
-  GymMemberProfile,
-  GymSettings,
-} from "./GymAdmin";
+import { GymDashboard, GymMembers, GymMemberProfile } from "./GymAdmin";
 import { GymRoutines, GymRoutineEditor } from "./GymRoutines";
 import { MemberHome, MemberTraining } from "./MemberTraining";
 import { GymProgress } from "./GymProgress";
+import { GymSettings } from "./GymSettings";
+import { GymContext as Context } from "./GymContext";
 import "./gym.css";
 
-const Context = createContext<{
-  access: GymAccess;
-  refresh: () => Promise<void>;
-} | null>(null);
-export function useGym() {
-  const v = useContext(Context);
-  if (!v) throw Error("Gym access required");
-  return v;
-}
 export function GymPortal() {
   const [access, setAccess] = useState<GymAccess | null>(null),
     [error, setError] = useState("");
@@ -79,7 +67,7 @@ export function GymPortal() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [pathname]);
-  if (error || access?.blocked || access?.mode === "pending")
+  if ((!access && error) || access?.blocked || access?.mode === "pending")
     return (
       <main className="gym-gate">
         <Brand />
@@ -160,6 +148,14 @@ export function GymPortal() {
           </div>
         </aside>
         <main id="contenido" className="gym-page" tabIndex={-1}>
+          {error && (
+            <div className="notice gym-connection" role="status">
+              <span>No pudimos actualizar tu acceso. {error}</span>
+              <button className="button secondary" onClick={refresh}>
+                Reintentar conexión
+              </button>
+            </div>
+          )}
           <Routes>
             {admin ? (
               <>

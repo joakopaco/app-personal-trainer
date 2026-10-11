@@ -127,13 +127,24 @@ export function Login() {
         <div>
           <p className="eyebrow">EL ENTRENAMIENTO, EN TUS MANOS</p>
           <h2>
-            Más presente.
+            {role === "trainer"
+              ? "Más presente."
+              : role === "gym"
+                ? "Tu gimnasio."
+                : "Tu entrenamiento."}
             <br />
-            En cada repetición.
+            {role === "trainer"
+              ? "En cada repetición."
+              : role === "gym"
+                ? "En movimiento."
+                : "Tu progreso."}
           </h2>
           <p>
-            Un espacio para preparar rutinas, acompañar a tus alumnos y ver cómo
-            progresan.
+            {role === "trainer"
+              ? "Un espacio para preparar rutinas, acompañar a tus alumnos y ver cómo progresan."
+              : role === "gym"
+                ? "Organizá las rutinas de tu gimnasio y acompañá el progreso de cada persona."
+                : "Tus rutinas, tus series y tu evolución. Todo listo para entrenar."}
           </p>
         </div>
         <p>Hecho para el ritmo de tu jornada.</p>
@@ -325,7 +336,9 @@ export function Login() {
             )}
             <p className="auth-note">
               <ShieldCheck size={16} aria-hidden="true" /> Una cuenta por email.
-              Cada entrenador tiene su espacio privado.
+              {role === "trainer"
+                ? "Cada entrenador tiene su espacio privado."
+                : "Tus datos y tu progreso, en tu cuenta."}
             </p>
           </>
         </div>
