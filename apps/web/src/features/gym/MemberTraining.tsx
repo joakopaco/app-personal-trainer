@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { numericPointerEntry } from "../../components/numeric-entry";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -747,6 +748,7 @@ export function GymTrainingSession({ initial }: { initial: GymSession }) {
                               aria-label={`${field === "weight" ? "Peso" : field === "reps" ? "Repeticiones" : "Tiempo"} serie ${n + 1} de ${exercise.name}`}
                               aria-describedby={issue ? errorId : undefined}
                               onFocus={(event) => event.target.select()}
+                              {...numericPointerEntry}
                               onChange={(event) =>
                                 editValue(
                                   exercise.id,

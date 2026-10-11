@@ -1,4 +1,5 @@
 import "./training.css";
+import { numericPointerEntry } from "../../components/numeric-entry";
 import { useDraftNavigation } from "../routines/use-draft-navigation";
 import { download } from "../../components/download";
 import { RestTimer } from "./RestTimer";
@@ -106,6 +107,29 @@ export function TrainingScreen() {
   const closing = queue.some((p) =>
     ["finish_session", "reconcile_offline_session"].includes(p.command.kind),
   );
+  function reviewPending() {
+    setFinish(false);
+    // Wait for the dialog to restore focus before revealing the pending field.
+    requestAnimationFrame(() => {
+      const target = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-raw-id]"),
+      ).find((node) => rawInputs.some((raw) => raw.id === node.dataset.rawId));
+      if (!target) return;
+      for (
+        let ancestor = target.parentElement;
+        ancestor;
+        ancestor = ancestor.parentElement
+      ) {
+        if (ancestor instanceof HTMLDetailsElement) ancestor.open = true;
+      }
+      target.scrollIntoView({ block: "center", behavior: "instant" });
+      target
+        .querySelector<HTMLElement>(
+          "input:not(:disabled), select:not(:disabled), button:not(:disabled)",
+        )
+        ?.focus({ preventScroll: true });
+    });
+  }
   async function close() {
     setBusy(true);
     setError("");
@@ -357,6 +381,21 @@ export function TrainingScreen() {
               <p className="error" role="alert">
                 {error}
               </p>
+            )}
+            {rawCount > 0 && (
+              <div className="notice" role="status">
+                <p>
+                  Hay {rawCount}{" "}
+                  {rawCount === 1
+                    ? "edición pendiente"
+                    : "ediciones pendientes"}
+                  . Confirmá o descartá las ediciones antes de finalizar. Tus
+                  anotaciones se conservan.
+                </p>
+                <button className="button secondary" onClick={reviewPending}>
+                  Revisar edición pendiente
+                </button>
+              </div>
             )}
             <button
               className="button"
@@ -750,7 +789,7 @@ export function SetEditor({
       </div>
     );
   return (
-    <div className="set-row set-editor">
+    <div className="set-row set-editor" data-raw-id={rawId}>
       <strong aria-label={"Serie " + set.ordinal}>{set.ordinal}</strong>
       {type !== "load_reps" && (
         <span className="set-bodyweight">
@@ -765,6 +804,8 @@ export function SetEditor({
             inputMode="decimal"
             disabled={disabled || !loaded || busy}
             value={values.weight}
+            {...numericPointerEntry}
+            onFocus={(event) => event.target.select()}
             onChange={(e) => change("weight", e.target.value)}
           />
         </label>
@@ -780,6 +821,8 @@ export function SetEditor({
           inputMode="numeric"
           disabled={disabled || !loaded || busy}
           value={type === "time" ? values.duration : values.reps}
+          {...numericPointerEntry}
+          onFocus={(event) => event.target.select()}
           onChange={(e) =>
             change(type === "time" ? "duration" : "reps", e.target.value)
           }
@@ -988,7 +1031,7 @@ export function LiveInput({
   }
   return (
     <>
-      <label className={"field live-field-" + field}>
+      <label className={"field live-field-" + field} data-raw-id={rawId}>
         {label}
         {isRestField(field) ? (
           <select
@@ -1030,6 +1073,7 @@ export function LiveInput({
             }
             value={raw}
             disabled={disabled || !loaded}
+            {...numericPointerEntry}
             onFocus={(e) => {
               focused.current = true;
               e.target.select();

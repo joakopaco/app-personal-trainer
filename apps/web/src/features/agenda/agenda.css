@@ -207,6 +207,7 @@
   justify-self: end;
   width: 44px;
   height: 44px;
+  min-height: 44px;
   padding: 0;
 }
 .today-heading > .button:not(.today-calendar-button) {

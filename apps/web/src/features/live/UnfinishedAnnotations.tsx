@@ -80,7 +80,7 @@ export function UnfinishedAnnotations({
             de descartarlas.
           </p>
           {visibleInputs.map((input) => (
-            <div className="notice" key={input.id}>
+            <div className="notice" key={input.id} data-raw-id={input.id}>
               <strong>
                 {rows.find((r) => r.studentId === input.studentId)?.projection
                   .student.name ?? "Alumno"}{" "}

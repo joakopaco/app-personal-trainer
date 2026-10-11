@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { numericPointerEntry } from "./numeric-entry";
 import { type NumericField as FieldName } from "@pulso/domain/numbers";
 import {
   displayNumber,
@@ -31,6 +32,7 @@ export function RoutineNumberField({
     <label className="field">
       {label}
       <input
+        {...numericPointerEntry}
         aria-label={label}
         inputMode={
           field === "weight" || isRestField(field) ? "decimal" : "numeric"
