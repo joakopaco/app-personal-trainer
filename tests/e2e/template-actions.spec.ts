@@ -175,9 +175,11 @@ test("a lost deletion acknowledgement can be retried after reload without recrea
       await route.abort();
     });
     await confirm(page, "Eliminar rutina");
+    // The durable pending command renders this button before the request ends.
+    // Enabled means the simulated lost response has finished, including commit.
     await expect(
       page.getByRole("button", { name: "Reintentar eliminación", exact: true }),
-    ).toBeVisible();
+    ).toBeEnabled();
     expect(
       (await a.client.from("routine_templates").select("id").eq("id", id)).data,
     ).toEqual([]);
