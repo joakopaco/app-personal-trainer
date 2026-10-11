@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { numericPointerEntry } from "./numeric-entry";
 import {
   parseNumber,
   type NumericField as FieldName,
@@ -31,6 +32,7 @@ export function NumericField({
     <label className="field">
       {label}
       <input
+        {...numericPointerEntry}
         aria-label={label}
         inputMode={field === "weight" ? "decimal" : "numeric"}
         value={raw}

@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -29,6 +30,7 @@ type DataValue = {
   rows: StoredStudent[];
   pending: PendingCommand[];
   error: string;
+  loading: boolean;
   refresh: () => Promise<void>;
   suspend: () => void;
   sync: (force?: boolean) => Promise<void>;
@@ -56,7 +58,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const lifetime = useMemo(() => new AccountLifetime(), [db]);
   const [rows, setRows] = useState<StoredStudent[]>([]),
     [pending, setPending] = useState<PendingCommand[]>([]),
+    [loading, setLoading] = useState(true),
     [error, setError] = useState("");
+  const refreshGeneration = useRef(0);
   const deviceId = useMemo(() => {
     const key = "pulso-device";
     let id = localStorage.getItem(key);
@@ -69,6 +73,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   async function refresh() {
     const alive = lifetime.capture();
     if (!alive()) return;
+    const generation = ++refreshGeneration.current;
+    setLoading(true);
     try {
       let from = 0;
       const ids: string[] = [];
@@ -107,13 +113,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
           );
         }
       }
-      if (!alive()) return;
+      if (!alive() || generation !== refreshGeneration.current) return;
       setError("");
     } catch {
-      if (!alive()) return;
+      if (!alive() || generation !== refreshGeneration.current) return;
       setError(
         "Sin conexión al servidor. Podés trabajar con los alumnos ya descargados.",
       );
+    } finally {
+      if (alive() && generation === refreshGeneration.current)
+        setLoading(false);
     }
   }
   async function sync(force = false) {
@@ -219,6 +228,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         rows,
         pending,
         error,
+        loading,
         refresh,
         suspend: () => lifetime.stop(),
         sync,

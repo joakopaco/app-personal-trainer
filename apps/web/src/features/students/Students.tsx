@@ -273,7 +273,12 @@ export function StudentProfile() {
                             (n, b) => n + b.exercises.length,
                             0,
                           )}{" "}
-                          ejercicios
+                          {day.blocks.reduce(
+                            (n, b) => n + b.exercises.length,
+                            0,
+                          ) === 1
+                            ? "ejercicio"
+                            : "ejercicios"}
                         </small>
                       </div>
                     </div>

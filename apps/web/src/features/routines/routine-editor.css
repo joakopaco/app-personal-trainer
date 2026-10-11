@@ -417,13 +417,16 @@
 @media (max-width: 400px) {
   .routine-workspace .routine-week-tools .routine-tabs,
   .routine-summary > .routine-tabs {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 5px;
   }
   .routine-workspace .routine-week-tools .routine-tabs .button,
   .routine-summary > .routine-tabs .button {
-    font-size: 12px;
+    font-size: 14px;
     padding: 10px 3px;
+  }
+  .routine-workspace .block-config {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 360px) {

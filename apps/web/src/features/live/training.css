@@ -132,9 +132,9 @@ main:has(.training-header) .save-indicator {
   grid-column: 1 / -1;
 }
 .training-block-rest select {
-  font-size: 13px;
+  font-size: 16px;
   border-color: var(--line);
-  min-height: 40px;
+  min-height: 48px;
 }
 .training-exercise-tools {
   display: flex;
@@ -148,7 +148,7 @@ main:has(.training-header) .save-indicator {
   max-width: 220px;
 }
 .training-exercise-tools .field select {
-  min-height: 40px;
+  min-height: 48px;
   border-color: var(--line);
   background: var(--surface-raised);
 }
@@ -160,7 +160,7 @@ main:has(.training-header) .save-indicator {
 .training-set-heading,
 .training-exercise .set-row.set-editor {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr) 46px 32px;
+  grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr) 46px 44px;
   gap: 10px;
   align-items: center;
 }
@@ -227,6 +227,7 @@ main:has(.training-header) .save-indicator {
   list-style: none;
   cursor: pointer;
   min-height: 44px;
+  min-width: 44px;
   display: grid;
   place-content: center;
   font-weight: 700;
@@ -250,7 +251,7 @@ main:has(.training-header) .save-indicator {
 }
 .training-exercise .set-list > div > .link-button {
   font-size: 12px;
-  min-height: 32px;
+  min-height: 44px;
   margin: 0 0 8px 40px;
 }
 .training-exercise .set-row:has(.badge) {
@@ -308,8 +309,8 @@ main:has(.training-header) .save-indicator {
   }
   .training-set-heading,
   .training-exercise .set-row.set-editor {
-    grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) 44px 24px;
-    gap: 6px;
+    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) 44px 44px;
+    gap: 4px;
   }
   .training-exercise .set-editor > strong {
     width: 26px;

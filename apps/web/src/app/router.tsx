@@ -1,6 +1,6 @@
 import { LoadingState } from "../components/LoadingState";
 import { lazy, Suspense, type ComponentType } from "react";
-import { useParams, Routes, Route, Navigate } from "react-router-dom";
+import { useParams, Routes, Route, Navigate, Link } from "react-router-dom";
 import { AppUpdates } from "../components/AppUpdates";
 import { SaveNotice } from "../components/SaveNotice";
 import { AppShell } from "./AppShell";
@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from "../features/auth/AuthProvider";
 import { SignOutButton } from "../features/auth/SignOutButton";
 import { Login } from "../features/auth/Login";
 import { AuthCallback } from "../features/auth/AuthCallback";
-import { DataProvider } from "./DataProvider";
+import { DataProvider, useData } from "./DataProvider";
 const GymPortal = lazy(() =>
   import("../features/gym/GymPortal").then((m) => ({ default: m.GymPortal })),
 );
@@ -75,11 +75,43 @@ const ExerciseLibrary = lazy(() =>
 );
 function StudentRoute({ component: Component }: { component: ComponentType }) {
   const { id } = useParams();
+  const data = useData();
+  if (!data.rows.some((row) => row.studentId === id)) {
+    if (data.loading) return <LoadingState label="Cargando alumno…" />;
+    return (
+      <section className="card stack" aria-labelledby="student-unavailable">
+        <h1 id="student-unavailable">
+          {data.error
+            ? "No pudimos cargar este alumno"
+            : "Alumno no disponible"}
+        </h1>
+        <p>
+          {data.error ||
+            "No encontramos este alumno en tu cuenta. Volvé a la lista o reintentá la carga si acabás de agregarlo."}
+        </p>
+        <div className="row">
+          <Link className="button" to="/alumnos">
+            Volver a alumnos
+          </Link>
+          <button
+            className="button secondary"
+            onClick={() => void data.refresh()}
+          >
+            Reintentar carga
+          </button>
+        </div>
+      </section>
+    );
+  }
   return <Component key={id} />;
 }
 function LegacyRoutine() {
   const { id } = useParams();
   return <Navigate to={"/alumnos/" + id + "/rutina"} replace />;
+}
+function TemplateRoute() {
+  const { id } = useParams();
+  return <TemplateEditor key={id} />;
 }
 function Protected() {
   const auth = useAuth();
@@ -120,10 +152,7 @@ function Protected() {
             />
             <Route path="/biblioteca" element={<ExerciseLibrary />} />
             <Route path="/rutinas" element={<RoutineCatalog />} />
-            <Route
-              path="/rutinas/plantillas/:id"
-              element={<StudentRoute component={TemplateEditor} />}
-            />
+            <Route path="/rutinas/plantillas/:id" element={<TemplateRoute />} />
             <Route
               path="/alumnos/:id/borradores"
               element={<StudentRoute component={StudentDrafts} />}
