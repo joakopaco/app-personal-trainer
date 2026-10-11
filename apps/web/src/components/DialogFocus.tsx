@@ -45,10 +45,12 @@ export function DialogFocus() {
       if (e.key === "Escape") {
         const close = Array.from(
           dialog.querySelectorAll<HTMLButtonElement>("button"),
-        ).find((b) =>
-          /^(Cerrar|Cancelar|Seguir entrenando|Volver)$/.test(
-            b.textContent?.trim() ?? "",
-          ),
+        ).find(
+          (b) =>
+            b.hasAttribute("data-dialog-close") ||
+            /^(Cerrar|Cancelar|Seguir entrenando|Volver)$/.test(
+              b.textContent?.trim() ?? "",
+            ),
         );
         if (close && !close.disabled) {
           e.preventDefault();
