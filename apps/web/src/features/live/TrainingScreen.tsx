@@ -358,7 +358,7 @@ export function TrainingScreen() {
             aria-modal="true"
             aria-label="Finalizar entrenamiento"
           >
-            <h2>Todo lo de hoy, registrado</h2>
+            <h2>Finalizar entrenamiento</h2>
             <p>
               {
                 session.items
