@@ -18,7 +18,7 @@ async function capture(page: Page, name: string) {
   await page.screenshot({
     path: `.local/screens/front-review/${name}-viewport.png`,
   });
-  const overlaps = await page.locator("main .button").evaluateAll((buttons) => {
+  const overlaps = await page.locator("main .button, main .routine-manage-button").evaluateAll((buttons) => {
     const visible = buttons
       .map((el) => ({
         text: el.textContent?.trim(),
