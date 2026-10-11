@@ -14,11 +14,10 @@ test("remote and local values are compared and only an explicit resolution overw
     await page.getByRole("button", { name: "Ingresar", exact: true }).click();
     await expect(page.getByRole("navigation")).toBeVisible();
     await page.goto("/entrenar/" + a.studentId);
-    await expect(page.getByLabel("Peso kg")).toHaveValue("20");
+    await expect(page.getByLabel("Descanso entre series")).toHaveValue("1");
     await page.route("http://127.0.0.1:54341/**", (r) => r.abort());
-    await page.getByText("Editar objetivos", { exact: true }).click();
-    await page.getByLabel("Peso kg").fill("44");
-    await page.getByLabel("Peso kg").blur();
+    await page.getByLabel("Descanso entre series").selectOption("5");
+    await page.getByLabel("Descanso entre series").blur();
     await expect(page.locator(".save-indicator")).toContainText(
       "Guardado en este dispositivo",
     );
@@ -32,8 +31,8 @@ test("remote and local values are compared and only an explicit resolution overw
         {
           sessionId: se.id,
           itemId: se.items[0].id,
-          field: "weight",
-          value: 42,
+          field: "microRest",
+          value: 180,
           scope: "session_and_future",
         },
         a.snapshot.revision,
@@ -43,24 +42,24 @@ test("remote and local values are compared and only an explicit resolution overw
     await page.unroute("http://127.0.0.1:54341/**");
     // The background worker retries after connectivity returns. Its next tick
     // can replace the retry button with the conflict review before a click.
-    await expect(page.getByText(/Valor confirmado: 42/)).toBeVisible({
+    await expect(page.getByText(/Valor confirmado: 180/)).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText(/Valor local: 44/)).toBeVisible();
+    await expect(page.getByText(/Valor local: 300/)).toBeVisible();
     const before = await a.client
-      .from("session_sets")
-      .select("weight")
+      .from("session_items")
+      .select("prescription")
       .eq("student_id", a.studentId);
-    expect(before.data?.[0].weight).toBe(42);
+    expect(before.data?.[0].prescription.microRest).toBe(180);
     await page
       .getByRole("button", { name: "Aplicar mi cambio revisado" })
       .click();
     await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
     const after = await a.client
-      .from("session_sets")
-      .select("weight")
+      .from("session_items")
+      .select("prescription")
       .eq("student_id", a.studentId);
-    expect(after.data?.map((s) => s.weight)).toEqual([44, 44]);
+    expect(after.data?.map((s) => s.prescription.microRest)).toEqual([300]);
   } finally {
     await dropFixture(a.studentId);
   }

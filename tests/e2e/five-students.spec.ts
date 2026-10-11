@@ -21,33 +21,39 @@ test("five simultaneous students keep their own weight while switching immediate
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(
         students[n].snapshot.student.name,
       );
-      await page.getByText("Editar objetivos", { exact: true }).click();
-      await page.getByLabel("Peso kg").fill(String(21 + n * 5));
+
+      await page.getByLabel("Peso serie 1").fill(String(21 + n * 5));
       if (n < 4)
         await page
           .locator(".active-strip")
           .getByRole("link", { name: students[n + 1].snapshot.student.name })
           .click();
-      else await page.getByLabel("Peso kg").blur();
+      else await page.getByLabel("Peso serie 1").blur();
     }
     for (let n = 0; n < 5; n++) {
       await page
         .locator(".active-strip")
         .getByRole("link", { name: students[n].snapshot.student.name })
         .click();
-      await expect(page.getByLabel("Peso kg")).toHaveValue(String(21 + n * 5));
+      await expect(page.getByLabel("Peso serie 1")).toHaveValue(
+        String(21 + n * 5),
+      );
+      await page
+        .getByRole("button", { name: "Registrar serie 1", exact: true })
+        .click();
       await expect
         .poll(
           async () => {
             const r = await students[n].client
               .from("session_sets")
               .select("weight")
+              .order("ordinal")
               .eq("student_id", students[n].studentId);
             return r.data?.map((s) => s.weight);
           },
           { timeout: 20000 },
         )
-        .toEqual([21 + n * 5, 21 + n * 5]);
+        .toEqual([21 + n * 5, 20]);
     }
     const overflow = await page.evaluate(() =>
       Array.from(document.querySelectorAll("body *"))

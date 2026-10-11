@@ -18,7 +18,9 @@ test("mobile navigation opens pages at the top and restores a live session's pos
       page.getByRole("heading", { name: "Hoy, con vos." }),
     ).toBeVisible();
     await page.goto("/entrenar/" + fixture.studentId);
-    await expect(page.getByLabel("Peso kg", { exact: true })).toHaveValue("20");
+    await expect(page.getByLabel("Peso serie 1", { exact: true })).toHaveValue(
+      "20",
+    );
     await page
       .getByRole("button", { name: "Finalizar entrenamiento", exact: true })
       .scrollIntoViewIfNeeded();
@@ -32,7 +34,9 @@ test("mobile navigation opens pages at the top and restores a live session's pos
     // Return through the app, so this also exercises effect cleanup ordering.
     await page.getByRole("link", { name: "Hoy", exact: true }).click();
     await page.locator(`a[href="/entrenar/${fixture.studentId}"]`).click();
-    await expect(page.getByLabel("Peso kg", { exact: true })).toHaveValue("20");
+    await expect(page.getByLabel("Peso serie 1", { exact: true })).toHaveValue(
+      "20",
+    );
     // The browser clamps the restored position to available height.
     await expect
       .poll(() => page.evaluate(() => window.scrollY))

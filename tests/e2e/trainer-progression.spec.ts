@@ -286,3 +286,106 @@ test("scheduled days and per-set editing survive save and reload at phone width"
     await dropFixture(a.studentId);
   }
 });
+
+test("removed objective controls leave old annotations recoverable and per-series recording intact", async ({
+  page,
+}) => {
+  const a = await prepared();
+  try {
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill(accounts[0].email);
+    await page
+      .getByLabel("Contraseña", { exact: true })
+      .fill(accounts[0].password);
+    await page.getByRole("button", { name: "Ingresar", exact: true }).click();
+    await expect(page.getByRole("navigation")).toBeVisible();
+    await page.goto(`/entrenar/${a.studentId}`);
+    await expect(page.getByLabel("Peso serie 1")).toHaveValue("20");
+    const session = a.snapshot.sessions[0];
+    await page.evaluate(
+      async ({ studentId, session, revision }) => {
+        const info = (await indexedDB.databases()).find((x) =>
+          x.name?.startsWith("pulso:"),
+        )!;
+        const database = await new Promise<IDBDatabase>((resolve, reject) => {
+          const request = indexedDB.open(info.name!);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        await new Promise<void>((resolve, reject) => {
+          const tx = database.transaction("rawInputs", "readwrite");
+          for (const field of ["weight", "reps", "sets", "durationSec"])
+            tx.objectStore("rawInputs").put({
+              id: session.id + ":" + session.items[0].id + ":" + field,
+              studentId,
+              sessionId: session.id,
+              itemId: session.items[0].id,
+              field,
+              raw: "27",
+              revision,
+              scope: "session_only",
+            });
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+        database.close();
+      },
+      { studentId: a.studentId, session, revision: a.snapshot.revision },
+    );
+
+    await page.reload();
+    await expect(
+      page.getByText("Editar objetivos", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Anotaciones sin registrar" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: "Exportar y descartar anotación",
+        exact: true,
+      }),
+    ).toHaveCount(4);
+    page.on("dialog", (dialog) => dialog.accept());
+    for (let i = 0; i < 4; i++) {
+      const download = page.waitForEvent("download");
+      await page
+        .getByRole("button", {
+          name: "Exportar y descartar anotación",
+          exact: true,
+        })
+        .first()
+        .click();
+      expect((await download).suggestedFilename()).toBe(
+        "pulso-anotacion-pendiente.json",
+      );
+      await expect(
+        page.getByRole("button", {
+          name: "Exportar y descartar anotación",
+          exact: true,
+        }),
+      ).toHaveCount(3 - i);
+    }
+    await page.getByLabel("Peso serie 1").fill("24,5");
+    await page
+      .getByRole("button", { name: "Registrar serie 1", exact: true })
+      .click();
+    await expect(
+      page.locator(".set-row").filter({ hasText: "24.5 kg" }),
+    ).toContainText("Registrada");
+    await expect(
+      page.getByText("Referencia del ejercicio", { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Finalizar entrenamiento", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Confirmar cierre", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Entrenamiento finalizado" }),
+    ).toBeVisible();
+  } finally {
+    await dropFixture(a.studentId);
+  }
+});

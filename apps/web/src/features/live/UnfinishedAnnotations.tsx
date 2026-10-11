@@ -8,7 +8,13 @@ import {
   parseRestMinutes,
   formatRestDuration,
 } from "../../components/rest-minutes";
-export function UnfinishedAnnotations({ studentId }: { studentId: string }) {
+export function UnfinishedAnnotations({
+  studentId,
+  removedObjectivesOnly = false,
+}: {
+  studentId: string;
+  removedObjectivesOnly?: boolean;
+}) {
   const { db, rows } = useData();
   const [inputs, setInputs] = useState<RawInput[]>([]),
     [error, setError] = useState("");
@@ -56,17 +62,24 @@ export function UnfinishedAnnotations({ studentId }: { studentId: string }) {
     }
     return input.raw || "Campo vacío";
   }
+  // Old app versions could leave drafts for the removed bulk-objective editor.
+  // Keep those values recoverable without bringing that editor back.
+  const visibleInputs = removedObjectivesOnly
+    ? inputs.filter((input) =>
+        ["weight", "reps", "sets", "durationSec"].includes(input.field),
+      )
+    : inputs;
   return (
     <>
       {error && <p role="alert">{error}</p>}
-      {inputs.length > 0 && (
+      {visibleInputs.length > 0 && (
         <section className="stack">
           <h3>Anotaciones sin registrar</h3>
           <p>
             Estas anotaciones quedaron sin registrar. Conservá una copia antes
             de descartarlas.
           </p>
-          {inputs.map((input) => (
+          {visibleInputs.map((input) => (
             <div className="notice" key={input.id}>
               <strong>
                 {rows.find((r) => r.studentId === input.studentId)?.projection

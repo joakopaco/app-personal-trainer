@@ -19,16 +19,20 @@ test("installed production shell starts fully offline and preserves training edi
       await navigator.serviceWorker.ready;
     });
     await page.goto("/entrenar/" + a.studentId);
-    await expect(page.getByLabel("Peso kg")).toHaveValue("20");
+    await expect(page.getByLabel("Peso serie 1")).toHaveValue("20");
     await context.setOffline(true);
-    await page.getByText("Editar objetivos", { exact: true }).click();
-    await page.getByLabel("Peso kg").fill("37,5");
-    await page.getByLabel("Peso kg").blur();
+
+    await page.getByLabel("Peso serie 1").fill("37,5");
+    await page
+      .getByRole("button", { name: "Registrar serie 1", exact: true })
+      .click();
     await expect(page.locator(".save-indicator")).toContainText(
       "Guardado en este dispositivo",
     );
     await page.reload();
-    await expect(page.getByLabel("Peso kg")).toHaveValue("37.5");
+    await expect(
+      page.locator(".set-row").filter({ hasText: "37.5 kg" }),
+    ).toContainText("Registrada");
     await expect(page.locator(".save-indicator")).toContainText(
       "Guardado en este dispositivo",
     );
