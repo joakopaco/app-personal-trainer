@@ -24,7 +24,10 @@ test("profile separates sections and exports all four routine weeks without priv
     await login(page, fixture.studentId);
     const tabs = page.getByRole("navigation", { name: "Secciones del alumno" });
     await expect(
-      tabs.getByRole("link", { name: "Información y rutinas", exact: true }),
+      tabs.getByRole("link", {
+        name: "Ficha: información y rutinas",
+        exact: true,
+      }),
     ).toHaveAttribute("aria-current", "page");
     await expect(
       page.getByRole("button", { name: "Editar días y horarios" }),

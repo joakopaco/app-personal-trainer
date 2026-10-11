@@ -87,8 +87,9 @@ export function validateRoutine(doc: unknown, publish = false): string[] {
     return result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
   const errors: string[] = [];
   const ids = new Set<string>();
-  for (const week of result.data.weeks)
-    for (const day of week) {
+  for (const [weekIndex, week] of result.data.weeks.entries())
+    for (const [dayIndex, day] of week.entries()) {
+      const location = `Semana ${weekIndex + 1} · Día ${dayIndex + 1}`;
       const exerciseLineages = new Set<string>();
       const positions = day.blocks.flatMap((b) => b.exercises);
       for (const item of [day, ...day.blocks, ...positions]) {
@@ -96,7 +97,7 @@ export function validateRoutine(doc: unknown, publish = false): string[] {
         ids.add(item.id);
       }
       if (publish && !positions.length)
-        errors.push(`${day.name}: agregá ejercicios`);
+        errors.push(`${location}: agregá al menos un ejercicio`);
       for (const p of positions) {
         const progression = p.prescription.progression;
         if (
@@ -104,7 +105,7 @@ export function validateRoutine(doc: unknown, publish = false): string[] {
           (p.type === "time" || progression.length !== p.prescription.sets)
         )
           errors.push(
-            `${p.name}: la progresión debe tener una fila por serie y usar repeticiones`,
+            `${location} · ${p.name}: la progresión debe tener una fila por serie y usar repeticiones`,
           );
         if (
           publish &&
@@ -114,7 +115,7 @@ export function validateRoutine(doc: unknown, publish = false): string[] {
           )
         )
           errors.push(
-            `${p.name}: completá el peso y las repeticiones de cada serie`,
+            `${location} · ${p.name}: completá el peso y las repeticiones de cada serie`,
           );
         if (exerciseLineages.has(p.lineageId))
           errors.push("Posición repetida en el día");
@@ -130,7 +131,7 @@ export function validateRoutine(doc: unknown, publish = false): string[] {
               p.prescription.weight === null) ||
             (p.type === "time" && p.prescription.durationSec === null))
         )
-          errors.push(`${p.name}: completá los valores`);
+          errors.push(`${location} · ${p.name}: completá los valores`);
       }
     }
   return errors;

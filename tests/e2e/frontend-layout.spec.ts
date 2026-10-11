@@ -18,7 +18,7 @@ async function capture(page: Page, name: string) {
   await page.screenshot({
     path: `.local/screens/front-review/${name}-viewport.png`,
   });
-  const overlaps = await page.locator("main .button").evaluateAll((buttons) => {
+  const overlaps = await page.locator("main .button, main .routine-manage-button").evaluateAll((buttons) => {
     const visible = buttons
       .map((el) => ({
         text: el.textContent?.trim(),
@@ -123,6 +123,23 @@ for (const width of [320, 390, 768, 1024, 1440])
         await expect(
           page.getByRole("navigation", { name: "Secciones del alumno" }),
         ).toBeVisible();
+        const navSizes = await page
+          .locator(".student-navigation a")
+          .evaluateAll((links) =>
+            links.map((link) => {
+              const box = link.getBoundingClientRect();
+              return { width: box.width, height: box.height };
+            }),
+          );
+        expect(navSizes).toHaveLength(5);
+        expect(
+          Math.max(...navSizes.map((s) => s.height)) -
+            Math.min(...navSizes.map((s) => s.height)),
+        ).toBeLessThanOrEqual(1);
+        expect(
+          Math.max(...navSizes.map((s) => s.width)) -
+            Math.min(...navSizes.map((s) => s.width)),
+        ).toBeLessThanOrEqual(1);
         const positions = await page
           .locator(".student-back, .student-heading, .student-navigation")
           .evaluateAll((nodes) =>
@@ -144,13 +161,15 @@ for (const width of [320, 390, 768, 1024, 1440])
               exact: false,
             }),
           ).toBeVisible();
-        if (name === "progress")
+        if (name === "progress") {
           await expect(
             page.getByRole("button", {
               name: "Exportar progreso",
               exact: true,
             }),
           ).toBeEnabled();
+          await expect(page.locator(".history-chart-date")).toHaveCount(1);
+        }
         if (name === "history")
           await expect(
             page.getByText("Entrenamiento cerrado", { exact: false }),
@@ -162,6 +181,28 @@ for (const width of [320, 390, 768, 1024, 1440])
             .click();
           await expect(page.getByLabel("Nombre de la rutina")).toBeVisible();
           await capture(page, `${width}-routine-editor`);
+          await page
+            .getByRole("button", { name: "Copiar semana 1 a…", exact: true })
+            .click();
+          const copyPanel = page.getByRole("dialog", {
+            name: "Copiar semana 1",
+            exact: true,
+          });
+          await expect(copyPanel).toBeVisible();
+          const panelBox = await copyPanel.boundingBox();
+          const programBox = await page
+            .locator(".routine-program-settings")
+            .boundingBox();
+          expect(panelBox!.x).toBeGreaterThanOrEqual(programBox!.x);
+          expect(panelBox!.x + panelBox!.width).toBeLessThanOrEqual(
+            programBox!.x + programBox!.width,
+          );
+          await page.screenshot({
+            path: `.local/screens/front-review/${width}-week-menu.png`,
+          });
+          await copyPanel
+            .getByRole("button", { name: "Cancelar", exact: true })
+            .click();
         }
         if (name === "progress") {
           await page
@@ -172,8 +213,16 @@ for (const width of [320, 390, 768, 1024, 1440])
           ).toBeVisible();
           await page.screenshot({
             path: `.local/screens/front-review/${width}-progress-export.png`,
-            fullPage: true,
           });
+          const exportHeights = await page
+            .locator(".document-toolbar > .row > .button")
+            .evaluateAll((buttons) =>
+              buttons.map((button) => button.getBoundingClientRect().height),
+            );
+          expect(exportHeights).toHaveLength(2);
+          expect(
+            Math.abs(exportHeights[0] - exportHeights[1]),
+          ).toBeLessThanOrEqual(1);
           await page.emulateMedia({ media: "print" });
           await page.pdf({
             path: `.local/screens/front-review/${width}-progress.pdf`,
@@ -233,6 +282,17 @@ for (const width of [320, 390, 768, 1024, 1440])
           await capture(page, `${width}-student-form`);
         }
         if (name === "exercises") {
+          const actionHeights = await page
+            .locator(".exercise-card")
+            .first()
+            .locator(".exercise-actions > .button")
+            .evaluateAll((buttons) =>
+              buttons.map((button) => button.getBoundingClientRect().height),
+            );
+          expect(actionHeights).toHaveLength(2);
+          expect(
+            Math.abs(actionHeights[0] - actionHeights[1]),
+          ).toBeLessThanOrEqual(1);
           await page
             .getByRole("button", { name: "Crear ejercicio propio" })
             .click();

@@ -51,13 +51,13 @@ export function ArchivedRoutine({ document }: { document: RoutineDocument }) {
             aria-pressed={day === index}
             onClick={() => setDay(index)}
           >
-            {entry.name}
+            Día {index + 1}
           </button>
         ))}
       </div>
       {selectedDay && (
         <>
-          <h4>{selectedDay.name}</h4>
+          <h4>Día {day + 1}</h4>
           {selectedDay.blocks.length ? (
             selectedDay.blocks.map((block) => (
               <section className="history-archive-block" key={block.id}>

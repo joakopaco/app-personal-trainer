@@ -11,7 +11,9 @@ import { useRef, useState } from "react";
 import { RoutineFields } from "../../apps/web/src/features/routines/RoutineFields";
 import { routineFixture } from "../fixtures/routine";
 import type { RoutineDocument } from "@pulso/domain/routines";
-vi.mock("../../apps/web/src/features/routines/ExercisePalette", () => ({ ExercisePalette: () => null }));
+vi.mock("../../apps/web/src/features/routines/ExercisePalette", () => ({
+  ExercisePalette: () => null,
+}));
 
 vi.mock("../../apps/web/src/adapters/supabase", () => ({
   cloud: () => ({
@@ -85,24 +87,29 @@ test("week copy replaces only selected destinations, preserves linkage and pendi
   fireEvent.click(
     within(backwards).getByRole("button", { name: "Copiar a 1 semana" }),
   );
-  expect(latest.weeks[0][0].name).toBe("Día 4");
+  expect(latest.weeks[0][0].name).toBe("Día 1");
+  expect(latest.weeks[0][0].blocks[0].exercises[0].lineageId).toBe(
+    latest.weeks[3][0].blocks[0].exercises[0].lineageId,
+  );
 });
 
-test("day toolbar renames, duplicates, reorders both ways and respects the six-day cap", () => {
+test("numbered days duplicate, reorder both ways and respect the six-day cap", () => {
   render(<Editor />);
-  fireEvent.click(screen.getByRole("button", { name: "Renombrar día" }));
-  fireEvent.change(screen.getByLabelText("Nombre del día"), {
-    target: { value: "Tren superior" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Guardar nombre" }));
-  expect(latest.weeks[0][0].name).toBe("Tren superior");
+  expect(screen.queryByRole("button", { name: "Renombrar día" })).toBeNull();
+  const originalId = latest.weeks[0][0].id;
   fireEvent.click(screen.getByRole("button", { name: "Duplicar día" }));
   expect(latest.weeks[0]).toHaveLength(2);
-  expect(latest.weeks[0][1].name).toBe("Tren superior (copia)");
+  const copyId = latest.weeks[0][1].id;
+  expect(copyId).not.toBe(originalId);
+  expect(
+    screen.getByRole("button", { name: "Día 2" }).getAttribute("aria-pressed"),
+  ).toBe("true");
   fireEvent.click(screen.getByRole("button", { name: "Mover día antes" }));
-  expect(latest.weeks[0][0].name).toBe("Tren superior (copia)");
+  expect(latest.weeks[0][0].id).toBe(copyId);
+  expect(latest.weeks[0].map((d) => d.name)).toEqual(["Día 1", "Día 2"]);
   fireEvent.click(screen.getByRole("button", { name: "Mover día después" }));
-  expect(latest.weeks[0][1].name).toBe("Tren superior (copia)");
+  expect(latest.weeks[0][1].id).toBe(copyId);
+  expect(latest.weeks[0].map((d) => d.name)).toEqual(["Día 1", "Día 2"]);
   for (let i = 0; i < 5; i++)
     fireEvent.click(screen.getByRole("button", { name: "+ Día" }));
   expect(latest.weeks[0]).toHaveLength(6);
@@ -113,7 +120,7 @@ test("day toolbar renames, duplicates, reorders both ways and respects the six-d
   ).toBe(true);
 });
 
-test("scheduled days retain their names and order and copy panel closes with Escape", () => {
+test("scheduled days show their position and copy panel closes with Escape", () => {
   render(<Editor schedule={[1, 3, 5]} />);
   expect(screen.queryByRole("button", { name: "Renombrar día" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Duplicar día" })).toBeNull();
@@ -126,9 +133,12 @@ test("scheduled days retain their names and order and copy panel closes with Esc
   expect(document.activeElement).toBe(
     screen.getByRole("button", { name: "Copiar semana 1 a…" }),
   );
+  fireEvent.click(screen.getByRole("button", { name: "Semana 4" }));
+  expect(screen.getByRole("button", { name: "Día 1" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Día 4" })).toBeNull();
 });
 
-test("canceling copy and rename preserves the draft; deleting requires confirmation and retains one day", () => {
+test("canceling copy preserves the draft; deleting requires confirmation and retains one day", () => {
   render(<Editor />);
   const original = structuredClone(latest);
   fireEvent.click(screen.getByRole("button", { name: "Copiar semana 1 a…" }));
@@ -138,11 +148,6 @@ test("canceling copy and rename preserves the draft; deleting requires confirmat
       { name: "Cancelar" },
     ),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Renombrar día" }));
-  fireEvent.change(screen.getByLabelText("Nombre del día"), {
-    target: { value: "No guardar" },
-  });
-  fireEvent.keyDown(screen.getByLabelText("Nombre del día"), { key: "Escape" });
   expect(latest).toEqual(original);
   expect(
     screen
@@ -158,7 +163,7 @@ test("canceling copy and rename preserves the draft; deleting requires confirmat
   expect(latest.weeks[0]).toHaveLength(2);
   fireEvent.click(screen.getByRole("button", { name: "Eliminar día" }));
   expect(confirmation).toHaveBeenCalledWith(
-    "¿Eliminar «Día 1 (copia)» y sus bloques de la semana 1?",
+    "¿Eliminar «Día 2» y sus bloques de la semana 1?",
   );
   expect(latest.weeks[0]).toHaveLength(1);
   expect(latest.weeks[0][0].name).toBe("Día 1");

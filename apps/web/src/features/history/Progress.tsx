@@ -205,6 +205,14 @@ export function Trend({
   }));
   const active =
     points[Math.min(focused ?? points.length - 1, points.length - 1)];
+  const axisDate = (value: string) =>
+    chartWidth < 360
+      ? new Date(value + "T12:00:00").toLocaleDateString("es-AR", {
+          day: "numeric",
+          month: "numeric",
+          year: "2-digit",
+        })
+      : date(value);
   return (
     <>
       <div className="history-comparison">
@@ -285,12 +293,30 @@ export function Trend({
             </title>
           </circle>
         ))}
-        <text x={left} y="225">
-          {date(first.date)}
-        </text>
-        <text x={right} y="225" textAnchor="end">
-          {date(last.date)}
-        </text>
+        {first.date === last.date ? (
+          <text
+            className="history-chart-date"
+            x={(left + right) / 2}
+            y="225"
+            textAnchor="middle"
+          >
+            {axisDate(first.date)}
+          </text>
+        ) : (
+          <>
+            <text className="history-chart-date" x={left} y="225">
+              {axisDate(first.date)}
+            </text>
+            <text
+              className="history-chart-date"
+              x={right}
+              y="225"
+              textAnchor="end"
+            >
+              {axisDate(last.date)}
+            </text>
+          </>
+        )}
       </svg>
       <p className="history-chart-reading" aria-live="polite">
         {date(active.date)} ·{" "}

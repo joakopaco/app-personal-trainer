@@ -19,7 +19,7 @@ test("logout preserves pending edits privately and restores them only to the sam
     // does not mean React's async data fetch has completed.
     await expect(page.getByLabel("Peso kg")).toHaveValue("20");
     await page.route("http://127.0.0.1:54341/**", (r) => r.abort());
-    await page.getByText("Ajustes del ejercicio", { exact: true }).click();
+    await page.getByText("Editar objetivos", { exact: true }).click();
     await page.getByLabel("Peso kg").fill("32");
     await page.getByLabel("Peso kg").blur();
     await expect(page.locator(".save-indicator")).toContainText(

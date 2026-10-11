@@ -20,7 +20,7 @@ test("shell updates silently without interrupting offline training and preserves
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
     await page.goto("/entrenar/" + a.studentId);
     await page.route("http://127.0.0.1:54341/**", (r) => r.abort());
-    await page.getByText("Ajustes del ejercicio", { exact: true }).click();
+    await page.getByText("Editar objetivos", { exact: true }).click();
     await page.getByLabel("Peso kg").fill("48");
     await page.getByLabel("Peso kg").blur();
     await expect(page.locator(".save-indicator")).toContainText(

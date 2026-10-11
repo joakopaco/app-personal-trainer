@@ -265,7 +265,7 @@ export function StudentProfile() {
                     <div key={day.id}>
                       <span className="student-day-number">{index + 1}</span>
                       <div>
-                        <strong>{day.name}</strong>
+                        <strong>Día {index + 1}</strong>
                         <small>
                           {day.blocks.length}{" "}
                           {day.blocks.length === 1 ? "bloque" : "bloques"} ·{" "}

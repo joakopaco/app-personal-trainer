@@ -554,6 +554,7 @@ function RoutineBuilderEditor() {
   const isNew =
     !row.projection.routine ||
     doc.weeks[0][0].id !== row.projection.routine.document.weeks[0][0].id;
+  const activationIssues = validateRoutine(doc, true);
   return (
     <div className="student-page routine-workspace">
       {guard}
@@ -579,7 +580,9 @@ function RoutineBuilderEditor() {
                   : dirty
                     ? "Borrador guardado en este dispositivo"
                     : draftRevision
-                      ? "Borrador listo para activar"
+                      ? activationIssues.length
+                        ? "Borrador guardado · falta completar la programación"
+                        : "Borrador listo para activar"
                       : row.projection.routine
                         ? "Sin cambios pendientes"
                         : "Programación de 4 semanas"}
@@ -652,8 +655,27 @@ function RoutineBuilderEditor() {
             : ""}
           {dirty
             ? "Guardá los cambios y activá el borrador cuando esté listo."
-            : "Borrador guardado. Podés activarlo cuando esté listo."}
+            : activationIssues.length
+              ? "Borrador guardado. Completá los días de las cuatro semanas antes de activarlo."
+              : "Borrador guardado. Podés activarlo cuando esté listo."}
         </p>
+      )}
+      {mode === "view" && draftRevision > 0 && activationIssues.length > 0 && (
+        <section
+          className="routine-activation-checklist"
+          aria-label="Pendientes para activar"
+        >
+          <h3>Antes de activar</h3>
+          <p>Un ejercicio completo por día alcanza. Revisá estos puntos:</p>
+          <ul>
+            {activationIssues.map((issue, i) => (
+              <li key={i}>{issue}</li>
+            ))}
+          </ul>
+          <p>
+            Si las semanas repiten el plan, usá «Copiar semana» en el editor.
+          </p>
+        </section>
       )}
       {error && (
         <p className="error" role="alert">

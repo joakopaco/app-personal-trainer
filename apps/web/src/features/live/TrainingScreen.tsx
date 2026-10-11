@@ -491,59 +491,65 @@ function ExerciseRow({
           </div>
         ))}
       </div>
-      <details className="training-adjustments">
-        <summary>
-          Ajustes del ejercicio <ChevronDown size={16} />
-        </summary>
-        <p className="muted">
-          Cambiar el objetivo actualiza las series pendientes. Las registradas
-          conservan sus resultados.
-        </p>
-        <div className="live-fields">
-          {(
-            [
-              "sets",
-              ...(item.type === "time"
-                ? ["durationSec"]
-                : item.type === "load_reps"
-                  ? ["weight", "reps"]
-                  : ["reps"]),
-            ] as NumericName[]
-          )
-            .filter(() => !item.prescription.progression)
-            .map((field) => (
-              <LiveInput
-                key={field}
-                field={field}
-                label={
-                  {
-                    weight: "Peso kg",
-                    sets: "Series",
-                    reps: "Repeticiones",
-                    durationSec: "Duración (s)",
-                    microRest: "Descanso entre series",
-                    macroRest: "Descanso del bloque",
-                  }[field]
-                }
-                value={
-                  field === "macroRest"
-                    ? item.macro_rest
-                    : item.prescription[field]
-                }
-                item={item}
-                session={session}
-                scope={scope}
-                onFieldState={onFieldState}
-                studentId={studentId}
-                disabled={disabled || item.skipped}
-                onError={onError}
-              />
-            ))}
-        </div>
-        <details className="exercise-guide">
-          <summary>Referencia del ejercicio</summary>
-          <ExerciseArt exerciseId={item.exercise_id} />
+      {!item.prescription.progression && (
+        <details className="training-adjustments">
+          <summary>
+            Editar objetivos <ChevronDown size={16} />
+          </summary>
+          <p className="muted">
+            Aplicá un objetivo a todas las series pendientes. Para registrar lo
+            realizado, usá las filas de arriba. Las series registradas conservan
+            sus resultados.
+          </p>
+          <div className="live-fields">
+            {(
+              [
+                "sets",
+                ...(item.type === "time"
+                  ? ["durationSec"]
+                  : item.type === "load_reps"
+                    ? ["weight", "reps"]
+                    : ["reps"]),
+              ] as NumericName[]
+            )
+              .filter(() => !item.prescription.progression)
+              .map((field) => (
+                <LiveInput
+                  key={field}
+                  field={field}
+                  label={
+                    {
+                      weight: "Peso kg",
+                      sets: "Series",
+                      reps: "Repeticiones",
+                      durationSec: "Duración (s)",
+                      microRest: "Descanso entre series",
+                      macroRest: "Descanso del bloque",
+                    }[field]
+                  }
+                  value={
+                    field === "macroRest"
+                      ? item.macro_rest
+                      : item.prescription[field]
+                  }
+                  item={item}
+                  session={session}
+                  scope={scope}
+                  onFieldState={onFieldState}
+                  studentId={studentId}
+                  disabled={disabled || item.skipped}
+                  onError={onError}
+                />
+              ))}
+          </div>
         </details>
+      )}
+      <details className="exercise-guide">
+        <summary>
+          Referencia del ejercicio
+          <ChevronDown size={18} aria-hidden="true" />
+        </summary>
+        <ExerciseArt exerciseId={item.exercise_id} />
       </details>
     </article>
   );

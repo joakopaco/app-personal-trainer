@@ -481,11 +481,16 @@ export function Today() {
                         disabled={busy}
                         onClick={() => setDayMenuOpen(!dayMenuOpen)}
                       >
-                        {selected.routine.document.weeks[week - 1].find(
-                          (d) => d.id === dayId,
-                        )?.name ||
-                          selected.routine.document.weeks[week - 1][0]?.name ||
-                          "Sin días disponibles"}
+                        {selected.routine.document.weeks[week - 1].length
+                          ? `Día ${
+                              Math.max(
+                                0,
+                                selected.routine.document.weeks[
+                                  week - 1
+                                ].findIndex((d) => d.id === dayId),
+                              ) + 1
+                            }`
+                          : "Sin días disponibles"}
                         <ChevronDown size={20} aria-hidden="true" />
                       </button>
                       {dayMenuOpen && (
@@ -494,7 +499,7 @@ export function Today() {
                           id="arrival-day-options"
                         >
                           {selected.routine.document.weeks[week - 1].map(
-                            (d) => (
+                            (d, dayIndex) => (
                               <button
                                 key={d.id}
                                 className={
@@ -518,7 +523,7 @@ export function Today() {
                                   setDayMenuOpen(false);
                                 }}
                               >
-                                {d.name}
+                                Día {dayIndex + 1}
                               </button>
                             ),
                           )}

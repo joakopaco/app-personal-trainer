@@ -8,11 +8,8 @@ import {
   ArrowRight,
   Trash2,
   Copy,
-  Pencil,
   ChevronDown,
   CalendarDays,
-  Check,
-  X,
 } from "lucide-react";
 import {
   cloneRoutineDocument,
@@ -54,8 +51,6 @@ export function RoutineFields({
     [day, setDay] = useState(0);
   const [copyOpen, setCopyOpen] = useState(false);
   const [copyTargets, setCopyTargets] = useState<number[]>([]);
-  const [renaming, setRenaming] = useState(false);
-  const [dayName, setDayName] = useState("");
   const [organizeMessage, setOrganizeMessage] = useState("");
   const copyRegion = useRef<HTMLDivElement>(null);
   const copyTrigger = useRef<HTMLButtonElement>(null);
@@ -115,20 +110,22 @@ export function RoutineFields({
     setCopyOpen(false);
     copyTrigger.current?.focus();
   }
-  function renameDay() {
-    if (!dayName.trim()) return;
-    mutate((next) => {
-      next.weeks[week][day].name = dayName.trim();
-    });
-    setRenaming(false);
-  }
   const [searchBlock, setSearchBlock] = useState<string | null>(null),
     [query, setQuery] = useState("");
   function mutate(fn: (copy: RoutineDocument) => void) {
     const next = structuredClone(doc);
     fn(next);
-    for (const w of next.weeks)
-      for (const d of w) for (const b of d.blocks) b.macroTarget = "blocks";
+    for (const [weekIndex, days] of next.weeks.entries()) {
+      const reordered =
+        days.length !== doc.weeks[weekIndex].length ||
+        days.some(
+          (entry, index) => entry.id !== doc.weeks[weekIndex][index]?.id,
+        );
+      for (const [dayIndex, entry] of days.entries()) {
+        if (reordered) entry.name = `Día ${dayIndex + 1}`;
+        for (const block of entry.blocks) block.macroTarget = "blocks";
+      }
+    }
     change(next);
   }
   const [ownExercises, setOwnExercises] = useState<ExerciseDefinition[]>([]);
@@ -239,7 +236,7 @@ export function RoutineFields({
           setTarget={setTargetBlock}
           add={addExercise}
           busy={busy}
-          context={`Semana ${week + 1} · ${selected.name}`}
+          context={`Semana ${week + 1} · Día ${day + 1}`}
           feedback={added}
           onDragStart={(id) => {
             draggedExerciseId.current = id;
@@ -274,7 +271,6 @@ export function RoutineFields({
                       setWeek(i);
                       setDay(0);
                       setCopyOpen(false);
-                      setRenaming(false);
                       setOrganizeMessage("");
                     }}
                   >
@@ -385,10 +381,9 @@ export function RoutineFields({
                   key={d.id}
                   onClick={() => {
                     setDay(i);
-                    setRenaming(false);
                   }}
                 >
-                  {d.name}
+                  Día {i + 1}
                 </button>
               ))}
               {!scheduled && (
@@ -405,7 +400,6 @@ export function RoutineFields({
                       });
                     });
                     if (!atDayLimit) setDay(doc.weeks[week].length);
-                    setRenaming(false);
                   }}
                 >
                   + Día
@@ -414,9 +408,11 @@ export function RoutineFields({
             </div>
             {scheduled ? (
               <p className="muted schedule-days-note routine-day-toolbar-schedule">
-                <CalendarDays size={15} aria-hidden="true" /> Días de su agenda
-                · {selected.name}
-                <span>La asistencia se cambia en el perfil del alumno.</span>
+                <CalendarDays size={15} aria-hidden="true" />{" "}
+                {doc.weeks[week].length}{" "}
+                {doc.weeks[week].length === 1 ? "día" : "días"} de entrenamiento
+                en esta semana
+                <span>La agenda de asistencia se cambia en su ficha.</span>
               </p>
             ) : (
               <div
@@ -425,21 +421,9 @@ export function RoutineFields({
               >
                 <div className="routine-day-toolbar-title">
                   <span>DÍA SELECCIONADO</span>
-                  <strong>{selected.name}</strong>
+                  <strong>Día {day + 1}</strong>
                 </div>
                 <div className="routine-day-toolbar-actions">
-                  <button
-                    className="routine-manage-button"
-                    aria-label="Renombrar día"
-                    aria-expanded={renaming}
-                    onClick={() => {
-                      setDayName(selected.name);
-                      setRenaming(!renaming);
-                    }}
-                  >
-                    <Pencil size={15} aria-hidden="true" />
-                    Renombrar
-                  </button>
                   <button
                     className="routine-manage-button"
                     aria-label="Duplicar día"
@@ -455,12 +439,11 @@ export function RoutineFields({
                             [selected],
                           ],
                         }).weeks[0][0];
-                        copy.name = selected.name.slice(0, 72) + " (copia)";
+                        copy.name = `Día ${day + 2}`;
                         copyRawInputs(selected, copy);
                         d.weeks[week].splice(day + 1, 0, copy);
                       });
                       if (!atDayLimit) setDay(day + 1);
-                      setRenaming(false);
                     }}
                     disabled={atDayLimit}
                   >
@@ -508,14 +491,13 @@ export function RoutineFields({
                     onClick={() => {
                       if (
                         confirm(
-                          `¿Eliminar «${selected.name}» y sus bloques de la semana ${week + 1}?`,
+                          `¿Eliminar «Día ${day + 1}» y sus bloques de la semana ${week + 1}?`,
                         )
                       ) {
                         mutate((d) => {
                           d.weeks[week].splice(day, 1);
                         });
                         setDay(Math.max(0, day - 1));
-                        setRenaming(false);
                       }
                     }}
                   >
@@ -523,42 +505,6 @@ export function RoutineFields({
                     Eliminar
                   </button>
                 </div>
-                {renaming && (
-                  <div className="routine-day-rename">
-                    <label className="field">
-                      Nombre del día
-                      <input
-                        maxLength={80}
-                        autoFocus
-                        value={dayName}
-                        onChange={(event) => setDayName(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                            renameDay();
-                          }
-                          if (event.key === "Escape") setRenaming(false);
-                        }}
-                      />
-                    </label>
-                    <button
-                      className="button"
-                      aria-label="Guardar nombre"
-                      disabled={!dayName.trim()}
-                      onClick={renameDay}
-                    >
-                      <Check size={16} aria-hidden="true" />
-                      Guardar
-                    </button>
-                    <button
-                      className="routine-manage-button"
-                      aria-label="Cancelar cambio de nombre"
-                      onClick={() => setRenaming(false)}
-                    >
-                      <X size={16} aria-hidden="true" />
-                    </button>
-                  </div>
-                )}
                 {atDayLimit && (
                   <small className="routine-day-toolbar-limit">
                     Máximo de 6 días por semana.

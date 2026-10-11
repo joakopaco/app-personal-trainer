@@ -105,7 +105,7 @@ export function MemberHome() {
                   aria-pressed={day === i}
                   onClick={() => setDay(i)}
                 >
-                  {d.name}
+                  Día {i + 1}
                 </button>
               ))}
             </div>

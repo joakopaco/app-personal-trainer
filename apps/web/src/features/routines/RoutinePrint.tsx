@@ -30,9 +30,9 @@ export function RoutinePrint({
         <section className="print-week" key={n}>
           <h2>Semana {n + 1}</h2>
           {!week.length && <p>Sin días programados.</p>}
-          {week.map((day) => (
+          {week.map((day, dayIndex) => (
             <section key={day.id}>
-              <h3>{day.name}</h3>
+              <h3>Día {dayIndex + 1}</h3>
               {!day.blocks.length && <p>Sin bloques programados.</p>}
               {day.blocks.map((block) => (
                 <section key={block.id}>

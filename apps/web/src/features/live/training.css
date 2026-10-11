@@ -4,7 +4,7 @@
 }
 main:has(.training-header) .rest-clock {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 52px auto;
+  grid-template-columns: minmax(0, 1fr) 48px auto;
   gap: 8px;
   padding: 14px 18px;
   margin: 6px 0 8px;
@@ -51,15 +51,15 @@ main:has(.training-header) .rest-clock-play {
   grid-column: 2;
   grid-row: 1;
   align-self: center;
-  width: 52px;
-  min-height: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 48px;
+  min-height: 48px;
+  height: 48px;
+  border-radius: 12px;
   gap: 4px;
 }
 main:has(.training-header) .rest-clock-play svg {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 main:has(.training-header) .rest-clock-play span {
   font-size: 11px;
@@ -68,14 +68,17 @@ main:has(.training-header) .rest-clock-actions {
   grid-column: 3;
   grid-row: 1;
   display: grid;
-  grid-template-columns: repeat(2, 44px);
+  grid-template-columns: repeat(2, 48px);
   align-self: center;
   gap: 5px;
   margin: 0;
 }
 main:has(.training-header) .rest-clock-actions .button {
-  min-height: 44px;
-  padding: 6px;
+  width: 48px;
+  min-height: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 12px;
   font-size: 11px;
 }
 main:has(.training-header) .rest-reset-label {
@@ -264,6 +267,24 @@ main:has(.training-header) .save-indicator {
   border-top: 1px solid var(--line);
   padding-top: 4px;
 }
+.training-exercise > .exercise-guide {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.training-exercise > .exercise-guide > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  padding: 14px 0;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.training-exercise > .exercise-guide[open] > summary svg {
+  transform: rotate(180deg);
+}
 .training-adjustments > summary {
   display: flex;
   align-items: center;
@@ -328,5 +349,26 @@ main:has(.training-header) .save-indicator {
   }
   .training-exercise .set-editor .set-confirm {
     width: 44px;
+  }
+}
+@media (max-width: 360px) {
+  main:has(.training-header) .rest-clock {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 12px;
+  }
+  main:has(.training-header) .rest-clock-face > div {
+    grid-column: 1 / -1;
+  }
+  main:has(.training-header) .rest-clock-play {
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
+  }
+  main:has(.training-header) .rest-clock-actions {
+    display: contents;
+  }
+  main:has(.training-header) .rest-clock-actions .button {
+    grid-row: 2;
+    width: 100%;
   }
 }
