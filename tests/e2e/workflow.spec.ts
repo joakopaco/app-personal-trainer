@@ -64,9 +64,16 @@ test("trainer can build a block routine and train from the mobile UI", async ({
     await expect(
       page.getByRole("heading", { name: "Sentadilla con barra" }),
     ).toBeVisible();
-    await page.getByText("Editar objetivos", { exact: true }).click();
-    await page.getByLabel("Peso kg").fill("25");
-    await page.getByLabel("Peso kg").blur();
+    await expect(
+      page.getByText("Editar objetivos", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText("Referencia del ejercicio", { exact: true }),
+    ).toBeVisible();
+    await page.getByLabel("Peso serie 1").fill("25");
+    await page
+      .getByRole("button", { name: "Registrar serie 1", exact: true })
+      .click();
     await expect(page.getByText("Guardado", { exact: true })).toBeVisible();
     await page
       .getByRole("button", { name: "Finalizar entrenamiento", exact: true })

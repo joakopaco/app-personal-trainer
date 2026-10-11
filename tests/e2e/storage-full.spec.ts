@@ -14,7 +14,9 @@ test("a failed raw-input write never presents the edited screen as synchronized"
     await page.getByRole("button", { name: "Ingresar", exact: true }).click();
     await expect(page.getByRole("navigation")).toBeVisible();
     await page.goto("/entrenar/" + a.studentId);
-    await expect(page.getByLabel("Peso kg", { exact: true })).toHaveValue("20");
+    await expect(page.getByLabel("Peso serie 1", { exact: true })).toHaveValue(
+      "20",
+    );
     await page.evaluate(() => {
       const original = IDBObjectStore.prototype.put;
       IDBObjectStore.prototype.put = function (
@@ -25,9 +27,9 @@ test("a failed raw-input write never presents the edited screen as synchronized"
         return original.apply(this, args);
       };
     });
-    await page.getByText("Editar objetivos", { exact: true }).click();
-    await page.getByLabel("Peso kg", { exact: true }).fill("99");
-    await page.getByLabel("Peso kg", { exact: true }).blur();
+
+    await page.getByLabel("Peso serie 1", { exact: true }).fill("99");
+    await page.getByLabel("Peso serie 1", { exact: true }).blur();
     await expect(page.getByRole("alert")).toContainText("No se pudo guardar");
     await expect(page.getByText("Guardado", { exact: true })).toHaveCount(0);
     await expect(

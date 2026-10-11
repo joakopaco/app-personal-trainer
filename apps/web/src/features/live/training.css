@@ -262,11 +262,6 @@ main:has(.training-header) .save-indicator {
 .training-exercise .set-row:has(.badge) > strong {
   min-width: 20px;
 }
-.training-adjustments {
-  margin-top: 16px;
-  border-top: 1px solid var(--line);
-  padding-top: 4px;
-}
 .training-exercise > .exercise-guide {
   margin-top: 16px;
   border-top: 1px solid var(--line);
@@ -284,33 +279,6 @@ main:has(.training-header) .save-indicator {
 }
 .training-exercise > .exercise-guide[open] > summary svg {
   transform: rotate(180deg);
-}
-.training-adjustments > summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  list-style: none;
-  cursor: pointer;
-  min-height: 44px;
-  font-size: 13px;
-  font-weight: 650;
-}
-.training-adjustments .live-fields {
-  margin-top: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-.training-adjustments .live-fields > .field {
-  grid-column: auto;
-}
-.training-adjustments .live-fields input {
-  font-size: 18px;
-  min-height: 44px;
-  padding: 8px;
-}
-.training-adjustments > p {
-  font-size: 12px;
-  line-height: 1.5;
 }
 .training-exercise .field-hint:empty {
   display: none;

@@ -22,16 +22,20 @@ test("offline edits survive a reload and synchronize exactly once", async ({
     await page.getByRole("button", { name: "Ingresar", exact: true }).click();
     await expect(page.getByRole("navigation")).toBeVisible();
     await page.goto("/entrenar/" + a.studentId);
-    await expect(page.getByLabel("Peso kg")).toHaveValue("20");
+    await expect(page.getByLabel("Peso serie 1")).toHaveValue("20");
     await page.route("http://127.0.0.1:54341/**", (r) => r.abort());
-    await page.getByText("Editar objetivos", { exact: true }).click();
-    await page.getByLabel("Peso kg").fill("42,5");
-    await page.getByLabel("Peso kg").blur();
+
+    await page.getByLabel("Peso serie 1").fill("42,5");
+    await page
+      .getByRole("button", { name: "Registrar serie 1", exact: true })
+      .click();
     await expect(page.locator(".save-indicator")).toContainText(
       "Guardado en este dispositivo",
     );
     await page.reload();
-    await expect(page.getByLabel("Peso kg")).toHaveValue("42.5");
+    await expect(
+      page.locator(".set-row").filter({ hasText: "42.5 kg" }),
+    ).toContainText("Registrada");
     await expect(page.locator(".save-indicator")).toContainText(
       "Guardado en este dispositivo",
     );
@@ -46,13 +50,14 @@ test("offline edits survive a reload and synchronize exactly once", async ({
     const sets = await a.client
       .from("session_sets")
       .select("weight")
+      .order("ordinal")
       .eq("student_id", a.studentId);
-    expect(sets.data?.map((s) => s.weight)).toEqual([42.5, 42.5]);
+    expect(sets.data?.map((s) => s.weight)).toEqual([42.5, 20]);
     const audit = await a.client
       .from("audit_events")
       .select("id")
       .eq("student_id", a.studentId)
-      .eq("kind", "adjust_prescription");
+      .eq("kind", "record_set");
     expect(audit.data).toHaveLength(1);
   } finally {
     await dropFixture(a.studentId);
