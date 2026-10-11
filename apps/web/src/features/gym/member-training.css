@@ -106,6 +106,17 @@
 .gym-member-training .gym-member-set.is-confirmed {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
+.gym-member-training .gym-set-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 14px;
+}
+.gym-member-training .gym-member-clock {
+  scroll-margin-block: 88px 16px;
+}
+.gym-member-training .gym-member-clock .rest-clock {
+  margin: 0;
+}
 .gym-member-training .gym-member-set-number {
   font-size: 15px;
   text-align: center;
