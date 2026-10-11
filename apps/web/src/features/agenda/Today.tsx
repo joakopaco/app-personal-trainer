@@ -115,7 +115,9 @@ export function Today() {
     <>
       <header className="page-heading today-heading">
         <button
-          className="button secondary today-calendar-button"
+          className="button secondary icon-button today-calendar-button"
+          aria-label="Calendario"
+          title="Calendario"
           onClick={(event) => {
             // Safari does not focus buttons on pointer clicks. Give the shared
             // dialog manager an explicit return target before opening.
@@ -123,8 +125,7 @@ export function Today() {
             setCalendarOpen(true);
           }}
         >
-          <CalendarDays size={18} aria-hidden="true" />
-          Calendario
+          <CalendarDays size={22} aria-hidden="true" />
         </button>
         <div>
           <p className="eyebrow">

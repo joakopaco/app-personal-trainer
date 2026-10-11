@@ -83,3 +83,27 @@ export function calendarEntries(
       a.student.name.localeCompare(b.student.name),
   );
 }
+
+export function shiftDate(date: string, days: number): string {
+  const value = new Date(date + "T12:00:00Z");
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+export function weekDays(date: string): string[] {
+  const offset = (new Date(date + "T12:00:00Z").getUTCDay() + 6) % 7;
+  const monday = shiftDate(date, -offset);
+  return Array.from({ length: 7 }, (_, i) => shiftDate(monday, i));
+}
+
+export function weekEntries(
+  date: string,
+  today: string,
+  visits: CalendarEntry[],
+  snapshots: Pick<StudentSnapshot, "student" | "schedule">[],
+): CalendarEntry[] {
+  const days = weekDays(date);
+  return [...new Set(days.map((day) => day.slice(0, 7)))]
+    .flatMap((month) => calendarEntries(month, today, visits, snapshots))
+    .filter((entry) => entry.date >= days[0] && entry.date <= days[6]);
+}

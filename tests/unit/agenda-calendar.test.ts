@@ -7,6 +7,9 @@ import {
   calendarEntries,
   countsAsTurn,
   monthDays,
+  weekDays,
+  weekEntries,
+  shiftDate,
   shiftMonth,
   type CalendarEntry,
 } from "../../apps/web/src/features/agenda/calendar";
@@ -117,4 +120,37 @@ test("archived students have no projected turns but their recorded history stays
       [{ student: archived, schedule }],
     ),
   ).toEqual([history]);
+});
+
+test("weekly strip crosses year and leap-day boundaries and moves by seven dates", () => {
+  expect(weekDays("2027-01-01")).toEqual([
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31",
+    "2027-01-01",
+    "2027-01-02",
+    "2027-01-03",
+  ]);
+  expect(weekDays("2028-02-29")).toContain("2028-03-05");
+  expect(shiftDate("2026-12-28", 7)).toBe("2027-01-04");
+  expect(shiftDate("2027-01-04", -7)).toBe("2026-12-28");
+});
+
+test("week crossing months includes recorded and habitual appointments exactly once", () => {
+  const visits = [
+    entry("2026-12-30", "closed"),
+    entry("2027-01-01", "pending"),
+    entry("2027-01-04", "pending"),
+  ];
+  const result = weekEntries("2027-01-01", "2026-12-20", visits, [
+    { student, schedule: { ...schedule, weekdays: [5, 7] } },
+  ]);
+  expect(result.map((v) => v.date).sort()).toEqual([
+    "2026-12-30",
+    "2027-01-01",
+    "2027-01-03",
+  ]);
+  expect(result.find((v) => v.date === "2027-01-01")?.status).toBe("pending");
+  expect(result.find((v) => v.date === "2027-01-03")?.status).toBe("habitual");
 });
