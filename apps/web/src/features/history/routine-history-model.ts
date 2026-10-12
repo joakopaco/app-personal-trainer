@@ -3,6 +3,14 @@ export type RoutineRevision = {
   id: string;
   created_at: string;
   document: unknown;
+  previous_revision_id?: string | null;
+  source_session_id?: string | null;
+};
+export type RoutineVersion = {
+  id: string;
+  createdAt: string;
+  document: RoutineDocument;
+  sourceSessionId?: string | null;
 };
 export type RoutineEntry = {
   id: string;
@@ -10,6 +18,7 @@ export type RoutineEntry = {
   start: string;
   end: string | null;
   current: boolean;
+  versions: RoutineVersion[];
 };
 
 // Renewals and live prescription edits retain the program's day IDs. New programs
@@ -30,7 +39,21 @@ export function routineTimeline(
       document.weeks.map((week) => week.map((day) => day.id)),
     ]);
     const previous = entries.at(-1);
-    if (previous && identity === previousIdentity) {
+    const version: RoutineVersion = {
+      id: revision.id,
+      createdAt: revision.created_at,
+      document,
+      sourceSessionId: revision.source_session_id,
+    };
+    if (
+      previous &&
+      (identity === previousIdentity ||
+        revision.previous_revision_id === previous.id)
+    ) {
+      // A monthly renewal with the exact same document is not a new version.
+      if (JSON.stringify(previous.document) !== JSON.stringify(document))
+        previous.versions.push(version);
+      previous.id = revision.id;
       previous.document = document;
       previous.current ||= revision.id === currentRevisionId;
     } else {
@@ -41,6 +64,7 @@ export function routineTimeline(
         start: revision.created_at,
         end: null,
         current: revision.id === currentRevisionId,
+        versions: [version],
       });
     }
     previousIdentity = identity;

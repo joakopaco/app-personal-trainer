@@ -6,6 +6,7 @@ import { useParams } from "react-router-dom";
 import { cloud } from "../../adapters/supabase";
 import { useData } from "../../app/DataProvider";
 import { StudentHeader } from "../students/StudentHeader";
+import { RoutineArchive } from "./RoutineArchive";
 import "./history.css";
 type AuditEvent = {
   id: string;
@@ -88,6 +89,12 @@ export function History() {
   return (
     <div className="student-page history-page">
       <StudentHeader data={row.projection} />
+      <RoutineArchive
+        studentId={id!}
+        currentRevisionId={row.projection.routine?.id}
+        studentName={row.projection.student.name}
+        mode="versions"
+      />
       <section className="card history-attendance">
         <h2>Asistencia reciente</h2>
         <p className="muted">

@@ -14,7 +14,8 @@ export const prescriptionSchema = z.object({
       }),
     )
     .min(1)
-    .max(4)
+    // Imported routines can retain more sets; new editor choices remain 1..4.
+    .max(50)
     .optional(),
 });
 export const exerciseTypeSchema = z.enum(["load_reps", "reps", "time"]);
