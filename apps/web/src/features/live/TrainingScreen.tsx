@@ -94,9 +94,19 @@ export function TrainingScreen() {
           Los resultados confirmados ya están en el progreso de{" "}
           {row.projection.student.name}.
         </p>
+        <p>
+          Podés consultar la rutina actualizada y sus versiones desde el
+          historial del alumno.
+        </p>
         <div className="row">
           <Link className="button" to="/hoy">
             Volver a Hoy
+          </Link>
+          <Link className="button secondary" to={`/alumnos/${id}/rutina`}>
+            Ver rutina actual
+          </Link>
+          <Link className="button secondary" to={`/historial/${id}`}>
+            Ver versiones
           </Link>
         </div>
       </>
@@ -255,17 +265,18 @@ export function TrainingScreen() {
       )}
       <details className="scope-choice">
         <summary>
-          Ajustes:{" "}
+          Descansos:{" "}
           {scope === "session_and_future"
             ? "sesión y semanas siguientes"
             : "solo este entrenamiento"}
         </summary>
         <p className="scope-note">
-          Las series ya registradas conservan sus valores. Podés corregirlas con
-          un motivo en el detalle de series.
+          Los pesos y repeticiones registrados actualizan la rutina al
+          finalizar. Elegí si los cambios de descanso también se usan en las
+          semanas siguientes.
         </p>
         <label className="field scope-select">
-          Aplicar los próximos ajustes
+          Aplicar los próximos descansos
           <select
             value={scope}
             onChange={(e) => setScope(e.target.value as typeof scope)}
@@ -368,6 +379,11 @@ export function TrainingScreen() {
               series registradas individualmente. Los ejercicios pendientes se
               confirmarán con sus valores actuales y quedarán identificados como
               confirmación rápida.
+            </p>
+            <p className="notice">
+              Los cambios registrados actualizarán este día desde esta semana en
+              adelante. La versión anterior quedará en el historial de la misma
+              rutina.
             </p>
             <label className="row">
               <input

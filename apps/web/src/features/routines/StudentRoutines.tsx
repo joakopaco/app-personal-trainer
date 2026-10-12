@@ -105,6 +105,12 @@ export function ActiveRoutine() {
               student={data.student.name}
               month={data.period?.month}
             />
+            <Link
+              className="button secondary"
+              to={`/historial/${id}#versiones`}
+            >
+              Ver versiones
+            </Link>
           </div>
           <RoutineSummary document={data.routine.document} />
         </>

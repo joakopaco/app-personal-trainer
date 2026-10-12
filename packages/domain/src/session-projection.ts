@@ -4,7 +4,6 @@ import type {
   StudentSnapshot,
   SessionItem,
 } from "./contracts";
-import type { Prescription } from "./routines";
 function validateProgressionSetCount(sets: number | null) {
   if (sets === null || !Number.isInteger(sets) || sets < 1 || sets > 4)
     throw Error("La progresi\u00f3n admite entre 1 y 4 series.");
@@ -130,43 +129,8 @@ export function projectCommand(
         }
       }
     }
-    if (p.scope === "session_and_future" && snapshot.routine) {
-      for (const week of snapshot.routine.document.weeks.slice(
-        session.week - 1,
-      ))
-        for (const day of week)
-          for (const block of day.blocks)
-            for (const e of block.exercises)
-              if (e.lineageId === item.lineage_id) {
-                if (field === "macroRest") block.macroRest = value;
-                else if (field === "macroTarget")
-                  block.macroTarget = p.value as "series" | "blocks";
-                else {
-                  e.prescription = {
-                    ...e.prescription,
-                    [field]: value,
-                  } as Prescription;
-                  if (e.prescription.progression) {
-                    const rx = e.prescription;
-                    if (field === "sets") validateProgressionSetCount(rx.sets);
-                    if (field === "sets")
-                      rx.progression = Array.from(
-                        { length: rx.sets! },
-                        (_, n) =>
-                          rx.progression?.[n] ?? {
-                            weight: rx.weight,
-                            reps: rx.reps,
-                          },
-                      );
-                    if (field === "weight" || field === "reps")
-                      rx.progression = rx.progression!.map((s) => ({
-                        ...s,
-                        [field]: value,
-                      }));
-                  }
-                }
-              }
-    }
+    // Routine versions are committed by the server once the session closes.
+    // Keeping its document unchanged here also avoids optimistic phantom versions.
   }
   if (c.kind === "record_set") {
     const set = item.sets.find((s) => s.id === p.setId);

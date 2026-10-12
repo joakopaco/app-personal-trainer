@@ -349,7 +349,7 @@ function RoutineBuilderEditor() {
     setMessage("");
     void persist(draftSnapshot(next)).catch(() => undefined);
   }
-  async function handleCommandError(cause: unknown) {
+  async function handleCommandError(cause: unknown, compareRoutine = false) {
     const message = (cause as Error).message;
     setError(message);
     try {
@@ -364,7 +364,10 @@ function RoutineBuilderEditor() {
     } catch {
       return;
     }
-    if (!/cambiaron|cambió|versión|conflict|changed|stale draft/i.test(message))
+    if (
+      !compareRoutine &&
+      !/cambiaron|cambió|versión|conflict|changed|stale draft/i.test(message)
+    )
       return;
     try {
       const remote = await gateway(db.scope).fetchStudent(db.scope, id!);
@@ -488,6 +491,14 @@ function RoutineBuilderEditor() {
       const latest =
         publishedSnapshot.current ??
         (await gateway(db.scope).fetchStudent(db.scope, id!));
+      if (
+        !pendingPublish &&
+        !publishedSnapshot.current &&
+        (latest.routine?.id ?? null) !== base
+      )
+        throw Error(
+          "La rutina activa cambió. Revisá los cambios antes de activar el borrador.",
+        );
       const snapshot =
         publishedSnapshot.current ??
         (await onlineCommand(
@@ -528,7 +539,7 @@ function RoutineBuilderEditor() {
         );
         return;
       }
-      await handleCommandError(e);
+      await handleCommandError(e, true);
     } finally {
       setBusy(false);
     }

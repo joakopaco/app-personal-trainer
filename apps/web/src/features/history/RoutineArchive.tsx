@@ -1,6 +1,7 @@
 import { LoadingState } from "../../components/LoadingState";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { type RoutineDocument } from "@pulso/domain/routines";
 import { cloud } from "../../adapters/supabase";
 import { formatRestDuration } from "../../components/rest-minutes";
@@ -117,10 +118,24 @@ export function ArchivedRoutine({ document }: { document: RoutineDocument }) {
                               >
                                 Peso
                               </span>
-                              {exercise.type === "load_reps" &&
-                              exercise.prescription.weight !== null
-                                ? exercise.prescription.weight + " kg"
-                                : "—"}
+                              {exercise.prescription.progression &&
+                              exercise.type === "load_reps" ? (
+                                <div className="version-series-values">
+                                  {exercise.prescription.progression.map(
+                                    (set, index) => (
+                                      <span key={index}>
+                                        Serie {index + 1}: {set.weight ?? "—"}{" "}
+                                        kg
+                                      </span>
+                                    ),
+                                  )}
+                                </div>
+                              ) : exercise.type === "load_reps" &&
+                                exercise.prescription.weight !== null ? (
+                                exercise.prescription.weight + " kg"
+                              ) : (
+                                "—"
+                              )}
                             </td>
                             <td role="cell">
                               <span
@@ -131,13 +146,28 @@ export function ArchivedRoutine({ document }: { document: RoutineDocument }) {
                                   ? "Duración"
                                   : "Repeticiones"}
                               </span>
-                              {exercise.type === "time"
-                                ? exercise.prescription.durationSec === null
-                                  ? "—"
-                                  : exercise.prescription.durationSec + " s"
-                                : exercise.prescription.reps === null
-                                  ? "—"
-                                  : exercise.prescription.reps + " reps"}
+                              {exercise.prescription.progression ? (
+                                <div className="version-series-values">
+                                  {exercise.prescription.progression.map(
+                                    (set, index) => (
+                                      <span key={index}>
+                                        Serie {index + 1}: {set.reps ?? "—"}{" "}
+                                        reps
+                                      </span>
+                                    ),
+                                  )}
+                                </div>
+                              ) : exercise.type === "time" ? (
+                                exercise.prescription.durationSec === null ? (
+                                  "—"
+                                ) : (
+                                  exercise.prescription.durationSec + " s"
+                                )
+                              ) : exercise.prescription.reps === null ? (
+                                "—"
+                              ) : (
+                                exercise.prescription.reps + " reps"
+                              )}
                             </td>
                             <td role="cell">
                               <span
@@ -175,13 +205,20 @@ export function RoutineArchive({
   studentId,
   currentRevisionId,
   studentName,
+  mode = "archive",
 }: {
   studentId: string;
   currentRevisionId?: string;
   studentName?: string;
+  mode?: "archive" | "versions";
 }) {
   const [entries, setEntries] = useState<RoutineEntry[]>([]);
   const [selected, setSelected] = useState<RoutineEntry | null>(null);
+  const [versionIndex, setVersionIndex] = useState(0);
+  function open(entry: RoutineEntry) {
+    setVersionIndex(entry.versions.length - 1);
+    setSelected(entry);
+  }
   const [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [retry, setRetry] = useState(0);
@@ -195,7 +232,9 @@ export function RoutineArchive({
       (start, end) =>
         cloud()
           .from("routine_revisions")
-          .select("id,created_at,document")
+          .select(
+            "id,created_at,document,previous_revision_id,source_session_id",
+          )
           .eq("student_id", studentId)
           .order("created_at")
           .order("id")
@@ -222,21 +261,36 @@ export function RoutineArchive({
       active = false;
     };
   }, [studentId, currentRevisionId, retry]);
-  const previous = entries.filter((entry) => !entry.current).reverse();
+  const previous = entries
+    .filter((entry) => mode === "versions" || !entry.current)
+    .reverse();
   const current = entries.find((entry) => entry.current);
+  const version = selected?.versions[versionIndex];
+  const title =
+    mode === "versions" ? "Versiones de rutinas" : "Rutinas anteriores";
   return (
     <section
       className="card history-routine-archive"
-      aria-label="Rutinas anteriores"
+      aria-label={title}
+      id={mode === "versions" ? "versiones" : undefined}
     >
-      <h2>Rutinas anteriores</h2>
+      <h2>{title}</h2>
       <p className="muted">
-        Cada rutina con sus fechas de inicio y fin. Los ajustes durante el
-        entrenamiento se conservan en Historial.
+        {mode === "versions"
+          ? "Cada rutina reúne sus versiones. Al finalizar un entrenamiento con cambios, podés consultar cómo estaba antes y cómo quedó."
+          : "Cada rutina con sus fechas de inicio y fin. Los ajustes del entrenamiento se guardan como versiones de esa misma rutina."}
       </p>
       {current && (
         <p className="routine-current-since">
           Rutina actual en curso desde el {routineDate(current.start)}.
+          {mode === "archive" && (
+            <>
+              {" "}
+              <Link to={`/historial/${studentId}#versiones`}>
+                Ver versiones
+              </Link>
+            </>
+          )}
         </p>
       )}
       {loading ? (
@@ -261,22 +315,34 @@ export function RoutineArchive({
                 <h3>{entry.document.name}</h3>
                 <p className="muted">
                   Inicio: {routineDate(entry.start)} · Fin:{" "}
-                  {entry.end ? routineDate(entry.end) : "Sin fecha registrada"}
+                  {entry.current
+                    ? "En curso"
+                    : entry.end
+                      ? routineDate(entry.end)
+                      : "Sin fecha registrada"}
                 </p>
+                {mode === "versions" && (
+                  <p className="muted">
+                    {entry.versions.length}{" "}
+                    {entry.versions.length === 1 ? "versión" : "versiones"}
+                  </p>
+                )}
               </div>
               <div className="row">
-                <Link
-                  className="button secondary"
-                  to={`/alumnos/${studentId}/borradores/editar?nueva=1&base=archive:${entry.id}`}
-                >
-                  Usar como base
-                </Link>
+                {mode === "archive" && (
+                  <Link
+                    className="button secondary"
+                    to={`/alumnos/${studentId}/borradores/editar?nueva=1&base=archive:${entry.id}`}
+                  >
+                    Usar como base
+                  </Link>
+                )}
                 <button
                   className="button secondary"
-                  onClick={() => setSelected(entry)}
-                  aria-label={`Ver rutina ${entry.document.name}`}
+                  onClick={() => open(entry)}
+                  aria-label={`${mode === "versions" ? "Ver versiones de" : "Ver rutina"} ${entry.document.name}`}
                 >
-                  Ver rutina
+                  {mode === "versions" ? "Ver versiones" : "Ver rutina"}
                 </button>
               </div>
             </article>
@@ -284,42 +350,92 @@ export function RoutineArchive({
         </div>
       ) : (
         <p className="history-empty">
-          Todavía no hay rutinas anteriores. Aparecerán acá cuando actives una
-          rutina diferente.
+          {mode === "versions"
+            ? "Todavía no hay una rutina con versiones guardadas."
+            : "Todavía no hay rutinas anteriores. Aparecerán acá cuando actives una rutina diferente."}
         </p>
       )}
-      {selected && (
+      {selected && version && (
         <div className="modal-backdrop">
           <section
             className="card modal routine-archive-modal"
             role="dialog"
             aria-modal="true"
-            aria-label={`Rutina anterior: ${selected.document.name}`}
+            aria-label={`${mode === "versions" ? "Versiones de" : "Rutina anterior:"} ${selected.document.name}`}
           >
             <div className="row spread">
               <div>
-                <p className="eyebrow">RUTINA ANTERIOR · SOLO LECTURA</p>
+                <p className="eyebrow">VERSIONES DE LA RUTINA · SOLO LECTURA</p>
                 <p>
                   Inicio: {routineDate(selected.start)} · Fin:{" "}
-                  {selected.end
-                    ? routineDate(selected.end)
-                    : "Sin fecha registrada"}
+                  {selected.current
+                    ? "En curso"
+                    : selected.end
+                      ? routineDate(selected.end)
+                      : "Sin fecha registrada"}
                 </p>
               </div>
               <button
-                className="button secondary"
+                className="button secondary routine-version-icon"
                 onClick={() => setSelected(null)}
+                aria-label="Cerrar"
+                data-dialog-close
               >
-                Cerrar
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
-            <ArchivedRoutine key={selected.id} document={selected.document} />
+            <div className="routine-version-controls">
+              <button
+                className="button secondary routine-version-icon"
+                aria-label="Versión anterior"
+                disabled={versionIndex === 0}
+                onClick={() => setVersionIndex((n) => n - 1)}
+              >
+                <ChevronLeft size={20} aria-hidden="true" />
+              </button>
+              <label className="field">
+                Versión de la rutina
+                <select
+                  aria-label="Versión de la rutina"
+                  value={versionIndex}
+                  onChange={(event) =>
+                    setVersionIndex(Number(event.target.value))
+                  }
+                >
+                  {selected.versions.map((entry, index) => (
+                    <option key={entry.id} value={index}>
+                      Versión {index + 1}
+                      {index === selected.versions.length - 1
+                        ? " · Última"
+                        : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="button secondary routine-version-icon"
+                aria-label="Versión siguiente"
+                disabled={versionIndex === selected.versions.length - 1}
+                onClick={() => setVersionIndex((n) => n + 1)}
+              >
+                <ChevronRight size={20} aria-hidden="true" />
+              </button>
+            </div>
+            <p className="muted routine-version-note">
+              {version.sourceSessionId
+                ? "Actualizada al finalizar el entrenamiento"
+                : versionIndex === 0
+                  ? "Versión inicial"
+                  : "Rutina actualizada"}{" "}
+              · {new Date(version.createdAt).toLocaleString("es-AR")}
+            </p>
+            <ArchivedRoutine key={version.id} document={version.document} />
             <footer className="student-routine-actions">
               {studentName && (
                 <ExportRoutine
-                  document={selected.document}
+                  document={version.document}
                   student={studentName}
-                  month={`Inicio: ${routineDate(selected.start)} · Fin: ${selected.end ? routineDate(selected.end) : "Sin fecha registrada"}`}
+                  month={`Versión ${versionIndex + 1} · ${routineDate(version.createdAt)}`}
                 />
               )}
             </footer>

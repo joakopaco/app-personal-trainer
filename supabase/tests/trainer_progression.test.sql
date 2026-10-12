@@ -1,5 +1,5 @@
 begin;
-select plan(39);
+select plan(44);
 
 insert into auth.users(id,email,email_confirmed_at)
 values ('a2800000-0000-4000-8000-000000000001','progression-fixture@pulso.local',now());
@@ -63,10 +63,10 @@ select is((select jsonb_agg(jsonb_build_array(weight,reps) order by ordinal) fro
  '[[35,9],[42,8],[42,6]]'::jsonb,'future adjustment retains observed weight and pending repetition progression');
 select is((select r.document#>'{weeks,0,0,blocks,0,exercises,0,prescription,progression}' from public.routine_periods p join public.routine_revisions r on r.id=p.current_revision_id where p.student_id=(select s from progression_fixture)),
  '[{"weight":20,"reps":10},{"weight":25,"reps":8},{"weight":30,"reps":6}]'::jsonb,'week before the selected week is unchanged');
-select ok((select bool_and((week->0#>'{blocks,0,exercises,0,prescription,progression}')='[{"weight":42,"reps":10},{"weight":42,"reps":8},{"weight":42,"reps":6}]'::jsonb)
+select ok((select bool_and((week->0#>'{blocks,0,exercises,0,prescription,progression}')='[{"weight":20,"reps":10},{"weight":25,"reps":8},{"weight":30,"reps":6}]'::jsonb)
  from public.routine_periods p join public.routine_revisions r on r.id=p.current_revision_id,
  lateral jsonb_array_elements(r.document->'weeks') with ordinality as weeks(week,ordinal)
- where p.student_id=(select s from progression_fixture) and ordinal>=2),'selected and later weeks retain distinct reps with new weight');
+ where p.student_id=(select s from progression_fixture) and ordinal>=2),'routine targets stay unchanged until the training closes');
 select is((select document from public.routine_revisions where id=(select original_revision from progression_fixture)),(select document from progression_fixture),'future adjustment does not rewrite historical routine revision');
 
 select is(pg_temp.training('adjust_prescription',jsonb_build_object('sessionId',f.session,'itemId',i.id,'field','sets','value',5,'scope','session_and_future'))->>'status','rejected','progression rejects a fifth set atomically')
@@ -81,7 +81,7 @@ select is(pg_temp.training('start_session',jsonb_build_object('sessionId',f.next
  'week',3,'dayId',f.document#>>'{weeks,2,0,id}','date',to_char(now() at time zone 'America/Argentina/Buenos_Aires','YYYY-MM-DD'),'time','13:00','timezone','America/Argentina/Buenos_Aires'))->>'status','applied','next session uses revised future prescription')
 from progression_fixture f join public.routine_periods p on p.student_id=f.s;
 select is((select jsonb_agg(jsonb_build_array(weight,reps) order by ordinal) from public.session_sets where session_id=(select next_session from progression_fixture)),
- '[[42,10],[42,8],[42,6]]'::jsonb,'future session seeds propagated progression without historical observations');
+ '[[35,9],[42,8],[42,6]]'::jsonb,'future session seeds observed results and planned adjustments from the completed session');
 select is(pg_temp.training('record_set',jsonb_build_object('sessionId',f.next_session,'itemId',st.item_id,'setId',st.id,'ordinal',1,'state','done','weight',null,'reps',null,'durationSec',null))->>'status','rejected','observed results still require measurements even with progression')
 from progression_fixture f join public.session_sets st on st.session_id=f.next_session and st.ordinal=1;
 select is(pg_temp.training('record_set',jsonb_build_object('sessionId',f.next_session,'itemId',st.item_id,'setId',st.id,'ordinal',1,'state','skipped','weight',99,'reps',99,'durationSec',null))->>'status','applied','skipped-set guard still accepts an unperformed result')
@@ -95,6 +95,11 @@ select is((select jsonb_agg(jsonb_build_array(weight,reps) order by ordinal) fro
  '[[null,null],[42,8],[42,6]]'::jsonb,'historical rest replay preserves skipped result and pending targets');
 select ok(not has_function_privilege('authenticated','private.apply_live_mutation(jsonb)','execute'),'live private executor remains inaccessible to authenticated clients');
 select ok(not has_function_privilege('authenticated','private.apply_historical_mutation(jsonb)','execute'),'historical private executor remains inaccessible to authenticated clients');
+select ok(not has_function_privilege('authenticated','private.carry_session_into_routine(uuid)','execute'),'automatic routine versioning cannot bypass command ownership');
+select ok(not has_function_privilege('anon','private.session_result_prescription(jsonb,public.session_items)','execute'),'anonymous clients cannot call the result merger');
+select ok(not has_function_privilege('authenticated','private.apply_live_mutation_before_routine_close(jsonb)','execute'),'legacy executor remains private after wrapping');
+select is((select count(*)::integer from public.routine_revisions where student_id=(select s from progression_fixture)),2,'all adjustments in a close produce just one extra version');
+select ok((select r.previous_revision_id=f.original_revision and r.source_session_id=f.session from public.routine_periods p join public.routine_revisions r on r.id=p.current_revision_id join progression_fixture f on f.s=p.student_id),'version links its original routine and originating session');
 
 create temp table template_fixture as select jsonb_build_object('workspaceId',w,'id',template,'operationId',template_operation,
  'kind','template','expectedRevision',0,'payload',jsonb_build_object('document',pg_temp.progression_document(6))) command from progression_fixture;

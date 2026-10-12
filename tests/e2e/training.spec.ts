@@ -71,7 +71,7 @@ test("observed sets survive prescription changes, future routine updates and clo
     expect(
       adjusted.patch.routine.document.weeks[3][0].blocks[0].exercises[0]
         .prescription.weight,
-    ).toBe(25);
+    ).toBe(20);
     const { r: second } = await run("start_session", {
       ...startPayload,
       sessionId: randomUUID(),
@@ -83,6 +83,13 @@ test("observed sets survive prescription changes, future routine updates and clo
       allowEmpty: false,
     });
     expect(closed.status).toBe("applied");
+    expect(
+      closed.patch.routine.document.weeks[3][0].blocks[0].exercises[0]
+        .prescription.progression,
+    ).toEqual([
+      { weight: 20, reps: 10 },
+      { weight: 25, reps: 10 },
+    ]);
     expect(closed.patch.sessions).toHaveLength(0);
     const repeat = await execute(a.client, close);
     expect(repeat.status).toBe("duplicate");

@@ -29,6 +29,13 @@ describe("routine timeline", () => {
         .weight,
     ).toBe(30);
     expect(timeline[1]).toMatchObject({ current: true, end: null });
+    expect(timeline[0].versions.map((version) => version.id)).toEqual([
+      "a",
+      "b",
+    ]);
+    expect(timeline[0].versions[0].document).toEqual(first);
+    expect(timeline[0].versions[1].document).toEqual(adjustment);
+    expect(timeline[0].id).toBe("c"); // Reusing a routine starts from its latest revision.
   });
   it("keeps newly assigned routines with the same name separate and rejects invalid history", () => {
     const first = routineFixture(),
@@ -45,5 +52,27 @@ describe("routine timeline", () => {
     expect(() =>
       routineTimeline([{ id: "a", created_at: "2026-09-01", document: {} }]),
     ).toThrow();
+  });
+  it("keeps explicitly linked session versions in one routine even when its name changed", () => {
+    const first = routineFixture();
+    const changed = structuredClone(first);
+    changed.name = "Nombre actualizado";
+    changed.weeks[0][0].blocks[0].exercises[0].prescription.weight = 50;
+    const timeline = routineTimeline(
+      [
+        { id: "a", created_at: "2026-10-01T10:00:00Z", document: first },
+        {
+          id: "b",
+          created_at: "2026-10-01T11:00:00Z",
+          document: changed,
+          previous_revision_id: "a",
+          source_session_id: "session",
+        },
+      ],
+      "b",
+    );
+    expect(timeline).toHaveLength(1);
+    expect(timeline[0].versions).toHaveLength(2);
+    expect(timeline[0].versions[1].sourceSessionId).toBe("session");
   });
 });
