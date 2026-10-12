@@ -180,6 +180,9 @@ for (const type of ["reps", "time", "legacy"] as const) {
 test("mobile close survives a lost reply and exposes old and new versions inside one routine", async ({
   page,
 }) => {
+  // Reloading during a request can leave the cross-tab lease alive for 30 s.
+  // Recovery must retain the operation until that lease safely expires.
+  test.setTimeout(60000);
   const doc = routineFixture();
   for (const week of doc.weeks)
     week[0].blocks[0].exercises[0].prescription.weight = 25;
@@ -207,17 +210,19 @@ test("mobile close survives a lost reply and exposes old and new versions inside
       .select("id")
       .eq("student_id", a.studentId);
     expect(before.data).toHaveLength(1);
-    let dropped = false;
+    let dropping = false,
+      dropped = false;
     await page.route("**/rest/v1/rpc/apply_training_command", async (route) => {
       if (
         route.request().postDataJSON().command.kind !== "finish_session" ||
-        dropped
+        dropping
       )
         return route.continue();
-      dropped = true;
+      dropping = true;
       const response = await route.fetch();
       expect((await response.json()).status).toBe("applied");
       await route.abort("failed");
+      dropped = true;
     });
     await page
       .getByRole("button", { name: "Finalizar entrenamiento", exact: true })
@@ -235,7 +240,7 @@ test("mobile close survives a lost reply and exposes old and new versions inside
         name: "Entrenamiento finalizado",
         exact: true,
       }),
-    ).toBeVisible({ timeout: 20000 });
+    ).toBeVisible({ timeout: 40000 });
     const versions = await a.client
       .from("routine_revisions")
       .select("id,source_session_id,previous_revision_id")
