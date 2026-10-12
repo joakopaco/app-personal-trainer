@@ -405,9 +405,6 @@ export function RoutineArchive({
                   {selected.versions.map((entry, index) => (
                     <option key={entry.id} value={index}>
                       Versión {index + 1}
-                      {index === selected.versions.length - 1
-                        ? " · Última"
-                        : ""}
                     </option>
                   ))}
                 </select>

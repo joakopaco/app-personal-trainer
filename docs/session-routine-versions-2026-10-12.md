@@ -17,7 +17,7 @@ El seguimiento del personal trainer usa los resultados confirmados al finalizar 
 
 Las revisiones incluyen `previous_revision_id` y `source_session_id`; no se crea otra rutina ni otro período. El historial muestra una tarjeta por rutina y un selector para consultar y exportar cada versión. Las renovaciones mensuales idénticas no agregan una versión visual redundante.
 
-La migración `20261012232249_session_routine_versions.sql` es incremental y debe aplicarse antes del frontend. Mantiene las funciones privadas sin permiso de ejecución para clientes y reutiliza los controles existentes de propietario, revisión del alumno e idempotencia. No modifica retrospectivamente entrenamientos cerrados.
+La migración `20261012235540_session_routine_versions.sql` es incremental y se aplicó en Supabase cloud antes del frontend. El archivo usa la versión registrada por el servicio; los cuerpos de las funciones coinciden con los probados localmente. Mantiene las funciones privadas sin permiso de ejecución para clientes y reutiliza los controles existentes de propietario, revisión del alumno e idempotencia. No modifica retrospectivamente entrenamientos cerrados.
 
 ## Verificación reproducible
 
