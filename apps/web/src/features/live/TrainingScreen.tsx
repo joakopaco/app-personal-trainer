@@ -1115,7 +1115,7 @@ export function LiveInput({
     </>
   );
 }
-function PreviousResult({
+export function PreviousResult({
   exerciseId,
   studentId,
 }: {
@@ -1129,7 +1129,7 @@ function PreviousResult({
       const { data, error } = await cloud()
         .from("session_items")
         .select(
-          "id,session_sets(weight,reps,duration_sec,state),sessions!inner(status,started_at)",
+          "id,session_sets(ordinal,weight,reps,duration_sec,state),sessions!inner(status,started_at)",
         )
         .eq("student_id", studentId)
         .eq("exercise_id", exerciseId)
@@ -1144,7 +1144,10 @@ function PreviousResult({
           String((a.sessions as unknown as { started_at: string }).started_at),
         ),
       );
-      const set = rows[0]?.session_sets.find((s) => s.state === "done");
+      const set = rows[0]?.session_sets
+        .slice()
+        .sort((a, b) => a.ordinal - b.ordinal)
+        .find((s) => s.state === "done");
       if (set)
         setValue(
           "Anterior: " +
