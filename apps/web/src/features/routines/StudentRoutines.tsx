@@ -1,5 +1,6 @@
 import { LoadingState } from "../../components/LoadingState";
 import { useEffect, useRef, useState } from "react";
+import { Pencil, Plus } from "lucide-react";
 import {
   Link,
   Navigate,
@@ -79,40 +80,36 @@ export function ActiveRoutine() {
               : "Todavía no hay una rutina activa."}
           </p>
         </div>
-        <div className="routine-heading-actions">
+        <div className="routine-heading-actions routine-current-actions">
           {data.routine && (
             <button
-              className="button secondary"
+              className="button routine-edit-button"
               disabled={checking}
               onClick={editCurrent}
             >
+              <Pencil size={18} aria-hidden="true" />
               Editar rutina
             </button>
           )}
           <Link
-            className="button"
+            className="button routine-new-button"
             to={`/alumnos/${id}/borradores/editar?nueva=1`}
           >
+            <Plus size={18} aria-hidden="true" />
             Nueva rutina
           </Link>
         </div>
       </header>
       {data.routine && (
         <>
-          <div className="row">
+          <RoutineSummary document={data.routine.document} />
+          <footer className="routine-export-footer">
             <ExportRoutine
               document={data.routine.document}
               student={data.student.name}
               month={data.period?.month}
             />
-            <Link
-              className="button secondary"
-              to={`/historial/${id}#versiones`}
-            >
-              Ver versiones
-            </Link>
-          </div>
-          <RoutineSummary document={data.routine.document} />
+          </footer>
         </>
       )}
     </div>
