@@ -22,10 +22,7 @@ export function RoutineSummary({ document }: { document: RoutineDocument }) {
           </button>
         ))}
       </nav>
-      <nav
-        className="routine-tabs routine-day-tabs"
-        aria-label="Días de la rutina"
-      >
+      <nav className="routine-day-tabs" aria-label="Días de la rutina">
         {document.weeks[week].map((day, index) => (
           <button
             key={day.id}
