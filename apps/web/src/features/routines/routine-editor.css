@@ -188,6 +188,49 @@
   gap: 10px;
   align-items: center;
 }
+.routine-current-actions .button {
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.routine-current-actions .routine-edit-button {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+.routine-current-actions .routine-edit-button > svg {
+  color: var(--accent);
+}
+.routine-current-actions .routine-new-button {
+  background: var(--surface);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.routine-current-actions .routine-edit-button:disabled {
+  background: var(--surface-raised);
+  border-color: var(--line);
+  color: var(--muted);
+}
+.routine-current-actions .routine-edit-button:disabled > svg {
+  color: currentColor;
+}
+.routine-export-footer {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+@media (max-width: 600px) {
+  .routine-current-actions .button {
+    padding-inline: 10px;
+    gap: 6px;
+  }
+  .routine-export-footer .button {
+    width: 100%;
+  }
+}
 .routine-workspace .editor-fields {
   display: grid;
   gap: 24px;
